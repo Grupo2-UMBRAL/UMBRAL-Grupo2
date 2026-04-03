@@ -1,0 +1,9 @@
+namespace Umbral.Domain.Scoring.Repositories;
+
+using Umbral.Domain.Scoring.Entities;
+
+public interface IPenaltyRepository
+{
+    Task AddAsync(Penalty penalty, CancellationToken ct = default);
+    Task<List<Penalty>> GetByTeamAndSessionAsync(Guid teamId, Guid sessionId, CancellationToken ct = default);
+}
