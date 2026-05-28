@@ -1,0 +1,34 @@
+services:
+  dotnet-sdk:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-dotnet-sdk
+    working_dir: /workspace
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+  template-generator:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-template-generator
+    working_dir: /workspace
+    entrypoint: ["dotnet"]
+    command:
+      - new
+      - list
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+  repo-shell:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-repo-shell
+    working_dir: /workspace
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["sleep infinity"]
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+volumes:
+  nuget-cache:

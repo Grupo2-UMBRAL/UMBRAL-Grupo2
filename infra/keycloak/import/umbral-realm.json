@@ -1,0 +1,141 @@
+{
+  "realm": "umbral",
+  "enabled": true,
+  "displayName": "UMBRAL",
+  "roles": {
+    "realm": [
+      { "name": "Administrator" },
+      { "name": "Operator" },
+      { "name": "Participant" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "umbral-web",
+      "name": "UMBRAL Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:5173"
+      ]
+    },
+    {
+      "clientId": "umbral-mobile",
+      "name": "UMBRAL Mobile",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost/*"
+      ],
+      "webOrigins": [
+        "+"
+      ]
+    },
+    {
+      "clientId": "umbral-mission-design-api",
+      "name": "Mission Design API",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "mission-design-secret"
+    },
+    {
+      "clientId": "umbral-session-operations-api",
+      "name": "Session Operations API",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "session-operations-secret"
+    },
+    {
+      "clientId": "umbral-scoring-audit-api",
+      "name": "Scoring and Audit API",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "scoring-audit-secret"
+    },
+    {
+      "clientId": "umbral-edge-proxy",
+      "name": "Edge Proxy",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "edge-proxy-secret"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "UMBRAL",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Administrator"
+      ]
+    },
+    {
+      "username": "operator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Operator",
+      "lastName": "UMBRAL",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "operator123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Operator"
+      ]
+    },
+    {
+      "username": "participant",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Participant",
+      "lastName": "UMBRAL",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "participant123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Participant"
+      ]
+    }
+  ]
+}
