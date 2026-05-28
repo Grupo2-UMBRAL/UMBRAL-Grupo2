@@ -1,0 +1,7 @@
+interface:
+  display_name: "Linear Ticket Orchestrator"
+  short_description: "Own ticket flow, branches, worktrees"
+  default_prompt: "Use $linear-ticket-orchestrator to execute Linear tickets with strict branch, worktree, and delegation control."
+
+policy:
+  allow_implicit_invocation: true

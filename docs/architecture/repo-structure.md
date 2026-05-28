@@ -19,6 +19,7 @@ Estructura real actual del repositorio.
 |  |  |- edge-proxy/
 |  |  `- web/
 |  `- services/
+|     |- building-blocks/
 |     |- identity-access/
 |     |- mission-design/
 |     |- scoring-audit/
@@ -32,6 +33,7 @@ Estructura real actual del repositorio.
 
 - `src/services/*/CONTEXT.md` mantiene el lenguaje de dominio por bounded context.
 - `src/services/*/` contiene los microservicios `.NET` que implementan cada bounded context.
+- `src/services/building-blocks/` contiene librerias compartidas de backend para cross-cutting concerns como bootstrap, auth, CQRS y persistencia.
 - `src/apps/edge-proxy/` contiene el borde tecnico minimo para exponer entrada unificada sin meter logica de dominio.
 - `src/apps/web/` contiene el frontend web cuando exista.
 - `infra/` agrupa bootstrap operativo local como `Keycloak` y scripts de `PostgreSQL`.

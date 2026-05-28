@@ -6,6 +6,15 @@ Primary backlog project:
 
 - [UMBRAL MVP Backlog](https://linearaapp/umbralsv/project/umbral-mvp-backlog-06582636352e)
 
+## Execution orchestration
+
+When work is executed by agents from Linear tickets, use `.agents/agents/orchestrator.md` as the operational source of truth for:
+
+- claiming tickets
+- isolating one branch and one `git worktree` per ticket
+- delegating implementation or review to other agents
+- updating ticket state only from the orchestrator role
+
 ## Conventions
 
 - Create issues in Linear rather than GitHub or local markoowna

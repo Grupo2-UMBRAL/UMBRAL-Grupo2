@@ -24,6 +24,8 @@ Leer en este orden:
 
 - Tratar `main` como rama protegida.
 - Hacer desarrollo solo en ramas `feature/*`, `fix/*` o equivalentes por cambio aislado.
+- Cuando haya multiples agentes trabajando desde tickets, asignar un unico orquestador como autoridad de Linear y `git`.
+- Cada ticket activo debe vivir en su propia branch y su propio `git worktree`.
 - Mantener commits atomicos: un solo cambio coherente por commit.
 - Usar mensajes `Conventional Commits` con referencia de tarea cuando exista: `feat[#Tarea]: mensaje`, `fix[#Tarea]: mensaje`.
 - Preferir `rebase` para mantener historial lineal y reducir ruido de merges intermedios.
@@ -59,6 +61,7 @@ Leer en este orden:
 - Antes de proponer o escribir codigo, leer los ADRs aplicables del area tocada.
 - Si un cambio viola estas reglas por necesidad tecnica, explicitar el trade-off y dejarlo documentado en el cambio o en un ADR.
 - Cuando una regla sea repetible como procedimiento, apoyarse en skills; cuando sea una decision dificil de revertir, apoyarse en ADRs.
+- Los agentes ejecutores no deben crear ramas, mezclar tickets en un mismo workspace ni mover estados criticos del tracker sin pasar por el orquestador.
 - En reviews, priorizar findings sobre testabilidad, fronteras de IO, manejo de errores, coherencia con lenguaje ubicuo y tamano del cambio.
 
 ## Estado actual del repo

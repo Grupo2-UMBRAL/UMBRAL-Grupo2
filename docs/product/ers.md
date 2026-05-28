@@ -48,6 +48,15 @@ Existen dos superficies principales:
 
 ## Decisiones aclaradas del ERS
 
+### Mission Design para primer release
+
+- El diseno reusable de una `Mission` se modela, para primer release, como una lista lineal de `Mission Stages`.
+- `Hint` pertenece directamente a un `Mission Stage`.
+- `Mission Node` se conserva solo como concepto de modelado futuro. No introduce contrato funcional, pantalla, API ni persistencia propia en primer release.
+- `Substage` queda fuera de alcance en primer release. Si algun texto del ERS detallado menciona subetapas, debe leerse como expansion futura y no como capacidad obligatoria del MVP.
+- `Stage Template Reuse` queda fuera de alcance en primer release. La unidad reusable soportada es la `Mission` completa, no una etapa o bloque parcial reutilizable entre misiones.
+- Las decisiones operativas de flujo en sesion para primer release actuan sobre `Mission Stages`, no sobre `Substages`.
+
 ### Trivia
 
 - La validacion de respuestas de `Trivia` ocurre automaticamente por defecto.

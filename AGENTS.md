@@ -6,6 +6,10 @@ Read this file first. Then follow the referenced documents in the order describe
 
 Issues are tracked in Linear using the workflow described in `.agents/agents/issue-tracker.md`.
 
+### Agent orchestration
+
+When work is executed from Linear tickets, use `.agents/agents/orchestrator.md` as the source of truth for ticket ownership, agent permissions, branch naming, worktree isolation, and delegation boundaries.
+
 ### Triage labels
 
 This repo uses the default canonical triage labels. See `.agents/agents/triage-labels.md`.
