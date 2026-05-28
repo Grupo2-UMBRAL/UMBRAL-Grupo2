@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MediatR;
+using Umbral.SessionOperations.Api.Application.Bootstrap.Commands;
+using Umbral.SessionOperations.Api.Application.Bootstrap.Queries;
 using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+var serviceIdentity = new ServiceIdentity("session-operations-service", "Session Operations", "session-operations");
 
 builder.Services.AddSignalR();
 builder.Services.AddUmbralApiDefaults(
@@ -28,7 +31,7 @@ builder.Services.AddUmbralApiDefaults(
         };
     });
 builder.Services.AddMediatR(typeof(Program).Assembly);
-builder.Services.AddUmbralPostgresDbContext<SessionOperationsDbContext>(builder.Configuration);
+builder.Services.AddSessionOperationsInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
@@ -36,21 +39,24 @@ app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapUmbralServiceDefaults(
-    new ServiceIdentity("session-operations-service", "Session Operations", "session-operations"),
-    configuration =>
-    {
-        var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
+app.MapUmbralServiceDefaults(serviceIdentity);
+app.MapUmbralAuthorizedApi(serviceIdentity)
+    .MapGet(
+        "/bootstrap",
+        async (ISender sender, CancellationToken cancellationToken) =>
+            Results.Ok(await sender.Send(new GetSessionOperationsBootstrapDetailsQuery(), cancellationToken)));
 
-        return new ServiceBootstrapDetails(
-            "Session Operations",
-            DatabaseConfigured: !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Postgres")),
-            Authority: authConfiguration.Authority,
-            Audience: authConfiguration.Audience,
-            RabbitMqHost: configuration["RabbitMQ:Host"],
-            SignalREnabled: configuration.GetValue("SignalR:Enabled", true));
-    });
+if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+    await sender.Send(new ApplySessionOperationsPersistenceMigrationsCommand());
+}
 
 app.MapHub<SessionOperationsHub>("/hubs/session");
 
 app.Run();
+
+public partial class Program
+{
+}

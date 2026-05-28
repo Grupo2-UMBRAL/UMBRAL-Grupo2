@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Configuration;
 
 namespace Umbral.ServiceDefaults;
 
@@ -9,12 +8,10 @@ public static class EndpointRouteBuilderExtensions
 {
     public static IEndpointRouteBuilder MapUmbralServiceDefaults(
         this IEndpointRouteBuilder endpoints,
-        ServiceIdentity serviceIdentity,
-        Func<IConfiguration, ServiceBootstrapDetails> bootstrapDetailsFactory)
+        ServiceIdentity serviceIdentity)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         ArgumentNullException.ThrowIfNull(serviceIdentity);
-        ArgumentNullException.ThrowIfNull(bootstrapDetailsFactory);
 
         endpoints.MapGet("/", () => Results.Ok(new
         {
@@ -29,10 +26,17 @@ public static class EndpointRouteBuilderExtensions
             service = serviceIdentity.ServiceName
         }));
 
-        endpoints.MapGroup($"/api/{serviceIdentity.ApiRouteSegment}")
-            .RequireAuthorization()
-            .MapGet("/bootstrap", (IConfiguration configuration) => Results.Ok(bootstrapDetailsFactory(configuration)));
-
         return endpoints;
+    }
+
+    public static RouteGroupBuilder MapUmbralAuthorizedApi(
+        this IEndpointRouteBuilder endpoints,
+        ServiceIdentity serviceIdentity)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        ArgumentNullException.ThrowIfNull(serviceIdentity);
+
+        return endpoints.MapGroup($"/api/{serviceIdentity.ApiRouteSegment}")
+            .RequireAuthorization();
     }
 }

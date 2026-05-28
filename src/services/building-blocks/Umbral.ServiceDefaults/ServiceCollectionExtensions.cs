@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
         var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
 
         services.AddProblemDetails();
+        services.AddExceptionHandler<UmbralExceptionHandler>();
         services.AddEndpointsApiExplorer();
         services.AddHealthChecks();
         services.AddAuthorization();
@@ -36,14 +38,23 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddUmbralPostgresDbContext<TContext>(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string schemaName)
         where TContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
         var connectionString = ServiceConfiguration.GetRequiredPostgresConnectionString(configuration);
-        services.AddDbContext<TContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<TContext>(options =>
+            options.UseNpgsql(
+                connectionString,
+                npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsAssembly(typeof(TContext).Assembly.FullName);
+                    npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", schemaName);
+                }));
 
         return services;
     }
