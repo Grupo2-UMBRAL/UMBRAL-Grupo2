@@ -1,24 +1,16 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
+using MediatR;
 using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Infrastructure;
+using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddProblemDetails();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddHealthChecks();
-builder.Services.AddAuthorization();
 builder.Services.AddSignalR();
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddUmbralApiDefaults(
+    builder.Configuration,
+    options =>
     {
-        var auth = builder.Configuration.GetSection("Auth");
-        options.Authority = auth["Authority"];
-        options.RequireHttpsMetadata = auth.GetValue("RequireHttpsMetadata", false);
-        options.TokenValidationParameters.ValidAudience = auth["Audience"];
-        options.TokenValidationParameters.ValidateAudience = !string.IsNullOrWhiteSpace(auth["Audience"]);
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -35,12 +27,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
-
-builder.Services.AddDbContext<SessionOperationsDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("Postgres");
-    options.UseNpgsql(connectionString);
-});
+builder.Services.AddMediatR(typeof(Program).Assembly);
+builder.Services.AddUmbralPostgresDbContext<SessionOperationsDbContext>(builder.Configuration);
 
 var app = builder.Build();
 
@@ -48,24 +36,20 @@ app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Ok(new
-{
-    service = "session-operations-service",
-    context = "Session Operations",
-    status = "bootstrapped"
-}));
-
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "session-operations-service" }));
-
-app.MapGroup("/api/session-operations")
-    .RequireAuthorization()
-    .MapGet("/bootstrap", (IConfiguration configuration) => Results.Ok(new
+app.MapUmbralServiceDefaults(
+    new ServiceIdentity("session-operations-service", "Session Operations", "session-operations"),
+    configuration =>
     {
-        context = "Session Operations",
-        dbConfigured = !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Postgres")),
-        rabbitMqHost = configuration["RabbitMQ:Host"],
-        signalREnabled = configuration.GetValue("SignalR:Enabled", true)
-    }));
+        var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
+
+        return new ServiceBootstrapDetails(
+            "Session Operations",
+            DatabaseConfigured: !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Postgres")),
+            Authority: authConfiguration.Authority,
+            Audience: authConfiguration.Audience,
+            RabbitMqHost: configuration["RabbitMQ:Host"],
+            SignalREnabled: configuration.GetValue("SignalR:Enabled", true));
+    });
 
 app.MapHub<SessionOperationsHub>("/hubs/session");
 

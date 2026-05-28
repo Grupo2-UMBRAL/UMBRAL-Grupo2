@@ -1,29 +1,13 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
+using MediatR;
 using Umbral.ScoringAudit.Api.Infrastructure;
+using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddProblemDetails();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddHealthChecks();
-builder.Services.AddAuthorization();
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        var auth = builder.Configuration.GetSection("Auth");
-        options.Authority = auth["Authority"];
-        options.RequireHttpsMetadata = auth.GetValue("RequireHttpsMetadata", false);
-        options.TokenValidationParameters.ValidAudience = auth["Audience"];
-        options.TokenValidationParameters.ValidateAudience = !string.IsNullOrWhiteSpace(auth["Audience"]);
-    });
-
-builder.Services.AddDbContext<ScoringAuditDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("Postgres");
-    options.UseNpgsql(connectionString);
-});
+builder.Services.AddUmbralApiDefaults(
+    builder.Configuration);
+builder.Services.AddMediatR(typeof(Program).Assembly);
+builder.Services.AddUmbralPostgresDbContext<ScoringAuditDbContext>(builder.Configuration);
 
 var app = builder.Build();
 
@@ -31,23 +15,18 @@ app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Ok(new
-{
-    service = "scoring-audit-service",
-    context = "Scoring and Audit",
-    status = "bootstrapped"
-}));
-
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "scoring-audit-service" }));
-
-app.MapGroup("/api/scoring-audit")
-    .RequireAuthorization()
-    .MapGet("/bootstrap", (IConfiguration configuration) => Results.Ok(new
+app.MapUmbralServiceDefaults(
+    new ServiceIdentity("scoring-audit-service", "Scoring and Audit", "scoring-audit"),
+    configuration =>
     {
-        context = "Scoring and Audit",
-        dbConfigured = !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Postgres")),
-        rabbitMqHost = configuration["RabbitMQ:Host"],
-        authority = configuration["Auth:Authority"]
-    }));
+        var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
+
+        return new ServiceBootstrapDetails(
+            "Scoring and Audit",
+            DatabaseConfigured: !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Postgres")),
+            Authority: authConfiguration.Authority,
+            Audience: authConfiguration.Audience,
+            RabbitMqHost: configuration["RabbitMQ:Host"]);
+    });
 
 app.Run();
