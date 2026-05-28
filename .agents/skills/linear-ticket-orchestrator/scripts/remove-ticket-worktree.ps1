@@ -33,15 +33,13 @@ function Invoke-Git {
 $normalizedIssueId = $IssueId.ToUpperInvariant()
 $resolvedWorktreeParent = (Resolve-Path -LiteralPath $WorktreeParent).Path
 $worktreePath = Join-Path -Path $resolvedWorktreeParent -ChildPath ('wt-{0}' -f $normalizedIssueId)
+$issueRuntimeRoot = Join-Path -Path (Join-Path -Path $resolvedWorktreeParent -ChildPath '_runtime') -ChildPath $normalizedIssueId
 
 if (-not (Test-Path -LiteralPath $worktreePath)) {
     throw "Worktree path does not exist: $worktreePath"
 }
 
-$branchName = (& git -C $worktreePath rev-parse --abbrev-ref HEAD 2>&1 | Select-Object -First 1).Trim()
-if ($LASTEXITCODE -ne 0) {
-    throw "Cannot read branch from worktree: $worktreePath"
-}
+$branchName = (Invoke-Git -Arguments @('-C', $worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD') | Select-Object -First 1).Trim()
 
 $removeArguments = @('worktree', 'remove')
 if ($Force) {
@@ -68,9 +66,16 @@ if ($DeleteBranch) {
     }
 }
 
+if (Test-Path -LiteralPath $issueRuntimeRoot) {
+    if ($PSCmdlet.ShouldProcess($issueRuntimeRoot, 'Remove runtime metadata and logs for ticket')) {
+        Remove-Item -LiteralPath $issueRuntimeRoot -Recurse -Force
+    }
+}
+
 [pscustomobject]@{
-    IssueId      = $normalizedIssueId
-    BranchName   = $branchName
-    WorktreePath = $worktreePath
+    IssueId       = $normalizedIssueId
+    BranchName    = $branchName
+    WorktreePath  = $worktreePath
     BranchDeleted = [bool]$DeleteBranch
+    RuntimePath   = $issueRuntimeRoot
 }

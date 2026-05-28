@@ -36,29 +36,38 @@ Run ticket execution from Linear without letting workers own global repo state.
    - `fix/<issue-id>-<slug>`
    - `chore/<issue-id>-<slug>`
 5. Create a dedicated `git worktree` for that branch.
-6. Dispatch the worker with:
+6. Initialize runtime metadata and log files outside the branch content.
+7. Dispatch the worker with:
    - ticket ID
+   - exact worktree path
+   - expected branch
    - acceptance criteria
    - bounded context
    - relevant ADRs
    - explicit do-not-cross boundaries
-7. Receive worker output and run validation.
-8. Decide next state:
+8. Require the worker to validate context with `assert-ticket-worktree.ps1` before editing.
+9. If the worker cannot prove it is inside the assigned worktree, abort the run.
+10. Receive worker output and run validation.
+11. Decide next state:
    - keep moving toward PR
    - send back to human
    - split into follow-up tickets
    - return to triage
-9. Pause for human review of the completed branch.
-10. After explicit approval, squash to one final commit on the ticket branch.
-11. Update Linear with evidence and next action.
-12. Clean branch/worktree only after merge or explicit close.
+12. Pause for human review of the completed branch.
+13. After explicit approval, squash to one final commit on the ticket branch.
+14. Update Linear with evidence and next action.
+15. Clean branch/worktree only after merge or explicit close.
 
 ## Bundled scripts
 
 Use these scripts instead of hand-writing `git worktree` commands each time:
 
 - `scripts/new-ticket-worktree.ps1`
+- `scripts/initialize-ticket-runtime.ps1`
+- `scripts/assert-ticket-worktree.ps1`
 - `scripts/remove-ticket-worktree.ps1`
+- `scripts/write-ticket-worker-log.ps1`
+- `scripts/watch-ticket-worker-log.ps1`
 
 Run them with `-WhatIf` first when validating the flow on a real ticket.
 
@@ -83,6 +92,7 @@ Before moving a ticket forward, verify:
 - tests for touched behavior ran or an explicit gap is documented
 - docs changed when a contract, decision, or workflow changed
 - branch, worktree, and ticket ID still match
+- runtime session metadata still points to the same worktree and branch
 
 ## Handoff contract
 
@@ -91,6 +101,7 @@ Every worker return should include:
 - Linear ticket ID
 - branch name
 - worktree path
+- runtime log path
 - files touched
 - tests run
 - open risks

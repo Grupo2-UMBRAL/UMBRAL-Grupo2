@@ -54,20 +54,26 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
 6. Crear `git worktree` dedicado con formato `../wt-<issue-id>`.
 7. Inyectar al worker:
    - ID del ticket
+   - ruta exacta del `worktree`
+   - branch esperada
    - criterios de aceptacion
    - bounded context afectado
    - ADRs relevantes
    - restricciones de permisos
-8. Recibir resultado, correr validacion y review del alcance.
-9. Actualizar Linear con evidencia tecnica:
+8. Antes de editar, exigir que el worker valide contexto con `assert-ticket-worktree.ps1`.
+9. Si el worker no puede demostrar que esta parado en el `worktree` correcto, abortar esa ejecucion.
+10. Mantener log operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/worker.log`.
+11. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
+12. Recibir resultado, correr validacion y review del alcance.
+13. Actualizar Linear con evidencia tecnica:
    - branch
    - pruebas ejecutadas
    - riesgos abiertos
    - decision siguiente
-10. Esperar revision humana sobre la branch terminada antes de consolidar historial.
-11. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
-12. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
-13. Tras merge o cierre, limpiar `worktree` y branch local.
+14. Esperar revision humana sobre la branch terminada antes de consolidar historial.
+15. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
+16. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
+17. Tras merge o cierre, limpiar `worktree` y branch local.
 
 ## Convenciones de branch y worktree
 
@@ -86,6 +92,34 @@ git worktree remove ../wt-LIN-123
 ```
 
 Usar un `worktree` por ticket evita contaminacion entre agentes y permite ejecutar varios tickets en paralelo.
+
+## Guardrails de ejecucion
+
+- El worker debe recibir la ruta exacta del `worktree`, no solo el nombre de la branch.
+- El worker debe validar contexto con `scripts/assert-ticket-worktree.ps1` antes de editar, probar o generar handoff.
+- Si `cwd`, branch o issue no coinciden con la sesion registrada, la ejecucion debe abortar.
+- Los logs de worker deben vivir en `.worktrees/_runtime/<ISSUE-ID>/` para que el branch quede libre de ruido operacional.
+
+## Logs y observabilidad
+
+Scripts de soporte:
+
+- `scripts/initialize-ticket-runtime.ps1`
+- `scripts/assert-ticket-worktree.ps1`
+- `scripts/write-ticket-worker-log.ps1`
+- `scripts/watch-ticket-worker-log.ps1`
+
+Convencion:
+
+- sesion: `.worktrees/_runtime/<ISSUE-ID>/session.json`
+- log vivo: `.worktrees/_runtime/<ISSUE-ID>/worker.log`
+- handoff: `.worktrees/_runtime/<ISSUE-ID>/handoff.md`
+
+Ejemplo de seguimiento humano:
+
+```powershell
+& '.agents/skills/linear-ticket-orchestrator/scripts/watch-ticket-worker-log.ps1' -IssueId 'UMB-5' -WorktreeParent '.worktrees'
+```
 
 ## Criterios para no delegar
 
