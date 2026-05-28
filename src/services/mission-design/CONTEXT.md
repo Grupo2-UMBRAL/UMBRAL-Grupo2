@@ -5,27 +5,27 @@ Contexto responsable del diseno reusable de las experiencias de juego. Aqui vive
 ## Language
 
 **Mission**:
-Plantilla reusable que define una experiencia de juego. Una **Mission** contiene sus **Mission Stages**, **Hints** y un **Game Type**.
+Plantilla reusable que define una experiencia de juego. En primer release, una **Mission** contiene una lista lineal de **Mission Stages** y un **Game Type**. Las **Hints** viven dentro de cada **Mission Stage**.
 _Avoid_: LiveSession, partida, ejecucion
 
 **Mission Stage**:
-Nodo jugable definido dentro de una **Mission**. Una **Mission Stage** expresa el orden base dentro de la mision y representa, por defecto, una unidad de juego completa, salvo que contenga subetapas explicitas.
+Unidad jugable y ordenable definida dentro de una **Mission**. En primer release, una **Mission Stage** es la unidad minima de diseno, activacion y flujo operativo soportada por producto.
 _Avoid_: Session Stage, etapa ejecutada, paso puramente visual
 
 **Mission Node**:
-Concepto estructural para modelar composicion dentro de una **Mission**. Un **Mission Node** puede representar una **Mission Stage** completa o una subetapa dentro de una jerarquia de etapas reutilizable.
+Concepto estructural reservado para posible composicion futura dentro de una **Mission**. En primer release no se expone como capacidad funcional separada: todo nodo soportado por producto se materializa como **Mission Stage**.
 _Avoid_: LiveSession node, UI tree
 
 **Substage**:
-Etapa hija dentro de una **Mission Stage** o dentro de otro **Mission Node**. Una **Substage** permite descomponer un bloque de juego mayor sin dejar de pertenecer al diseno reusable de la mision.
+Posible etapa hija dentro de una **Mission Stage** o dentro de otro **Mission Node**. Queda fuera de alcance en primer release y no debe asumirse en contratos funcionales ni flujo de sesion actual.
 _Avoid_: session checkpoint, runtime progress marker
 
 **Stage Template Reuse**:
-Capacidad de usar una **Mission Stage** o un bloque compuesto de nodos como plantilla dentro de otra **Mission**, ya sea reutilizandolo como bloque completo o aplicando modificaciones sobre esa base.
+Posible capacidad futura de reutilizar una **Mission Stage** o bloque compuesto dentro de otra **Mission**. Queda fuera de alcance en primer release. Unidad reusable soportada hoy: **Mission** completa.
 _Avoid_: copy-paste accidental, runtime cloning
 
 **Hint**:
-Pieza de informacion asociada a una **Mission Stage**. Puede ser visible durante la sesion o revelarse como solucion al finalizar.
+Pieza de informacion asociada directamente a una **Mission Stage**. Puede ser visible durante la sesion o revelarse como solucion al finalizar.
 _Avoid_: Event, evidence, notification
 
 **Game Type**:
@@ -41,10 +41,10 @@ Dev: "Entonces el Game Type pertenece al diseno, no a la operacion."
 Experto de dominio: "Correcto. La sesion hereda ese tipo desde la Mission."
 
 Dev: "Una Mission Stage es siempre un unico juego indivisible?"
-Experto de dominio: "Por defecto si, pero puede contener subetapas cuando el diseno necesite descomponer ese bloque."
+Experto de dominio: "En primer release si. Si luego necesitamos descomponerla, eso sera una expansion explicita."
 
 Dev: "Y esa etapa puede usarse otra vez en otra Mission?"
-Experto de dominio: "Si. Una Mission Stage o un bloque compuesto puede reutilizarse como plantilla en otra mision, completo o con ajustes."
+Experto de dominio: "No en primer release. Reuse soportado hoy ocurre al nivel de Mission completa."
 
 Dev: "Entonces, Mission Stage y Mission Node son lo mismo?"
-Experto de dominio: "No exactamente. Mission Stage es la unidad jugable y ordenable de la mision. Mission Node es el concepto estructural que permite composicion y subetapas."
+Experto de dominio: "En producto actual, tratarlos igual. Mission Node queda reservado como concepto futuro, no como capacidad separada."
