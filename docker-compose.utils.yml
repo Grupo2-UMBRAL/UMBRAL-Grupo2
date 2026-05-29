@@ -49,5 +49,14 @@ services:
       - ./:/workspace
       - nuget-cache:/root/.nuget/packages
 
+  web-package-manager:
+    image: node:22-alpine
+    working_dir: /workspace/src/apps/web
+    entrypoint: ["npm"]
+    volumes:
+      - ./:/workspace
+      - web-npm-cache:/root/.npm
+
 volumes:
   nuget-cache:
+  web-npm-cache:

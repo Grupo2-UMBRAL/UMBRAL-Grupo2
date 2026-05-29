@@ -155,6 +155,34 @@ services:
       keycloak:
         condition: service_started
 
+  web:
+    build:
+      context: ./src/apps/web
+      dockerfile: Dockerfile
+    container_name: umbral-web
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    environment:
+      NODE_ENV: development
+      PORT: ${WEB_PORT}
+      WATCHPACK_POLLING: true
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID}
+      EDGE_PROXY_INTERNAL_BASE_URL: ${EDGE_PROXY_INTERNAL_BASE_URL}
+      KEYCLOAK_INTERNAL_BASE_URL: ${KEYCLOAK_INTERNAL_BASE_URL}
+      NEXT_PUBLIC_EDGE_PROXY_BASE_URL: ${NEXT_PUBLIC_EDGE_PROXY_BASE_URL}
+      NEXT_PUBLIC_KEYCLOAK_BASE_URL: ${NEXT_PUBLIC_KEYCLOAK_BASE_URL}
+      NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH}
+    ports:
+      - "${WEB_PORT}:3000"
+    volumes:
+      - ./src/apps/web:/app
+      - web-node-modules:/app/node_modules
+    depends_on:
+      edge-proxy:
+        condition: service_started
+
 volumes:
   postgres-data:
   rabbitmq-data:
+  web-node-modules:
