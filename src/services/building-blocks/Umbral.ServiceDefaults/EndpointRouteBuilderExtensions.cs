@@ -39,4 +39,50 @@ public static class EndpointRouteBuilderExtensions
         return endpoints.MapGroup($"/api/{serviceIdentity.ApiRouteSegment}")
             .RequireAuthorization();
     }
+
+    public static RouteGroupBuilder MapUmbralRoleSmokeRoutes(
+        this RouteGroupBuilder authorizedApi,
+        ServiceIdentity serviceIdentity)
+    {
+        ArgumentNullException.ThrowIfNull(authorizedApi);
+        ArgumentNullException.ThrowIfNull(serviceIdentity);
+
+        MapRoleSmokeRoute(
+            authorizedApi,
+            serviceIdentity,
+            "administrator",
+            UmbralAuthorizationPolicies.Administrator,
+            UmbralRoles.Administrator);
+        MapRoleSmokeRoute(
+            authorizedApi,
+            serviceIdentity,
+            "operator",
+            UmbralAuthorizationPolicies.Operator,
+            UmbralRoles.Operator);
+        MapRoleSmokeRoute(
+            authorizedApi,
+            serviceIdentity,
+            "participant",
+            UmbralAuthorizationPolicies.Participant,
+            UmbralRoles.Participant);
+
+        return authorizedApi;
+    }
+
+    private static void MapRoleSmokeRoute(
+        IEndpointRouteBuilder authorizedApi,
+        ServiceIdentity serviceIdentity,
+        string routeSegment,
+        string policyName,
+        string role)
+    {
+        authorizedApi.MapGet($"/smoke/{routeSegment}", () => Results.Ok(new
+            {
+                service = serviceIdentity.ServiceName,
+                context = serviceIdentity.ContextName,
+                requiredRole = role,
+                status = "authorized"
+            }))
+            .RequireAuthorization(policyName);
+    }
 }

@@ -59,7 +59,7 @@ services:
   mission-design-service:
     build:
       context: .
-      dockerfile: src/services/mission-design/Umbral.MissionDesign.Api/Dockerfile
+      dockerfile: infra/keycloak/docker/mission-design.Dockerfile
     container_name: umbral-mission-design-service
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -79,7 +79,7 @@ services:
   session-operations-service:
     build:
       context: .
-      dockerfile: src/services/session-operations/Umbral.SessionOperations.Api/Dockerfile
+      dockerfile: infra/keycloak/docker/session-operations.Dockerfile
     container_name: umbral-session-operations-service
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -106,7 +106,7 @@ services:
   scoring-audit-service:
     build:
       context: .
-      dockerfile: src/services/scoring-audit/Umbral.ScoringAudit.Api/Dockerfile
+      dockerfile: infra/keycloak/docker/scoring-audit.Dockerfile
     container_name: umbral-scoring-audit-service
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -132,7 +132,7 @@ services:
   edge-proxy:
     build:
       context: .
-      dockerfile: src/apps/edge-proxy/Umbral.EdgeProxy/Dockerfile
+      dockerfile: infra/keycloak/docker/edge-proxy.Dockerfile
     container_name: umbral-edge-proxy
     environment:
       ASPNETCORE_ENVIRONMENT: Development

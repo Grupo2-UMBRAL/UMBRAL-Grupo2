@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -17,12 +19,25 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
+        services.AddSingleton(authConfiguration);
 
         services.AddProblemDetails();
         services.AddExceptionHandler<UmbralExceptionHandler>();
         services.AddEndpointsApiExplorer();
         services.AddHealthChecks();
-        services.AddAuthorization();
+        services.AddSingleton<IClaimsTransformation, KeycloakRoleClaimsTransformation>();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(
+                UmbralAuthorizationPolicies.Administrator,
+                policy => policy.RequireRole(UmbralRoles.Administrator));
+            options.AddPolicy(
+                UmbralAuthorizationPolicies.Operator,
+                policy => policy.RequireRole(UmbralRoles.Operator));
+            options.AddPolicy(
+                UmbralAuthorizationPolicies.Participant,
+                policy => policy.RequireRole(UmbralRoles.Participant));
+        });
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -30,6 +45,8 @@ public static class ServiceCollectionExtensions
                 options.RequireHttpsMetadata = authConfiguration.RequireHttpsMetadata;
                 options.TokenValidationParameters.ValidAudience = authConfiguration.Audience;
                 options.TokenValidationParameters.ValidateAudience = true;
+                options.TokenValidationParameters.ClockSkew = TimeSpan.Zero;
+                options.TokenValidationParameters.RoleClaimType = ClaimTypes.Role;
                 configureJwtBearer?.Invoke(options);
             });
 

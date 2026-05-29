@@ -1,4 +1,23 @@
 services:
+  auth-smoke-tests:
+    image: python:3.12-alpine
+    container_name: umbral-auth-smoke-tests
+    working_dir: /workspace
+    entrypoint: ["python", "/workspace/infra/keycloak/verify/verify_auth.py"]
+    environment:
+      EDGE_PROXY_URL: http://edge-proxy:8080
+      KEYCLOAK_URL: http://edge-proxy:8080/auth
+      KEYCLOAK_REALM: umbral
+      SHORT_LIVED_CLIENT_ID: umbral-web-shortlived
+      AUTH_SMOKE_SCENARIO: ${AUTH_SMOKE_SCENARIO:-all}
+    depends_on:
+      edge-proxy:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    volumes:
+      - ./:/workspace
+
   dotnet-sdk:
     image: mcr.microsoft.com/dotnet/sdk:8.0
     container_name: umbral-dotnet-sdk

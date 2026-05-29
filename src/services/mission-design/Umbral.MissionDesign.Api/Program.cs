@@ -19,11 +19,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapUmbralServiceDefaults(serviceIdentity);
-app.MapUmbralAuthorizedApi(serviceIdentity)
+var authorizedApi = app.MapUmbralAuthorizedApi(serviceIdentity);
+authorizedApi
     .MapGet(
         "/bootstrap",
         async (ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetMissionDesignBootstrapDetailsQuery(), cancellationToken)));
+authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {
