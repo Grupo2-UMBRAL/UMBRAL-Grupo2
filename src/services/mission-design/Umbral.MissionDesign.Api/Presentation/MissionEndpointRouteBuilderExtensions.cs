@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Umbral.MissionDesign.Api.Application.MissionStages;
 using Umbral.MissionDesign.Api.Application.Missions;
 using Umbral.ServiceDefaults;
 
@@ -68,6 +69,66 @@ public static class MissionEndpointRouteBuilderExtensions
             "/{missionId:guid}/deactivate",
             async (Guid missionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new DeactivateMissionCommand(missionId), cancellationToken)));
+
+        missionRoutes.MapGet(
+            "/{missionId:guid}/stages",
+            async (Guid missionId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new ListMissionStagesQuery(missionId), cancellationToken)));
+
+        missionRoutes.MapPost(
+            "/{missionId:guid}/stages",
+            async (
+                Guid missionId,
+                [FromBody] CreateMissionStageRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                var missionStage = await sender.Send(
+                    new CreateMissionStageCommand(
+                        missionId,
+                        request.Name,
+                        request.Order,
+                        request.GameType,
+                        request.ExpectedQrHash,
+                        request.TriviaValidationCriteria),
+                    cancellationToken);
+
+                return Results.Created($"/api/mission-design/stages/{missionStage.Id}", missionStage);
+            });
+
+        var missionStageRoutes = authorizedApi
+            .MapGroup("/stages")
+            .RequireAuthorization(UmbralAuthorizationPolicies.Administrator);
+
+        missionStageRoutes.MapGet(
+            "/{missionStageId:guid}",
+            async (Guid missionStageId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetMissionStageByIdQuery(missionStageId), cancellationToken)));
+
+        missionStageRoutes.MapPost(
+            "/{missionStageId:guid}/hints",
+            async (
+                Guid missionStageId,
+                [FromBody] CreateMissionStageHintRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+            {
+                var hint = await sender.Send(
+                    new CreateMissionStageHintCommand(
+                        missionStageId,
+                        request.Content,
+                        request.IsSolution,
+                        request.Latitude,
+                        request.Longitude),
+                    cancellationToken);
+
+                return Results.Created($"/api/mission-design/stages/{missionStageId}", hint);
+            });
+
+        missionStageRoutes.MapPost(
+            "/{missionStageId:guid}/deactivate",
+            async (Guid missionStageId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new DeactivateMissionStageCommand(missionStageId), cancellationToken)));
 
         return authorizedApi;
     }

@@ -63,6 +63,7 @@ Leer en este orden:
 - Cuando una regla sea repetible como procedimiento, apoyarse en skills; cuando sea una decision dificil de revertir, apoyarse en ADRs.
 - Los agentes ejecutores no deben crear ramas, mezclar tickets en un mismo workspace ni mover estados criticos del tracker sin pasar por el orquestador.
 - En reviews, priorizar findings sobre testabilidad, fronteras de IO, manejo de errores, coherencia con lenguaje ubicuo y tamano del cambio.
+- Si el trabajo entra en loops de `docker compose`, preferir `ps`, `config`, logs acotados por servicio y archivos en `.worktrees/_runtime/` sobre streams largos en chat; para eso usar `.agents/skills/docker-compose-context-hygiene/`.
 
 ## Estado actual del repo
 
