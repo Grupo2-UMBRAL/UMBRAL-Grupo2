@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Umbral.MissionDesign.Api.Application.MissionStages;
 using Umbral.MissionDesign.Api.Application.Missions;
 using Umbral.MissionDesign.Api.Domain.Missions;
 using Umbral.MissionDesign.Api.Infrastructure;
@@ -289,6 +290,16 @@ internal sealed class MissionApiFactory : WebApplicationFactory<Program>
 
         await dbContext.Database.EnsureCreatedAsync();
         dbContext.Missions.Add(mission);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task SeedMissionStageAsync(MissionStage missionStage)
+    {
+        await using var scope = Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MissionDesignDbContext>();
+
+        await dbContext.Database.EnsureCreatedAsync();
+        dbContext.MissionStages.Add(missionStage);
         await dbContext.SaveChangesAsync();
     }
 
