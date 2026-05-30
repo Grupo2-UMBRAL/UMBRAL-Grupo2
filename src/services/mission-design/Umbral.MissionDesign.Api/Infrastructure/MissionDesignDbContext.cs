@@ -35,6 +35,9 @@ public sealed class MissionDesignDbContext(DbContextOptions<MissionDesignDbConte
                 .IsRequired();
             mission.Property(entity => entity.IsActive)
                 .IsRequired();
+            mission.Property(entity => entity.NodeTreeJson)
+                .HasColumnType("text")
+                .IsRequired();
 
             mission.HasIndex(entity => entity.Name)
                 .IsUnique();

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Umbral.MissionDesign.Api.Infrastructure;
@@ -11,9 +12,11 @@ using Umbral.MissionDesign.Api.Infrastructure;
 namespace Umbral.MissionDesign.Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MissionDesignDbContext))]
-    partial class MissionDesignDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260530123000_AddMissionNodeTreeJson")]
+    partial class AddMissionNodeTreeJson
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

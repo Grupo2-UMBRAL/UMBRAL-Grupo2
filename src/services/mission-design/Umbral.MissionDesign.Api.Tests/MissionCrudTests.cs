@@ -56,6 +56,102 @@ public sealed class MissionDomainTests
     }
 
     [Fact]
+    public void Create_RejectsDuplicateSiblingOrdersInNodeTree()
+    {
+        var duplicateOrderLeafA = MissionNode.Create(
+            Guid.NewGuid(),
+            "Leaf A",
+            1,
+            true,
+            timeBudgetMinutes: 20,
+            gameType: MissionGameType.TreasureHunt,
+            expectedQrHash: "hash-a");
+        var duplicateOrderLeafB = MissionNode.Create(
+            Guid.NewGuid(),
+            "Leaf B",
+            1,
+            true,
+            timeBudgetMinutes: 25,
+            gameType: MissionGameType.Trivia,
+            triviaValidAnswer: "answer");
+
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            MissionNode.Create(
+                Guid.NewGuid(),
+                "Composite",
+                1,
+                true,
+                defaultTimeBudgetMinutes: 45,
+                children:
+                [
+                    duplicateOrderLeafA,
+                    duplicateOrderLeafB
+                ]));
+
+        Assert.Equal("mission_node_order_duplicate", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public void Create_RejectsIncompleteHintCoordinates()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            MissionHint.Create(
+                Guid.NewGuid(),
+                "Hint with incomplete coordinates",
+                false,
+                latitude: 10.1m));
+
+        Assert.Equal("mission_hint_coordinates_incomplete", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public void Create_ResolvesInheritedTimeBudgetForLeafNodes()
+    {
+        var childStage = MissionNode.Create(
+            Guid.NewGuid(),
+            "Leaf Stage",
+            1,
+            true,
+            timeBudgetMinutes: null,
+            gameType: MissionGameType.TreasureHunt,
+            expectedQrHash: "expected-qr-hash",
+            hints:
+            [
+                MissionHint.Create(
+                    Guid.NewGuid(),
+                    "Visible clue",
+                    false)
+            ]);
+        var mission = Mission.Create(
+            Guid.NewGuid(),
+            "Tree Mission",
+            "Tree-shaped mission.",
+            "Medium",
+            90,
+            MissionGameType.Trivia,
+            [
+                MissionNode.Create(
+                    Guid.NewGuid(),
+                    "Root Block",
+                    1,
+                    true,
+                    defaultTimeBudgetMinutes: 45,
+                    children:
+                    [
+                        childStage
+                    ])
+            ]);
+
+        var rootNode = mission.Nodes.Single();
+        var leafNode = rootNode.Children.Single();
+
+        Assert.Equal(45, leafNode.ResolveTimeBudgetMinutes(rootNode.ResolveTimeBudgetMinutes(mission.MaximumDurationMinutes)));
+        Assert.Equal("Visible clue", leafNode.Hints.Single().Content);
+    }
+
+    [Fact]
     public void Deactivate_RejectsAlreadyInactiveMission()
     {
         var mission = Mission.Create(
@@ -100,6 +196,58 @@ public sealed class MissionEndpointTests
         Assert.Equal("City Circuit", mission.Name);
         Assert.Equal(MissionGameType.TreasureHunt, mission.GameType);
         Assert.True(mission.IsActive);
+        Assert.Empty(mission.Nodes);
+    }
+
+    [Fact]
+    public async Task CreateMission_PersistsNodeTree()
+    {
+        await using var factory = new MissionApiFactory();
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/mission-design/missions",
+            new CreateMissionRequest(
+                "City Circuit",
+                "Route through control points.",
+                "Medium",
+                75,
+                MissionGameType.TreasureHunt,
+                [
+                    new MissionNodeRequest(
+                        Name: "Root Block",
+                        Order: 1,
+                        IsActive: true,
+                        DefaultTimeBudgetMinutes: 40,
+                        Children:
+                        [
+                            new MissionNodeRequest(
+                                Name: "Leaf Stage",
+                                Order: 1,
+                                IsActive: true,
+                                TimeBudgetMinutes: null,
+                                GameType: MissionGameType.TreasureHunt,
+                                ExpectedQrHash: "expected-qr-hash",
+                                Hints:
+                                [
+                                    new MissionHintRequest(
+                                        Content: "Visible clue",
+                                        IsSolution: false)
+                                ])
+                        ])
+                ]));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var mission = await response.Content.ReadFromJsonAsync<MissionResponse>();
+
+        Assert.NotNull(mission);
+        var rootNode = Assert.Single(mission.Nodes);
+        Assert.Equal("Root Block", rootNode.Name);
+        var leafNode = Assert.Single(rootNode.Children);
+        Assert.Equal("Leaf Stage", leafNode.Name);
+        Assert.Equal(40, leafNode.ResolvedTimeBudgetMinutes);
+        Assert.Equal("Visible clue", Assert.Single(leafNode.Hints).Content);
     }
 
     [Fact]
@@ -151,7 +299,8 @@ public sealed class MissionEndpointTests
                 "Updated Mission",
                 "Updated description.",
                 "Hard",
-                95));
+                95,
+                MissionGameType.TreasureHunt));
 
         response.EnsureSuccessStatusCode();
 
@@ -162,7 +311,58 @@ public sealed class MissionEndpointTests
         Assert.Equal("Updated description.", mission.Description);
         Assert.Equal("Hard", mission.Difficulty);
         Assert.Equal(95, mission.MaximumDurationMinutes);
+        Assert.Equal(MissionGameType.TreasureHunt, mission.GameType);
+    }
+
+    [Fact]
+    public async Task UpdateMission_UpdatesCatalogGameType_AndNodeTree()
+    {
+        await using var factory = new MissionApiFactory();
+        var existingMission = Mission.Create(
+            Guid.NewGuid(),
+            "Mixed Mission",
+            "Original description.",
+            "Medium",
+            60,
+            MissionGameType.TreasureHunt);
+        await factory.SeedMissionAsync(existingMission);
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/mission-design/missions/{existingMission.Id}",
+            new UpdateMissionRequest(
+                "Mixed Mission",
+                "Original description.",
+                "Medium",
+                60,
+                MissionGameType.Trivia,
+                [
+                    new MissionNodeRequest(
+                        Name: "Root Block",
+                        Order: 1,
+                        IsActive: true,
+                        DefaultTimeBudgetMinutes: 25,
+                        Children:
+                        [
+                            new MissionNodeRequest(
+                                Name: "Trivia Stage",
+                                Order: 1,
+                                IsActive: true,
+                                GameType: MissionGameType.Trivia,
+                                TriviaValidAnswer: "42")
+                        ])
+                ]));
+
+        response.EnsureSuccessStatusCode();
+
+        var mission = await response.Content.ReadFromJsonAsync<MissionResponse>();
+
+        Assert.NotNull(mission);
         Assert.Equal(MissionGameType.Trivia, mission.GameType);
+        var rootNode = Assert.Single(mission.Nodes);
+        var leafNode = Assert.Single(rootNode.Children);
+        Assert.Equal(MissionGameType.Trivia, leafNode.GameType);
+        Assert.Equal(25, leafNode.ResolvedTimeBudgetMinutes);
     }
 
     [Fact]
@@ -186,6 +386,50 @@ public sealed class MissionEndpointTests
         Assert.Equal(existingMission.Id, mission.Id);
         Assert.Equal("Checkpoint Mission", mission.Name);
         Assert.Equal("Detailed mission.", mission.Description);
+        Assert.Empty(mission.Nodes);
+    }
+
+    [Fact]
+    public async Task GetMissionById_ReturnsPersistedNodeTree()
+    {
+        await using var factory = new MissionApiFactory();
+        var existingMission = Mission.Create(
+            Guid.NewGuid(),
+            "Tree Mission",
+            "Detailed mission.",
+            "Medium",
+            60,
+            MissionGameType.Trivia,
+            [
+                MissionNode.Create(
+                    Guid.NewGuid(),
+                    "Root Block",
+                    1,
+                    true,
+                    defaultTimeBudgetMinutes: 30,
+                    children:
+                    [
+                        MissionNode.Create(
+                            Guid.NewGuid(),
+                            "Leaf Stage",
+                            1,
+                            true,
+                            timeBudgetMinutes: null,
+                            gameType: MissionGameType.Trivia,
+                            triviaValidAnswer: "answer")
+                    ])
+            ]);
+        await factory.SeedMissionAsync(existingMission);
+        var client = factory.CreateAuthorizedClient();
+
+        var mission = await client.GetFromJsonAsync<MissionResponse>(
+            $"/api/mission-design/missions/{existingMission.Id}");
+
+        Assert.NotNull(mission);
+        var rootNode = Assert.Single(mission.Nodes);
+        var leafNode = Assert.Single(rootNode.Children);
+        Assert.Equal(30, leafNode.ResolvedTimeBudgetMinutes);
+        Assert.Equal(MissionGameType.Trivia, leafNode.GameType);
     }
 
     [Fact]
