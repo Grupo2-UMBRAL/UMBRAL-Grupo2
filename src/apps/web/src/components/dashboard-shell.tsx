@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/logout-button";
 import { LiveSessionConnection } from "@/components/live-session-connection";
@@ -13,6 +14,8 @@ type DashboardShellProps = {
   title: string;
   summary: string;
   focus: string[];
+  mainContent?: ReactNode;
+  sideContent?: ReactNode;
 };
 
 function formatExpiryTimestamp(expiresAt: string) {
@@ -29,7 +32,9 @@ export function DashboardShell({
   session,
   title,
   summary,
-  focus
+  focus,
+  mainContent,
+  sideContent
 }: DashboardShellProps) {
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -95,6 +100,8 @@ export function DashboardShell({
         </section>
 
         <ServiceStatusBoard accessToken={session.accessToken} refreshKey={refreshKey} role={role} />
+
+        {mainContent}
       </section>
 
       <aside className="shell-side">
@@ -120,6 +127,8 @@ export function DashboardShell({
             <li>Protected service checks surface live 401 or 403 failures.</li>
           </ul>
         </section>
+
+        {sideContent}
       </aside>
     </main>
   );

@@ -38,7 +38,9 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -146,6 +148,12 @@ input {
   border: 1px solid rgba(82, 70, 57, 0.16);
   background: rgba(255, 255, 255, 0.9);
   color: var(--text);
+}
+
+.textarea-input {
+  min-height: 8.5rem;
+  padding: 0.9rem 1rem;
+  resize: vertical;
 }
 
 .input:focus-visible {
@@ -353,6 +361,173 @@ input {
   color: var(--text-soft);
 }
 
+.muted-copy,
+.field-hint {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.field-hint {
+  font-size: 0.9rem;
+}
+
+.banner-error,
+.banner-success {
+  margin: 0;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(75, 64, 51, 0.1);
+}
+
+.banner-error {
+  color: var(--red);
+  background: rgba(181, 73, 63, 0.08);
+}
+
+.banner-success {
+  color: var(--green);
+  background: rgba(46, 125, 79, 0.09);
+}
+
+.mission-summary-grid,
+.mission-workspace-grid,
+.form-grid-two {
+  display: grid;
+  gap: 1rem;
+}
+
+.mission-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mission-workspace-grid {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.mission-list-panel,
+.mission-editor-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(75, 64, 51, 0.1);
+  background: var(--surface-strong);
+}
+
+.mission-list-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.mission-list-header h3 {
+  margin: 0.2rem 0 0;
+  font-size: 1.35rem;
+}
+
+.mission-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mission-list-item {
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(75, 64, 51, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  display: grid;
+  gap: 0.8rem;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.mission-list-item:hover,
+.mission-list-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(39, 105, 199, 0.25);
+  box-shadow: 0 12px 28px rgba(61, 45, 30, 0.08);
+}
+
+.mission-list-item.is-active {
+  border-color: rgba(39, 105, 199, 0.34);
+  background: rgba(39, 105, 199, 0.08);
+}
+
+.mission-list-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.mission-list-item p {
+  margin: 0;
+}
+
+.mission-meta-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.mission-meta-grid dt {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.mission-meta-grid dd {
+  margin: 0.25rem 0 0;
+}
+
+.metric-value {
+  margin: 0.4rem 0 0;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+
+.metric-success {
+  color: var(--green);
+}
+
+.metric-danger {
+  color: var(--red);
+}
+
+.mission-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.danger-button {
+  color: var(--red);
+  background: rgba(181, 73, 63, 0.12);
+}
+
+.mission-detail-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.empty-state {
+  padding: 1rem;
+  border-radius: var(--radius-control);
+  border: 1px dashed rgba(75, 64, 51, 0.18);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.empty-state p {
+  margin: 0.45rem 0 0;
+}
+
 .form-error {
   margin: 0;
   color: var(--red);
@@ -380,11 +555,20 @@ input {
   }
 
   .focus-list,
-  .status-grid {
+  .status-grid,
+  .mission-summary-grid,
+  .mission-workspace-grid,
+  .form-grid-two,
+  .mission-detail-grid {
     grid-template-columns: 1fr;
   }
 
   .section-heading {
+    flex-direction: column;
+  }
+
+  .mission-list-header,
+  .mission-list-item-top {
     flex-direction: column;
   }
 }

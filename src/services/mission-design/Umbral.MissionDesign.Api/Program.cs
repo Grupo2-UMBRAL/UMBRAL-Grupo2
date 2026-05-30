@@ -2,6 +2,7 @@ using MediatR;
 using Umbral.MissionDesign.Api.Application.Bootstrap.Commands;
 using Umbral.MissionDesign.Api.Application.Bootstrap.Queries;
 using Umbral.MissionDesign.Api.Infrastructure;
+using Umbral.MissionDesign.Api.Presentation;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,7 @@ authorizedApi
         async (ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetMissionDesignBootstrapDetailsQuery(), cancellationToken)));
 authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
+authorizedApi.MapMissionRoutes();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {
