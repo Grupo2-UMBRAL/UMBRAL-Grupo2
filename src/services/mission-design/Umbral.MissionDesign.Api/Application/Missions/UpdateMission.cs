@@ -10,7 +10,9 @@ public sealed record UpdateMissionCommand(
     string Name,
     string Description,
     string Difficulty,
-    int MaximumDurationMinutes) : IRequest<MissionResponse>;
+    int MaximumDurationMinutes,
+    string GameType,
+    IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>;
 
 public sealed class UpdateMissionCommandHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<UpdateMissionCommand, MissionResponse>
@@ -35,6 +37,12 @@ public sealed class UpdateMissionCommandHandler(MissionDesignDbContext dbContext
             request.Description,
             request.Difficulty,
             request.MaximumDurationMinutes);
+        mission.UpdateCatalogGameType(request.GameType);
+
+        if (request.Nodes is not null)
+        {
+            mission.ReplaceNodes(request.Nodes.Select(node => node.ToDomain()).ToArray());
+        }
 
         var nameAlreadyExists = await dbContext.Missions
             .AnyAsync(

@@ -508,6 +508,12 @@ textarea {
   gap: 0.8rem;
 }
 
+.tree-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
 .danger-button {
   color: var(--red);
   background: rgba(181, 73, 63, 0.12);
@@ -531,6 +537,108 @@ textarea {
 .form-error {
   margin: 0;
   color: var(--red);
+}
+
+.mission-node-list,
+.hint-editor-list,
+.node-subsection {
+  display: grid;
+  gap: 1rem;
+}
+
+.tree-empty-state {
+  padding: 1rem;
+  border-radius: var(--radius-control);
+  border: 1px dashed rgba(75, 64, 51, 0.18);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.tree-empty-state p {
+  margin: 0.45rem 0 0;
+}
+
+.mission-node-card,
+.hint-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(75, 64, 51, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.mission-node-card {
+  border-left: 4px solid rgba(39, 105, 199, 0.16);
+}
+
+.mission-node-header,
+.node-actions,
+.node-chip-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.mission-node-header,
+.node-chip-row {
+  align-items: start;
+  justify-content: space-between;
+}
+
+.mission-node-header h4,
+.node-subsection h4,
+.node-subsection h5 {
+  margin: 0;
+}
+
+.node-subsection h4,
+.node-subsection h5 {
+  margin-top: 0.2rem;
+}
+
+.node-chip-row {
+  justify-content: start;
+  flex-wrap: wrap;
+}
+
+.node-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.node-chip.is-leaf {
+  color: var(--blue);
+  background: rgba(39, 105, 199, 0.1);
+}
+
+.node-chip.is-composite {
+  color: var(--amber);
+  background: rgba(182, 112, 25, 0.12);
+}
+
+.node-actions {
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
+.node-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.inline-toggle {
+  align-content: end;
+}
+
+.inline-toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
 }
 
 .forbidden-page {
@@ -559,7 +667,9 @@ textarea {
   .mission-summary-grid,
   .mission-workspace-grid,
   .form-grid-two,
-  .mission-detail-grid {
+  .mission-detail-grid,
+  .tree-stat-grid,
+  .node-grid {
     grid-template-columns: 1fr;
   }
 
@@ -568,7 +678,9 @@ textarea {
   }
 
   .mission-list-header,
-  .mission-list-item-top {
+  .mission-list-item-top,
+  .mission-node-header,
+  .node-actions {
     flex-direction: column;
   }
 }

@@ -11,7 +11,8 @@ public sealed record CreateMissionCommand(
     string Description,
     string Difficulty,
     int MaximumDurationMinutes,
-    string GameType) : IRequest<MissionResponse>;
+    string GameType,
+    IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>;
 
 public sealed class CreateMissionCommandHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionCommand, MissionResponse>
@@ -26,7 +27,8 @@ public sealed class CreateMissionCommandHandler(MissionDesignDbContext dbContext
             request.Description,
             request.Difficulty,
             request.MaximumDurationMinutes,
-            request.GameType);
+            request.GameType,
+            request.Nodes?.Select(node => node.ToDomain()).ToArray());
 
         var missionNameAlreadyExists = await dbContext.Missions
             .AnyAsync(

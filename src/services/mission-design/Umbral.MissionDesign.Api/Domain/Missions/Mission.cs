@@ -1,9 +1,17 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Domain.Missions;
 
 public sealed class Mission
 {
+    private static readonly JsonSerializerOptions TreeSerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     private Mission()
     {
     }
@@ -15,7 +23,8 @@ public sealed class Mission
         string difficulty,
         int maximumDurationMinutes,
         string gameType,
-        bool isActive)
+        bool isActive,
+        string nodeTreeJson)
     {
         Id = id;
         Name = name;
@@ -24,6 +33,7 @@ public sealed class Mission
         MaximumDurationMinutes = maximumDurationMinutes;
         GameType = gameType;
         IsActive = isActive;
+        NodeTreeJson = nodeTreeJson;
     }
 
     public Guid Id { get; private set; }
@@ -40,22 +50,34 @@ public sealed class Mission
 
     public bool IsActive { get; private set; }
 
+    public string NodeTreeJson { get; private set; } = "[]";
+
+    [JsonIgnore]
+    [NotMapped]
+    public IReadOnlyList<MissionNode> Nodes => DeserializeNodes(NodeTreeJson);
+
     public static Mission Create(
         Guid id,
         string name,
         string description,
         string difficulty,
         int maximumDurationMinutes,
-        string gameType)
+        string gameType,
+        IReadOnlyList<MissionNode>? nodes = null)
     {
-        return new Mission(
+        var mission = new Mission(
             id,
             NormalizeRequiredText(name, "mission_name_required", "Mission name is required.", 120),
             NormalizeRequiredText(description, "mission_description_required", "Mission description is required.", 1_024),
             NormalizeRequiredText(difficulty, "mission_difficulty_required", "Mission difficulty is required.", 60),
             NormalizeMaximumDuration(maximumDurationMinutes),
             MissionGameType.Normalize(gameType),
-            true);
+            true,
+            "[]");
+
+        mission.ReplaceNodes(nodes ?? Array.Empty<MissionNode>());
+
+        return mission;
     }
 
     public void UpdateDetails(
@@ -70,6 +92,19 @@ public sealed class Mission
         MaximumDurationMinutes = NormalizeMaximumDuration(maximumDurationMinutes);
     }
 
+    public void UpdateCatalogGameType(string gameType)
+    {
+        GameType = MissionGameType.Normalize(gameType);
+    }
+
+    public void ReplaceNodes(IReadOnlyList<MissionNode> nodes)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+
+        var normalizedNodes = MissionNode.NormalizeRoots(nodes, MaximumDurationMinutes);
+        NodeTreeJson = JsonSerializer.Serialize(normalizedNodes, TreeSerializerOptions);
+    }
+
     public void Deactivate()
     {
         if (!IsActive)
@@ -81,6 +116,19 @@ public sealed class Mission
         }
 
         IsActive = false;
+    }
+
+    private static IReadOnlyList<MissionNode> DeserializeNodes(string? nodeTreeJson)
+    {
+        if (string.IsNullOrWhiteSpace(nodeTreeJson))
+        {
+            return Array.Empty<MissionNode>();
+        }
+
+        IReadOnlyList<MissionNode>? nodes =
+            JsonSerializer.Deserialize<List<MissionNode>>(nodeTreeJson, TreeSerializerOptions);
+
+        return nodes ?? Array.Empty<MissionNode>();
     }
 
     private static string NormalizeRequiredText(

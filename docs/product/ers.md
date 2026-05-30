@@ -50,12 +50,20 @@ Existen dos superficies principales:
 
 ### Mission Design para primer release
 
-- El diseno reusable de una `Mission` se modela, para primer release, como una lista lineal de `Mission Stages`.
-- `Hint` pertenece directamente a un `Mission Stage`.
-- `Mission Node` se conserva solo como concepto de modelado futuro. No introduce contrato funcional, pantalla, API ni persistencia propia en primer release.
-- `Substage` queda fuera de alcance en primer release. Si algun texto del ERS detallado menciona subetapas, debe leerse como expansion futura y no como capacidad obligatoria del MVP.
-- `Stage Template Reuse` queda fuera de alcance en primer release. La unidad reusable soportada es la `Mission` completa, no una etapa o bloque parcial reutilizable entre misiones.
-- Las decisiones operativas de flujo en sesion para primer release actuan sobre `Mission Stages`, no sobre `Substages`.
+- El diseno reusable de una `Mission` se modela, para primer release, como un arbol ordenado de `Mission Nodes`.
+- Solo los nodos hoja son `Mission Stages` jugables y participan en el flujo operativo de sesion.
+- `Substage` es una relacion padre-hijo recursiva entre `Mission Nodes` dentro de la misma `Mission`.
+- `Hint` pertenece directamente a un `Mission Stage` hoja, no a nodos compuestos.
+- Una `Mission` puede mezclar varios `Game Types`, pero cada `Mission Stage` tiene exactamente uno.
+- Cuando un `Mission Node` compuesto representa un bloque tematico, sus descendientes jugables deben compartir el mismo `Game Type`.
+- El flujo operativo se deriva aplanando los `Mission Stages` hoja en recorrido depth-first de izquierda a derecha segun el orden definido entre hermanos.
+- Los nodos compuestos pueden definir `Default Time Budget` heredable por descendientes. Un valor mas especifico reemplaza por completo al heredado.
+- `Stage Template Reuse` entra en alcance para reutilizar un `Mission Stage` o un subarbol de `Mission Nodes` dentro de otra `Mission`.
+- El reuse copia el subarbol completo con sus descendientes, `Hints`, tiempos y metadata como copia independiente.
+- La copia conserva referencia de trazabilidad visible al origen y deja evento auditable de reuse, pero no mantiene sincronizacion viva con el origen.
+- El reuse puede tomar como origen cualquier nodo de una `Mission` visible para el `Administrator`; no requiere que la mision origen este activa.
+- La experiencia del `Participant` sigue siendo lineal sobre la hoja actual y puede mostrar el bloque padre como contexto, pero no expone el arbol completo de diseno.
+- En sesion, el `Operator` puede desactivar una hoja individual o un nodo compuesto; en este ultimo caso, la desactivacion afecta solo las hojas descendientes que sigan pendientes.
 
 ### Trivia
 

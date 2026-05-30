@@ -38,7 +38,8 @@ public static class MissionEndpointRouteBuilderExtensions
                         request.Description,
                         request.Difficulty,
                         request.MaximumDurationMinutes,
-                        request.GameType),
+                        request.GameType,
+                        request.Nodes),
                     cancellationToken);
 
                 return Results.Created($"/api/mission-design/missions/{mission.Id}", mission);
@@ -58,7 +59,9 @@ public static class MissionEndpointRouteBuilderExtensions
                             request.Name,
                             request.Description,
                             request.Difficulty,
-                            request.MaximumDurationMinutes),
+                            request.MaximumDurationMinutes,
+                            request.GameType,
+                            request.Nodes),
                         cancellationToken)));
 
         missionRoutes.MapPost(
