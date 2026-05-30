@@ -99,6 +99,7 @@ Usar un `worktree` por ticket evita contaminacion entre agentes y permite ejecut
 - El worker debe validar contexto con `scripts/assert-ticket-worktree.ps1` antes de editar, probar o generar handoff.
 - Si `cwd`, branch o issue no coinciden con la sesion registrada, la ejecucion debe abortar.
 - Los logs de worker deben vivir en `.worktrees/_runtime/<ISSUE-ID>/` para que el branch quede libre de ruido operacional.
+- Si el ticket requiere `docker compose`, usar `.agents/skills/docker-compose-context-hygiene/` para evitar floods de logs y mover evidencia ruidosa a archivos en `.worktrees/_runtime/<ISSUE-ID>/`.
 
 ## Logs y observabilidad
 
@@ -114,6 +115,7 @@ Convencion:
 - sesion: `.worktrees/_runtime/<ISSUE-ID>/session.json`
 - log vivo: `.worktrees/_runtime/<ISSUE-ID>/worker.log`
 - handoff: `.worktrees/_runtime/<ISSUE-ID>/handoff.md`
+- evidencia compose recomendada: `compose-ps.txt`, `compose-up.txt`, `<service>.log`
 
 Ejemplo de seguimiento humano:
 
