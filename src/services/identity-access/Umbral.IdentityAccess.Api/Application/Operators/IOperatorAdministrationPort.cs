@@ -19,4 +19,6 @@ public interface IOperatorAdministrationPort
     Task<OperatorUser?> GetUserByIdAsync(string userId, CancellationToken cancellationToken);
 
     Task<OperatorUser> SetUserEnabledAsync(string userId, bool enabled, CancellationToken cancellationToken);
+
+    Task RotateOperatorPasswordAsync(string userId, string password, CancellationToken cancellationToken);
 }

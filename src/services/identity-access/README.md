@@ -33,6 +33,7 @@ La capacidad `Identity and Access` usa `Keycloak` como proveedor de identidad lo
   - `GET /api/identity-access/operators`
   - `POST /api/identity-access/operators`
   - `POST /api/identity-access/operators/{userId}/deactivate`
+  - `POST /api/identity-access/operators/{userId}/reset-password`
 - payload de provision: `username`, `email`, `firstName`, `lastName`, `password`
 
 ## Configuracion requerida para admin facade

@@ -116,6 +116,66 @@ public sealed class OperatorAdministrationServiceTests
             new[] { "alpha.operator", "zeta.operator" },
             operators.Select(operatorUser => operatorUser.Username));
     }
+
+    [Fact]
+    public async Task RotateOperatorPassword_UpdatesPasswordForExistingOperator()
+    {
+        var port = new FakeOperatorAdministrationPort();
+        port.Users.Add(new OperatorUser(
+            "operator-1",
+            "field.operator",
+            "field.operator@umbral.local",
+            "Field",
+            "Operator",
+            true));
+        var service = new OperatorAdministrationService(port);
+
+        var operatorUser = await service.RotateOperatorPasswordAsync(
+            "operator-1",
+            "newPassword123!",
+            CancellationToken.None);
+
+        Assert.Equal("field.operator", operatorUser.Username);
+        Assert.Equal("newPassword123!", port.PasswordsByUserId["operator-1"]);
+    }
+
+    [Fact]
+    public async Task RotateOperatorPassword_RejectsMissingPassword()
+    {
+        var port = new FakeOperatorAdministrationPort();
+        port.Users.Add(new OperatorUser(
+            "operator-1",
+            "field.operator",
+            "field.operator@umbral.local",
+            "Field",
+            "Operator",
+            true));
+        var service = new OperatorAdministrationService(port);
+
+        var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
+            service.RotateOperatorPasswordAsync(
+                "operator-1",
+                "   ",
+                CancellationToken.None));
+
+        Assert.Equal("operator_password_required", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public async Task RotateOperatorPassword_RejectsUnknownOperatorUser()
+    {
+        var service = new OperatorAdministrationService(new FakeOperatorAdministrationPort());
+
+        var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
+            service.RotateOperatorPasswordAsync(
+                "missing-operator",
+                "newPassword123!",
+                CancellationToken.None));
+
+        Assert.Equal("operator_user_not_found", exception.Code);
+        Assert.Equal(UmbralFailureCategory.NotFound, exception.Category);
+    }
 }
 
 public sealed class OperatorEndpointTests
@@ -198,6 +258,76 @@ public sealed class OperatorEndpointTests
 
         Assert.NotNull(operatorUser);
         Assert.False(operatorUser.IsActive);
+    }
+
+    [Fact]
+    public async Task RotateOperatorPassword_ReturnsSelectedUser()
+    {
+        await using var factory = new IdentityAccessApiFactory();
+        factory.Port.Users.Add(new OperatorUser(
+            "operator-1",
+            "field.operator",
+            "field.operator@umbral.local",
+            "Field",
+            "Operator",
+            true));
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/identity-access/operators/operator-1/reset-password",
+            new
+            {
+                Password = "newPassword123!"
+            });
+
+        response.EnsureSuccessStatusCode();
+
+        var operatorUser = await response.Content.ReadFromJsonAsync<OperatorUser>();
+
+        Assert.NotNull(operatorUser);
+        Assert.Equal("operator-1", operatorUser.Id);
+        Assert.Equal("newPassword123!", factory.Port.PasswordsByUserId["operator-1"]);
+    }
+
+    [Fact]
+    public async Task RotateOperatorPassword_ReturnsValidationFailureWhenPasswordIsMissing()
+    {
+        await using var factory = new IdentityAccessApiFactory();
+        factory.Port.Users.Add(new OperatorUser(
+            "operator-1",
+            "field.operator",
+            "field.operator@umbral.local",
+            "Field",
+            "Operator",
+            true));
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/identity-access/operators/operator-1/reset-password",
+            new
+            {
+                Password = "   "
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Password is required.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task RotateOperatorPassword_ReturnsNotFoundWhenOperatorDoesNotExist()
+    {
+        await using var factory = new IdentityAccessApiFactory();
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/identity-access/operators/missing-operator/reset-password",
+            new
+            {
+                Password = "newPassword123!"
+            });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("Operator User was not found.", await response.Content.ReadAsStringAsync());
     }
 }
 
@@ -293,6 +423,7 @@ internal sealed class IdentityAccessApiFactory : WebApplicationFactory<Program>
 internal sealed class FakeOperatorAdministrationPort : IOperatorAdministrationPort
 {
     public List<OperatorUser> Users { get; } = [];
+    public Dictionary<string, string> PasswordsByUserId { get; } = [];
 
     public List<string> DeletedUserIds { get; } = [];
 
@@ -363,5 +494,19 @@ internal sealed class FakeOperatorAdministrationPort : IOperatorAdministrationPo
         Users.Add(updatedUser);
 
         return Task.FromResult(updatedUser);
+    }
+
+    public Task RotateOperatorPasswordAsync(string userId, string password, CancellationToken cancellationToken)
+    {
+        if (!Users.Any(user => user.Id == userId))
+        {
+            throw new UmbralDomainException(
+                "operator_user_not_found",
+                "Operator User was not found.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        PasswordsByUserId[userId] = password;
+        return Task.CompletedTask;
     }
 }

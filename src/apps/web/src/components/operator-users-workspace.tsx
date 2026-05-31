@@ -27,6 +27,10 @@ type OperatorUsersWorkspaceProps = {
   accessToken: string;
 };
 
+type PasswordRotationDraft = {
+  password: string;
+};
+
 function createAuthorizedHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`
@@ -39,6 +43,12 @@ function createEmptyDraft(): OperatorUserDraft {
     firstName: "",
     lastName: "",
     email: "",
+    password: ""
+  };
+}
+
+function createEmptyPasswordRotationDraft(): PasswordRotationDraft {
+  return {
     password: ""
   };
 }
@@ -196,9 +206,13 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   const [operators, setOperators] = useState<OperatorUserSummary[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<OperatorUserDraft>(createEmptyDraft);
+  const [passwordRotationDraft, setPasswordRotationDraft] = useState<PasswordRotationDraft>(
+    createEmptyPasswordRotationDraft
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  const [isRotatingPassword, setIsRotatingPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -374,6 +388,50 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     }
   }
 
+  async function handleRotateSelectedOperatorPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedOperator) {
+      return;
+    }
+
+    const password = passwordRotationDraft.password.trim();
+
+    if (!password) {
+      setErrorMessage("New password is required.");
+      return;
+    }
+
+    setIsRotatingPassword(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`${operatorsUrl}/${encodeURIComponent(selectedOperator.id)}/reset-password`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          password
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setPasswordRotationDraft(createEmptyPasswordRotationDraft());
+      setFeedback(`Password rotated for Operator User ${selectedOperator.username}.`);
+      await syncOperators(selectedOperator.id);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not rotate Operator User password.");
+    } finally {
+      setIsRotatingPassword(false);
+    }
+  }
+
   return (
     <section className="panel stack-gap">
       <div className="section-heading">
@@ -442,6 +500,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                 key={operator.id}
                 onClick={() => {
                   setFeedback(null);
+                  setPasswordRotationDraft(createEmptyPasswordRotationDraft());
                   setSelectedOperatorId(operator.id);
                 }}
                 type="button"
@@ -569,7 +628,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
               <span>Route contract</span>
               <input className="input" disabled value={operatorsUrl} />
               <span className="field-hint">
-                This slice uses GET, POST, and POST /{userId}/deactivate through the edge-proxy facade.
+                This slice uses GET, POST, POST /{"{userId}"}/deactivate, and POST /{"{userId}"}/reset-password.
               </span>
             </label>
 
@@ -629,6 +688,34 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                 <p>Select a roster entry after the facade returns data.</p>
               </div>
             )}
+
+            <form className="stack-gap" onSubmit={handleRotateSelectedOperatorPassword}>
+              <label className="field">
+                <span>Rotate password</span>
+                <input
+                  className="input"
+                  disabled={!selectedOperator || isRotatingPassword}
+                  minLength={8}
+                  onChange={(event) =>
+                    setPasswordRotationDraft({
+                      password: event.target.value
+                    })
+                  }
+                  required
+                  type="password"
+                  value={passwordRotationDraft.password}
+                />
+                <span className="field-hint">
+                  New secret goes to `identity-access`. Shell never receives Keycloak admin credentials.
+                </span>
+              </label>
+
+              <div className="mission-action-row">
+                <button className="primary-button" disabled={!selectedOperator || isRotatingPassword} type="submit">
+                  {isRotatingPassword ? "Rotating..." : "Rotate password"}
+                </button>
+              </div>
+            </form>
 
             <div className="mission-action-row">
               <button

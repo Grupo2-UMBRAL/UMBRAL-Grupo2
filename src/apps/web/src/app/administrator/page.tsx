@@ -11,9 +11,10 @@ export default async function AdministratorPage() {
       focus={[
         "Protect administrator route with server-side cookie guard and role-based redirects.",
         "Manage Operator Users through the identity-access facade over edge-proxy with the current bearer token.",
+        "Rotate Operator User passwords through the same identity-access boundary instead of direct Keycloak administration.",
         "Drive Mission CRUD directly against the protected mission-design API boundary.",
         "Expose realtime connection state and smoke checks beside control-plane workflows.",
-        "Leave role edits, password rotation, and Mission Stage follow-ups outside this slice."
+        "Leave role edits and Mission Stage follow-ups outside this slice."
       ]}
       mainContent={
         <>
