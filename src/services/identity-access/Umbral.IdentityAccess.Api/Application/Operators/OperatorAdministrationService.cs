@@ -101,6 +101,38 @@ public sealed class OperatorAdministrationService(IOperatorAdministrationPort po
         return await port.SetUserEnabledAsync(normalizedUserId, enabled: false, cancellationToken);
     }
 
+    public async Task<OperatorUser> RotateOperatorPasswordAsync(
+        string userId,
+        string? password,
+        CancellationToken cancellationToken)
+    {
+        var normalizedUserId = userId.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedUserId))
+        {
+            throw new UmbralDomainException(
+                "operator_user_id_required",
+                "Operator user id is required.",
+                UmbralFailureCategory.Validation);
+        }
+
+        var operators = await port.ListOperatorsAsync(cancellationToken);
+        var operatorUser = operators.FirstOrDefault(candidate => candidate.Id == normalizedUserId);
+
+        if (operatorUser is null)
+        {
+            throw new UmbralDomainException(
+                "operator_user_not_found",
+                "Operator User was not found.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        var normalizedPassword = NormalizePassword(password);
+        await port.RotateOperatorPasswordAsync(normalizedUserId, normalizedPassword, cancellationToken);
+
+        return operatorUser;
+    }
+
     public static ValidatedCreateOperatorInput ValidateCreateOperatorInput(CreateOperatorInput input) =>
         new(
             NormalizeUsername(input.Username),

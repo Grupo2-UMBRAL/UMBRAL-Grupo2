@@ -180,6 +180,24 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         return updatedUser;
     }
 
+    public async Task RotateOperatorPasswordAsync(
+        string userId,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        var updateResponse = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}/reset-password",
+            new KeycloakCredentialRepresentation
+            {
+                Type = "password",
+                Value = password,
+                Temporary = false
+            },
+            cancellationToken: cancellationToken);
+        updateResponse.Dispose();
+    }
+
     public void Dispose()
     {
         tokenLock.Dispose();

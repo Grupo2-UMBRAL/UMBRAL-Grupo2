@@ -46,6 +46,17 @@ public static class OperatorEndpointRouteBuilderExtensions
             async (string userId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new DeactivateOperatorCommand(userId), cancellationToken)));
 
+        operatorRoutes.MapPost(
+            "/{userId}/reset-password",
+            async (
+                string userId,
+                [FromBody] RotateOperatorPasswordRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new RotateOperatorPasswordCommand(userId, request.Password),
+                    cancellationToken)));
+
         return authorizedApi;
     }
 }
@@ -56,3 +67,5 @@ public sealed record CreateOperatorRequest(
     string? FirstName,
     string? LastName,
     string? Password);
+
+public sealed record RotateOperatorPasswordRequest(string? Password);
