@@ -405,14 +405,55 @@ textarea {
   align-items: start;
 }
 
+.operator-workspace-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.1fr);
+  align-items: start;
+}
+
 .mission-list-panel,
-.mission-editor-panel {
+.mission-editor-panel,
+.operator-list-panel,
+.operator-form-panel,
+.operator-detail-card {
   display: grid;
   gap: 1rem;
   padding: 1rem;
   border-radius: var(--radius-control);
   border: 1px solid rgba(75, 64, 51, 0.1);
   background: var(--surface-strong);
+}
+
+.operator-list,
+.operator-detail-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.operator-list-item {
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  border-radius: var(--radius-control);
+  border: 1px solid rgba(75, 64, 51, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  display: grid;
+  gap: 0.8rem;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.operator-list-item:hover,
+.operator-list-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(39, 105, 199, 0.25);
+  box-shadow: 0 12px 28px rgba(61, 45, 30, 0.08);
+}
+
+.operator-list-item.is-active {
+  border-color: rgba(39, 105, 199, 0.34);
+  background: rgba(39, 105, 199, 0.08);
 }
 
 .mission-list-header {
@@ -665,6 +706,7 @@ textarea {
   .focus-list,
   .status-grid,
   .mission-summary-grid,
+  .operator-workspace-grid,
   .mission-workspace-grid,
   .form-grid-two,
   .mission-detail-grid,

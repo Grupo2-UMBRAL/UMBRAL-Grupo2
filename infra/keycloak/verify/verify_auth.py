@@ -18,11 +18,13 @@ SHORT_LIVED_CLIENT_ID = os.environ.get("SHORT_LIVED_CLIENT_ID", "umbral-web-shor
 SCENARIO = os.environ.get("AUTH_SMOKE_SCENARIO", "all")
 
 EXPECTED_API_AUDIENCES = {
+    "umbral-identity-access-api",
     "umbral-mission-design-api",
     "umbral-session-operations-api",
     "umbral-scoring-audit-api",
 }
 BOOTSTRAP_PATHS = [
+    "/identity-access/api/identity-access/bootstrap",
     "/mission-design/api/mission-design/bootstrap",
     "/session-operations/api/session-operations/bootstrap",
     "/scoring-audit/api/scoring-audit/bootstrap",

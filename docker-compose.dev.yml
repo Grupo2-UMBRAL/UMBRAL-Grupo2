@@ -56,6 +56,29 @@ services:
       timeout: 5s
       retries: 10
 
+  identity-access-service:
+    build:
+      context: .
+      dockerfile: infra/keycloak/docker/identity-access.Dockerfile
+    container_name: umbral-identity-access-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-identity-access-api
+      IdentityAccess__Keycloak__BaseUrl: ${IDENTITY_ACCESS_KEYCLOAK_BASE_URL}
+      IdentityAccess__Keycloak__Realm: ${IDENTITY_ACCESS_KEYCLOAK_REALM}
+      IdentityAccess__Keycloak__AdminRealm: ${IDENTITY_ACCESS_KEYCLOAK_ADMIN_REALM}
+      IdentityAccess__Keycloak__AdminClientId: ${IDENTITY_ACCESS_KEYCLOAK_ADMIN_CLIENT_ID}
+      IdentityAccess__Keycloak__AdminUsername: ${IDENTITY_ACCESS_KEYCLOAK_ADMIN_USERNAME}
+      IdentityAccess__Keycloak__AdminPassword: ${IDENTITY_ACCESS_KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "${IDENTITY_ACCESS_PORT}:8080"
+    depends_on:
+      keycloak:
+        condition: service_started
+
   mission-design-service:
     build:
       context: .
@@ -140,6 +163,7 @@ services:
       AllowedOrigins__0: http://localhost:5173
       AllowedOrigins__1: http://localhost:3000
       AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}
+      ReverseProxy__Clusters__identity-access__Destinations__primary__Address: http://identity-access-service:8080/
       ReverseProxy__Clusters__mission-design__Destinations__primary__Address: http://mission-design-service:8080/
       ReverseProxy__Clusters__session-operations__Destinations__primary__Address: http://session-operations-service:8080/
       ReverseProxy__Clusters__scoring-audit__Destinations__primary__Address: http://scoring-audit-service:8080/
@@ -147,6 +171,8 @@ services:
     ports:
       - "${EDGE_PROXY_PORT}:8080"
     depends_on:
+      identity-access-service:
+        condition: service_started
       mission-design-service:
         condition: service_started
       session-operations-service:

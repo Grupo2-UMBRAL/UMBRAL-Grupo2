@@ -4,7 +4,7 @@ Validaciones reproducibles para el bootstrap local de `Identity and Access` usan
 
 ## Escenarios cubiertos
 
-- `login`: verifica que los tokens emitidos para `umbral-web` y `umbral-mobile` incluyan las audiencias de las tres APIs y funcionen contra `/bootstrap`.
+- `login`: verifica que los tokens emitidos para `umbral-web` y `umbral-mobile` incluyan las audiencias de las cuatro APIs y funcionen contra `/bootstrap`.
 - `invalid`: verifica que un token malformado reciba `401` al invocar una API por el proxy.
 - `expired`: emite un token desde `umbral-web-shortlived`, espera su expiracion dentro del contenedor y verifica `401`.
 - `insufficient-role`: usa un token de `Participant` contra una smoke route administrativa para obtener `403` por falta de rol.
@@ -32,3 +32,4 @@ docker compose --env-file .env.example -f docker-compose.dev.yml -f docker-compo
 ## Notas
 
 - El caso `expired` no depende del reloj del host. El contenedor espera internamente hasta que el `exp` del JWT quede atras.
+- `login` ahora incluye `identity-access` en el set de audiencias esperadas y en la smoke call por `edge proxy`. Si el servicio aun no existe en el worktree, este escenario no puede pasar end-to-end hasta que se agregue `src/services/identity-access/Umbral.IdentityAccess.Api/`.
