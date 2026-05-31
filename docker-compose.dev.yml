@@ -139,6 +139,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       AllowedOrigins__0: http://localhost:5173
       AllowedOrigins__1: http://localhost:3000
+      AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}
       ReverseProxy__Clusters__mission-design__Destinations__primary__Address: http://mission-design-service:8080/
       ReverseProxy__Clusters__session-operations__Destinations__primary__Address: http://session-operations-service:8080/
       ReverseProxy__Clusters__scoring-audit__Destinations__primary__Address: http://scoring-audit-service:8080/
@@ -182,7 +183,38 @@ services:
       edge-proxy:
         condition: service_started
 
+  mobile:
+    image: node:22-alpine
+    container_name: umbral-mobile
+    working_dir: /app
+    command:
+      - /bin/sh
+      - -lc
+      - >
+          npm install &&
+          npm run web:compose -- --port ${MOBILE_WEB_PORT}
+    environment:
+      CI: "1"
+      NODE_ENV: development
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_PUBLIC_EDGE_PROXY_BASE_URL: ${MOBILE_EDGE_PROXY_BASE_URL}
+      EXPO_PUBLIC_KEYCLOAK_BASE_URL: ${MOBILE_KEYCLOAK_BASE_URL}
+      EXPO_PUBLIC_KEYCLOAK_REALM: ${MOBILE_KEYCLOAK_REALM}
+      EXPO_PUBLIC_KEYCLOAK_CLIENT_ID: ${MOBILE_KEYCLOAK_CLIENT_ID}
+      EXPO_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${MOBILE_SESSION_OPERATIONS_HUB_PATH}
+    ports:
+      - "${MOBILE_WEB_PORT}:${MOBILE_WEB_PORT}"
+    volumes:
+      - ./src/apps/mobile:/app
+      - mobile-node-modules:/app/node_modules
+      - mobile-npm-cache:/root/.npm
+    depends_on:
+      edge-proxy:
+        condition: service_started
+
 volumes:
   postgres-data:
   rabbitmq-data:
   web-node-modules:
+  mobile-node-modules:
+  mobile-npm-cache:

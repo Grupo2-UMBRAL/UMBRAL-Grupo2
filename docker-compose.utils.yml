@@ -57,6 +57,17 @@ services:
       - ./:/workspace
       - web-npm-cache:/root/.npm
 
+  mobile-package-manager:
+    image: node:22-alpine
+    working_dir: /workspace/src/apps/mobile
+    entrypoint: ["npm"]
+    volumes:
+      - ./:/workspace
+      - mobile-node-modules:/workspace/src/apps/mobile/node_modules
+      - mobile-npm-cache:/root/.npm
+
 volumes:
   nuget-cache:
   web-npm-cache:
+  mobile-node-modules:
+  mobile-npm-cache:

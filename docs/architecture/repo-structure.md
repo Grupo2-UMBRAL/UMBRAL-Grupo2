@@ -17,6 +17,7 @@ Estructura real actual del repositorio.
 |- src/
 |  |- apps/
 |  |  |- edge-proxy/
+|  |  |- mobile/
 |  |  `- web/
 |  `- services/
 |     |- building-blocks/
@@ -35,6 +36,7 @@ Estructura real actual del repositorio.
 - `src/services/*/` contiene los microservicios `.NET` que implementan cada bounded context.
 - `src/services/building-blocks/` contiene librerias compartidas de backend para cross-cutting concerns como bootstrap, auth, CQRS y persistencia.
 - `src/apps/edge-proxy/` contiene el borde tecnico minimo para exponer entrada unificada sin meter logica de dominio.
+- `src/apps/mobile/` contiene el shell mobile de `Participant` y sus clientes de auth, API y realtime.
 - `src/apps/web/` contiene el frontend web cuando exista.
 - `infra/` agrupa bootstrap operativo local como `Keycloak` y scripts de `PostgreSQL`.
 - `docker-compose.dev.yml` levanta el entorno de desarrollo distribuido.
@@ -46,6 +48,6 @@ Estructura real actual del repositorio.
 
 ## No asumir todavia
 
-- No asumir que `mobile` ya existe en este repo ni que `web` tenga implementacion completa.
+- No asumir que `mobile` o `web` tengan implementacion completa de todas las capacidades del backlog.
 - No asumir que los esqueletos `.NET` ya compilan localmente sin instalar SDK o restaurar paquetes.
 - No asumir pipelines de `CI/CD` o tests automatizados hasta que se agreguen explicitamente.
