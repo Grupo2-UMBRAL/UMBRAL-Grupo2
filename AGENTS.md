@@ -29,6 +29,7 @@ When the task involves writing, refactoring, or reviewing code:
 
 - Read the relevant ADRs in `docs/architecture/adr/` before changing code when they apply to the affected area.
 - Apply `.agents/skills/engineering-guardrails/` as the default reusable procedure for implementation and review guardrails.
+- Apply `.agents/skills/local-validation/` when choosing or running local tests, coverage checks, secret scans, or repo validation evidence.
 - When local validation or debugging uses `docker compose`, apply `.agents/skills/docker-compose-context-hygiene/` to keep logs, runtime evidence, and chat context under control.
 - Use `src/services/*/CONTEXT.md` as the source of truth for ubiquitous language and bounded-context terminology.
 

@@ -2,7 +2,7 @@
 
 ## Rol
 
-Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a la separación por roles.
+Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a la separacion por roles.
 
 ## Lee primero
 
@@ -13,22 +13,24 @@ Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a l
 - [../../src/session-operations/CONTEXT.md](../../src/session-operations/CONTEXT.md)
 - [../../src/scoring-audit/CONTEXT.md](../../src/scoring-audit/CONTEXT.md)
 - [../../src/identity-access/CONTEXT.md](../../src/identity-access/CONTEXT.md)
+- [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)
 
 ## Hace
 
 - Implementa flujos web para `Administrator` y `Operator`.
-- Implementa experiencia móvil para `Participant`.
+- Implementa experiencia movil para `Participant`.
 - Usa el vocabulario del dominio en estados, tipos y vistas.
-- Considera tiempo real, reconexión y estados de sesión.
+- Considera tiempo real, reconexion y estados de sesion.
+- Usa la validacion reproducible del repo para lint, typecheck y build antes de cerrar cambios.
 
 ## No hace
 
-- No mueve lógica de negocio compleja al cliente.
+- No mueve logica de negocio compleja al cliente.
 - No inventa pantallas o entidades fuera del ERS y del contexto.
 - No asume estructura final de carpetas mientras no exista.
 
 ## Entregables
 
-- Código UI
+- Codigo UI
 - Estados y contratos con backend
 - Notas de UX cuando una regla del dominio afecte el flujo

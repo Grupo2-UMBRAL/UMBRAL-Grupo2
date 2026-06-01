@@ -15,6 +15,8 @@ When exploring the codebase, use the project's domain glossary to get a clear me
 
 Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give up.**
 
+Before inventing a new local loop, check whether `.agents/skills/local-validation/` already gives a reproducible command close to the failing behavior.
+
 ### Ways to construct one — try them in roughly this order
 
 1. **Failing test** at whatever seam reaches the bug — unit, integration, e2e.
@@ -110,6 +112,7 @@ Required before declaring done:
 
 - [ ] Original repro no longer reproduces (re-run the Phase 1 loop)
 - [ ] Regression test passes (or absence of seam is documented)
+- [ ] Relevant local validation command from `.agents/skills/local-validation/` ran, or the blocker is stated explicitly
 - [ ] All `[DEBUG-...]` instrumentation removed (`grep` the prefix)
 - [ ] Throwaway prototypes deleted (or moved to a clearly-marked debug location)
 - [ ] The hypothesis that turned out correct is stated in the commit / PR message — so the next debugger learns

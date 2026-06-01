@@ -43,6 +43,8 @@ Existen dos superficies principales:
 - No se aceptan evidencias en sesion pausada, finalizada o cancelada.
 - Las etapas progresan de forma lineal por equipo.
 - El ranking se ordena por puntaje y desempata por tiempo de resolucion.
+- El tiempo de resolucion se usa solo para desempate y auditoria; no modifica el puntaje.
+- El desempate por tiempo de resolucion usa precision de medio segundo.
 - Las penalizaciones deben registrar motivo y momento.
 - Al finalizar la sesion se revelan pistas y soluciones.
 
@@ -52,6 +54,8 @@ Existen dos superficies principales:
 
 - El diseno reusable de una `Mission` se modela, para primer release, como un arbol ordenado de `Mission Nodes`.
 - Solo los nodos hoja son `Mission Stages` jugables y participan en el flujo operativo de sesion.
+- Cada `Mission Stage` define su propia `Difficulty` y esa dificultad alimenta el puntaje base cuando la etapa se resuelve.
+- Un `Mission Node` compuesto no define `Difficulty` para scoring y la `Mission` no impone una dificultad unica a todas sus hojas.
 - `Substage` es una relacion padre-hijo recursiva entre `Mission Nodes` dentro de la misma `Mission`.
 - `Hint` pertenece directamente a un `Mission Stage` hoja, no a nodos compuestos.
 - Una `Mission` puede mezclar varios `Game Types`, pero cada `Mission Stage` tiene exactamente uno.
@@ -70,6 +74,26 @@ Existen dos superficies principales:
 - La validacion de respuestas de `Trivia` ocurre automaticamente por defecto.
 - El `Operator` puede corregir el resultado cuando detecte que la respuesta enviada corresponde a una alternativa valida.
 - No debe modelarse `Trivia` como un flujo donde toda evidencia entra primero en estado `Pending` para revision humana obligatoria.
+
+### Scoring and penalties
+
+- El puntaje base por evidencia validada depende de la `Difficulty` del `Mission Stage`.
+- Para primer release, la tabla base de puntaje es `Easy = 100`, `Medium = 200`, `Hard = 300`.
+- Un `Mission Stage` resuelto otorga `0` o el puntaje completo que le corresponda; no existe `partial credit` en el primer release.
+- El instante oficial para medir `Resolution Time` es la recepcion del envio en backend.
+- La latencia y los tiempos de conexion se registran para auditoria, pero no corrigen el desempate con una formula compensatoria.
+- Si dos equipos empatan en puntaje y tambien en `Resolution Time` con precision de medio segundo, el `Ranking` mantiene el empate y no aplica un tercer criterio oculto.
+- El `Operator` aplica penalizaciones eligiendo una severidad predefinida, no ingresando un descuento libre de puntos.
+- Para primer release, las severidades de `Penalty` son `Minor = -50`, `Major = -100`, `Critical = -200`.
+- Cuando un `Validation Override` confirma como valida una evidencia ambigua de `Trivia`, la etapa otorga el puntaje completo que corresponda segun la `Difficulty` del `Mission Stage`.
+- Una `Evidence Submission` invalida no genera penalizacion automatica por si misma.
+- El descuento de puntaje ocurre solo cuando el `Operator` aplica una `Penalty` explicita con severidad y motivo auditables.
+- Un mismo `Session Team` puede recibir multiples `Penalty` dentro de una misma `LiveSession` cuando correspondan a hechos distintos.
+- El sistema debe bloquear duplicados tecnicos del mismo comando de penalizacion para evitar doble aplicacion accidental por reenvio o doble accion del operador.
+- El puntaje acumulado visible de un `Session Team` no puede quedar por debajo de `0`, aunque la penalizacion completa siga quedando registrada en auditoria y trazabilidad.
+- Un `Session Team` solo puede obtener puntaje positivo una vez por cada `Mission Stage` resuelto dentro de una `LiveSession`.
+- Los reintentos fallidos no generan puntaje por si mismos y una correccion manual del `Operator` no debe duplicar puntaje positivo sobre la misma hoja.
+- Cada intento, correccion manual, penalizacion y cambio efectivo de puntaje debe quedar reflejado en auditoria.
 
 ## Uso esperado
 
