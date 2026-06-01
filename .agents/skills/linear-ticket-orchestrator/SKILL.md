@@ -48,6 +48,7 @@ Run ticket execution from Linear without letting workers own global repo state.
 8. Require the worker to validate context with `assert-ticket-worktree.ps1` before editing.
 9. If the worker cannot prove it is inside the assigned worktree, abort the run.
 10. Receive worker output and run validation.
+   - Use `.agents/skills/local-validation/` to choose the smallest repo validation command that still proves the ticket outcome.
 11. Decide next state:
    - keep moving toward PR
    - send back to human

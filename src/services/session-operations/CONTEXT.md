@@ -48,6 +48,10 @@ _Avoid_: open-ended switching, runtime free reassignment
 Intento de un **Session Team** por resolver su etapa actual dentro de una **LiveSession**. Session Operations decide si el envio es aceptable dentro del flujo activo antes de que otras capacidades lo usen.
 _Avoid_: ScoreEntry, audit event
 
+**Validation Override**:
+Intervencion manual del **Operator** para corregir el resultado de una **Evidence Submission** ambigua dentro de una **LiveSession**. La correccion cambia el resultado operativo final, debe quedar auditada y, si confirma una respuesta valida, habilita el puntaje completo de la hoja sin duplicar credito positivo para la misma etapa.
+_Avoid_: nuevo intento disfrazado, doble premio por la misma etapa, cambio silencioso sin trazabilidad
+
 **Validation Outcome**:
 Resultado de evaluar una **Evidence Submission** dentro de una **LiveSession**. Puede resolverse automaticamente por regla o requerir intervencion manual del operador en casos ambiguos.
 _Avoid_: score entry, audit-only status
@@ -59,6 +63,18 @@ _Avoid_: mission status, connection status
 **Hint Release**:
 Capacidad operativa que controla que **Hints** quedan visibles para cada **Session Team** durante una **LiveSession**. Incluye liberacion manual, liberacion por regla y revelacion final de soluciones.
 _Avoid_: mission design hint authoring, generic notification
+
+**Penalty Application**:
+Accion operativa por la que el **Operator** sanciona a un **Session Team** dentro de una **LiveSession** eligiendo una severidad predefinida y registrando el motivo. Esta accion origina una **Penalty** para `Scoring and Audit`, pero no decide por si misma el recalculo interno del **Scoreboard**.
+_Avoid_: descuento libre de puntos como decision operativa, recalculo de ranking dentro de Session Operations
+
+**Penalty Command Idempotency**:
+Proteccion tecnica que evita aplicar dos veces la misma **Penalty Application** cuando el mismo comando se reenvia o el operador dispara accidentalmente la misma accion duplicada. No fusiona penalizaciones de negocio realmente distintas.
+_Avoid_: doble descuento accidental, deduplicar hechos distintos, esconder sanciones reales
+
+**Invalid Attempt**:
+Resultado operativo de una **Evidence Submission** rechazada dentro de una **LiveSession**. Queda auditado como intento invalido, pero no descuenta puntaje por si mismo sin una **Penalty Application** explicita del **Operator**.
+_Avoid_: penalizacion automatica implicita, confundir rechazo de evidencia con sancion, descuento silencioso
 
 **Session Flow Deactivation**:
 Capacidad operativa de desactivar etapas pendientes dentro del **Session Stage Flow** para una **LiveSession** concreta. Puede apuntar a un **Mission Stage** hoja individual o a un **Mission Node** compuesto, caso en el que la desactivacion aplica a todas sus hojas descendientes que sigan pendientes. Las hojas ya completadas conservan su historial y no se reescriben.
@@ -104,6 +120,9 @@ Experto de dominio: "No. Primero intentamos resolver el Validation Outcome autom
 
 Dev: "Las pistas son solo un atributo mas de la sesion?"
 Experto de dominio: "No. Hint Release tiene reglas propias dentro de Session Operations, aunque siga perteneciendo al mismo bounded context."
+
+Dev: "Cuando penalizo a un equipo, escribo cualquier numero?"
+Experto de dominio: "No. En la operacion eliges una severidad predefinida y dejas el motivo; el descuento lo resuelve Scoring and Audit."
 
 Dev: "Desactivar una etapa cambia la Mission Stage?"
 Experto de dominio: "No. Cambia el Session Stage Flow de esta LiveSession."

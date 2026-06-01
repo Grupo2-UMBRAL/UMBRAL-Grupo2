@@ -54,6 +54,7 @@ Before writing any code:
 - [ ] Design interfaces for [testability](interface-design.md)
 - [ ] List the behaviors to test (not implementation steps)
 - [ ] Get user approval on the plan
+- [ ] Decide which repo validation command from `.agents/skills/local-validation/` will be used before closing the slice
 
 Ask: "What should the public interface look like? Which behaviors are most important to test?"
 
@@ -95,6 +96,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 - [ ] Apply SOLID principles where natural
 - [ ] Consider what new code reveals about existing code
 - [ ] Run tests after each refactor step
+- [ ] Before finishing the slice, run the narrowest relevant repo validation command
 
 **Never refactor while RED.** Get to GREEN first.
 

@@ -13,6 +13,7 @@ Use this skill when you are about to implement, refactor, or review code and nee
 2. `docs/architecture/adr/2026-05-26-coding-standards-and-testability.md`
 3. `docs/architecture/adr/2026-05-26-error-handling-and-boundary-design.md`
 4. `src/*/CONTEXT.md` for the bounded context being changed
+5. `../local-validation/SKILL.md` when local test evidence is needed
 
 ## What this skill governs
 
@@ -30,6 +31,7 @@ Use this skill when you are about to implement, refactor, or review code and nee
 2. Check whether the change is mostly domain logic, orchestration, infrastructure, or review-only.
 3. Apply the relevant guardrails before editing code.
 4. Re-check the diff before finishing.
+5. Run the narrowest repo validation command that proves the touched behavior.
 
 ## Implementation checklist
 

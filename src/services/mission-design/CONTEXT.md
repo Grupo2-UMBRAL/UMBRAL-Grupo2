@@ -9,7 +9,7 @@ Plantilla reusable que define una experiencia de juego. Una **Mission** contiene
 _Avoid_: LiveSession, partida, ejecucion
 
 **Mission Stage**:
-**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, y es la unidad que luego puede participar en flujo operativo.
+**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define su propia **Difficulty**, y es la unidad que luego puede participar en flujo operativo.
 _Avoid_: Session Stage, etapa ejecutada, paso puramente visual
 
 **Mission Node**:
@@ -31,6 +31,10 @@ _Avoid_: Event, evidence, notification
 **Game Type**:
 Clasificacion fija de un **Mission Stage** que determina su estrategia de validacion de evidencias. En UMBRAL los valores actuales son Treasure Hunt y Trivia.
 _Avoid_: session mode, mission-wide rule cuando la mision mezcla tipos
+
+**Difficulty**:
+Clasificacion discreta de un **Mission Stage** usada para determinar su puntaje base cuando esa hoja se resuelve. En el primer release los valores canonicos son Easy, Medium y Hard.
+_Avoid_: dificultad global de la Mission, dificultad heredada desde Mission Node compuesto, estimacion informal del operador
 
 **Default Time Budget**:
 Valor temporal por defecto definido en un **Mission Node** compuesto para sus descendientes. Se hereda hacia abajo mientras un subnodo o un **Mission Stage** no declare su propio tiempo explicito. Cuando aparece un valor mas especifico, reemplaza por completo al heredado.
@@ -58,6 +62,9 @@ Experto de dominio: "No. Solo los nodos hoja son Mission Stages jugables; los no
 
 Dev: "Entonces una Mission completa tiene un solo Game Type?"
 Experto de dominio: "No necesariamente. Cada Mission Stage define su propio Game Type y la Mission puede mezclar varios."
+
+Dev: "Y la dificultad para scoring vive en la Mission completa o en el nodo hoja?"
+Experto de dominio: "En el Mission Stage. El nodo compuesto estructura el arbol, pero la hoja jugable define la Difficulty que alimenta el puntaje."
 
 Dev: "El tiempo del bloque grande es solo decorativo?"
 Experto de dominio: "No. Si el nodo compuesto define un Default Time Budget, sus descendientes lo heredan salvo que alguno lo sobreescriba."
