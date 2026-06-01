@@ -14,6 +14,7 @@ Estructura real actual del repositorio.
 |- docs/
 |  |- architecture/
 |  `- product/
+|- scripts/
 |- src/
 |  |- apps/
 |  |  |- edge-proxy/
@@ -39,6 +40,7 @@ Estructura real actual del repositorio.
 - `src/apps/mobile/` contiene el shell mobile de `Participant` y sus clientes de auth, API y realtime.
 - `src/apps/web/` contiene el frontend web cuando exista.
 - `infra/` agrupa bootstrap operativo local como `Keycloak` y scripts de `PostgreSQL`.
+- `scripts/` contiene automatizacion reproducible de validacion, smoke tests y soporte operativo del repo.
 - `docker-compose.dev.yml` levanta el entorno de desarrollo distribuido.
 - `docker-compose.utils.yml` levanta contenedores utilitarios para scaffolding y tareas de plantilla.
 - `.agents/agents/` contiene instrucciones cortas para agentes.
@@ -50,4 +52,4 @@ Estructura real actual del repositorio.
 
 - No asumir que `mobile` o `web` tengan implementacion completa de todas las capacidades del backlog.
 - No asumir que los esqueletos `.NET` ya compilan localmente sin instalar SDK o restaurar paquetes.
-- No asumir pipelines de `CI/CD` o tests automatizados hasta que se agreguen explicitamente.
+- No asumir pipelines de despliegue o gates adicionales mas alla de `.github/workflows/validation.yml` y `scripts/`.

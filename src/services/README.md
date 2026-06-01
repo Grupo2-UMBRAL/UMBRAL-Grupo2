@@ -4,11 +4,10 @@ Este directorio contiene el baseline backend ejecutable para los bounded context
 
 ## Servicios incluidos
 
+- `identity-access/Umbral.IdentityAccess.Api`
 - `mission-design/Umbral.MissionDesign.Api`
 - `session-operations/Umbral.SessionOperations.Api`
 - `scoring-audit/Umbral.ScoringAudit.Api`
-
-`identity-access` sigue implementado inicialmente con `Keycloak`, segun [identity-access/README.md](./identity-access/README.md). No se agrega un host `.NET` artificial para no inventar un servicio de producto fuera de alcance.
 
 ## Capas esperadas por servicio
 
@@ -30,6 +29,13 @@ Los servicios usan `UmbralExceptionHandler` para mapear fallos de forma consiste
 - `Technical` -> `500`
 
 ## Build y tests
+
+### Identity and Access
+
+```powershell
+dotnet build src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.IdentityAccess.Api.csproj
+dotnet test src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj
+```
 
 ### Mission Design
 
@@ -74,3 +80,11 @@ dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-de
 dotnet ef migrations add InitialSchemaBaseline --project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj --startup-project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj --startup-project src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj
 ```
+
+## Validacion integrada
+
+La validacion reproducible del repo vive en `scripts/Invoke-RepositoryValidation.ps1`.
+
+- backend: `dotnet build`, `dotnet test` y cobertura `XPlat Code Coverage`
+- smoke distribuido: `scripts/Invoke-ComposeSmokeValidation.ps1`
+- politica y artefactos: `docs/architecture/validation-pipeline.md`

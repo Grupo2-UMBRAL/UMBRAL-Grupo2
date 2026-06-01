@@ -1,0 +1,59 @@
+name: Validation
+
+on:
+  push:
+    branches:
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "chore/**"
+  pull_request:
+
+jobs:
+  code-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            src/apps/web/package-lock.json
+            src/apps/mobile/package-lock.json
+
+      - name: Validate code and coverage
+        shell: pwsh
+        run: ./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-artifacts
+          path: temp/validation
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run compose smoke validation
+        shell: pwsh
+        run: ./scripts/Invoke-ComposeSmokeValidation.ps1
+
+      - name: Upload compose artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-artifacts
+          path: temp/validation/compose
