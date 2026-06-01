@@ -16,10 +16,24 @@ public static class MissionEndpointRouteBuilderExtensions
             .MapGroup("/missions")
             .RequireAuthorization(UmbralAuthorizationPolicies.Administrator);
 
+        var liveSessionCandidateRoutes = authorizedApi
+            .MapGroup("/missions/eligible-for-live-session")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
+
         missionRoutes.MapGet(
             "/",
             async (ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new ListMissionsQuery(), cancellationToken)));
+
+        liveSessionCandidateRoutes.MapGet(
+            "/",
+            async (ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new ListEligibleMissionsForLiveSessionQuery(), cancellationToken)));
+
+        liveSessionCandidateRoutes.MapGet(
+            "/{missionId:guid}",
+            async (Guid missionId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetEligibleMissionForLiveSessionQuery(missionId), cancellationToken)));
 
         missionRoutes.MapGet(
             "/{missionId:guid}",
@@ -64,6 +78,11 @@ public static class MissionEndpointRouteBuilderExtensions
                             request.GameType,
                             request.Nodes),
                         cancellationToken)));
+
+        missionRoutes.MapPost(
+            "/{missionId:guid}/activate",
+            async (Guid missionId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new ActivateMissionCommand(missionId), cancellationToken)));
 
         missionRoutes.MapPost(
             "/{missionId:guid}/deactivate",

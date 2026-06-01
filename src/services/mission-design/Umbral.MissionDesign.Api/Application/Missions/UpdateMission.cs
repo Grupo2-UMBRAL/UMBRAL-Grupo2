@@ -44,6 +44,11 @@ public sealed class UpdateMissionCommandHandler(MissionDesignDbContext dbContext
             mission.ReplaceNodes(request.Nodes.Select(node => node.ToDomain()).ToArray());
         }
 
+        if (mission.IsActive)
+        {
+            mission.EnsureEligibleForLiveSession();
+        }
+
         var nameAlreadyExists = await dbContext.Missions
             .AnyAsync(
                 existingMission => existingMission.Id != request.MissionId && existingMission.Name == mission.Name,

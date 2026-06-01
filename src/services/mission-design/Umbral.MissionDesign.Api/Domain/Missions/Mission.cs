@@ -72,7 +72,7 @@ public sealed class Mission
             NormalizeRequiredText(difficulty, "mission_difficulty_required", "Mission difficulty is required.", 60),
             NormalizeMaximumDuration(maximumDurationMinutes),
             MissionGameType.Normalize(gameType),
-            true,
+            false,
             "[]");
 
         mission.ReplaceNodes(nodes ?? Array.Empty<MissionNode>());
@@ -116,6 +116,51 @@ public sealed class Mission
         }
 
         IsActive = false;
+    }
+
+    public void Activate()
+    {
+        if (IsActive)
+        {
+            throw new UmbralDomainException(
+                "mission_already_active",
+                "Mission is already active.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        EnsureEligibleForLiveSession();
+        IsActive = true;
+    }
+
+    public void EnsureEligibleForLiveSession()
+    {
+        var activeMissionStages = EnumerateActiveMissionStages(Nodes, MaximumDurationMinutes).ToArray();
+        if (activeMissionStages.Length == 0)
+        {
+            throw new UmbralDomainException(
+                "mission_eligible_stage_required",
+                "Mission must expose at least one active Mission Stage to be eligible for LiveSession.",
+                UmbralFailureCategory.Validation);
+        }
+
+        foreach (var missionStage in activeMissionStages)
+        {
+            EnsureMissionStageValidationData(missionStage);
+            EnsureMissionStageHintsAreConsistent(missionStage);
+        }
+    }
+
+    public bool IsEligibleForLiveSession()
+    {
+        try
+        {
+            EnsureEligibleForLiveSession();
+            return true;
+        }
+        catch (UmbralDomainException)
+        {
+            return false;
+        }
     }
 
     private static IReadOnlyList<MissionNode> DeserializeNodes(string? nodeTreeJson)
@@ -176,5 +221,87 @@ public sealed class Mission
         }
 
         return maximumDurationMinutes;
+    }
+
+    private static IEnumerable<MissionNode> EnumerateActiveMissionStages(
+        IEnumerable<MissionNode> nodes,
+        int inheritedTimeBudgetMinutes)
+    {
+        foreach (var node in nodes)
+        {
+            if (!node.IsActive)
+            {
+                continue;
+            }
+
+            var resolvedTimeBudgetMinutes = node.ResolveTimeBudgetMinutes(inheritedTimeBudgetMinutes);
+            if (node.IsLeaf)
+            {
+                yield return node;
+                continue;
+            }
+
+            foreach (var child in EnumerateActiveMissionStages(node.Children, resolvedTimeBudgetMinutes))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static void EnsureMissionStageValidationData(MissionNode missionStage)
+    {
+        if (string.Equals(missionStage.GameType, MissionGameType.TreasureHunt, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(missionStage.ExpectedQrHash))
+            {
+                throw new UmbralDomainException(
+                    "mission_eligible_stage_expected_qr_hash_required",
+                    $"Mission Stage '{missionStage.Name}' must define an expected QR hash.",
+                    UmbralFailureCategory.Validation);
+            }
+
+            return;
+        }
+
+        if (string.Equals(missionStage.GameType, MissionGameType.Trivia, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(missionStage.TriviaValidAnswer) &&
+                string.IsNullOrWhiteSpace(missionStage.TriviaInitialValidationCriterion))
+            {
+                throw new UmbralDomainException(
+                    "mission_eligible_stage_trivia_validation_required",
+                    $"Mission Stage '{missionStage.Name}' must define a valid answer or validation criterion.",
+                    UmbralFailureCategory.Validation);
+            }
+
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "mission_eligible_stage_game_type_unsupported",
+            $"Mission Stage '{missionStage.Name}' has unsupported Game Type '{missionStage.GameType}'.",
+            UmbralFailureCategory.Validation);
+    }
+
+    private static void EnsureMissionStageHintsAreConsistent(MissionNode missionStage)
+    {
+        foreach (var hint in missionStage.Hints)
+        {
+            if (string.IsNullOrWhiteSpace(hint.Content))
+            {
+                throw new UmbralDomainException(
+                    "mission_eligible_hint_content_required",
+                    $"Mission Stage '{missionStage.Name}' has a hint without content.",
+                    UmbralFailureCategory.Validation);
+            }
+
+            if (hint.Latitude.HasValue != hint.Longitude.HasValue)
+            {
+                throw new UmbralDomainException(
+                    "mission_eligible_hint_coordinates_incomplete",
+                    $"Mission Stage '{missionStage.Name}' has a hint with incomplete coordinates.",
+                    UmbralFailureCategory.Validation);
+            }
+        }
     }
 }

@@ -23,7 +23,7 @@ namespace Umbral.MissionDesign.Api.Tests;
 public sealed class MissionDomainTests
 {
     [Fact]
-    public void Create_NormalizesSupportedGameType_AndMarksMissionActive()
+    public void Create_NormalizesSupportedGameType_AndMarksMissionInactive()
     {
         var mission = Mission.Create(
             Guid.NewGuid(),
@@ -37,7 +37,7 @@ public sealed class MissionDomainTests
         Assert.Equal("Urban treasure route", mission.Description);
         Assert.Equal("Medium", mission.Difficulty);
         Assert.Equal(MissionGameType.Trivia, mission.GameType);
-        Assert.True(mission.IsActive);
+        Assert.False(mission.IsActive);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class MissionDomainTests
     }
 
     [Fact]
-    public void Deactivate_RejectsAlreadyInactiveMission()
+    public void Activate_RejectsMissionWithoutActiveMissionStage()
     {
         var mission = Mission.Create(
             Guid.NewGuid(),
@@ -163,7 +163,57 @@ public sealed class MissionDomainTests
             30,
             MissionGameType.TreasureHunt);
 
-        mission.Deactivate();
+        var exception = Assert.Throws<UmbralDomainException>(mission.Activate);
+
+        Assert.Equal("mission_eligible_stage_required", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public void Activate_AllowsEligibleMission()
+    {
+        var mission = Mission.Create(
+            Guid.NewGuid(),
+            "Museum Hunt",
+            "Description.",
+            "Easy",
+            25,
+            MissionGameType.TreasureHunt,
+            [
+                MissionNode.Create(
+                    Guid.NewGuid(),
+                    "Root Block",
+                    1,
+                    true,
+                    defaultTimeBudgetMinutes: 25,
+                    children:
+                    [
+                        MissionNode.Create(
+                            Guid.NewGuid(),
+                            "Leaf Stage",
+                            1,
+                            true,
+                            timeBudgetMinutes: null,
+                            gameType: MissionGameType.TreasureHunt,
+                            expectedQrHash: "qr-hash-1")
+                    ])
+            ]);
+
+        mission.Activate();
+
+        Assert.True(mission.IsActive);
+    }
+
+    [Fact]
+    public void Deactivate_RejectsAlreadyInactiveMission()
+    {
+        var mission = Mission.Create(
+            Guid.NewGuid(),
+            "Museum Hunt",
+            "Description",
+            "Easy",
+            30,
+            MissionGameType.TreasureHunt);
 
         var exception = Assert.Throws<UmbralDomainException>(mission.Deactivate);
 
@@ -196,7 +246,7 @@ public sealed class MissionEndpointTests
         Assert.NotNull(mission);
         Assert.Equal("City Circuit", mission.Name);
         Assert.Equal(MissionGameType.TreasureHunt, mission.GameType);
-        Assert.True(mission.IsActive);
+        Assert.False(mission.IsActive);
         Assert.Empty(mission.Nodes);
     }
 
@@ -434,16 +484,68 @@ public sealed class MissionEndpointTests
     }
 
     [Fact]
-    public async Task DeactivateMission_ReturnsInactiveMission()
+    public async Task ActivateMission_ReturnsActiveMission()
+    {
+        await using var factory = new MissionApiFactory();
+        var mission = CreateEligibleMission("Activation Mission");
+        await factory.SeedMissionAsync(mission);
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsync(
+            $"/api/mission-design/missions/{mission.Id}/activate",
+            content: null);
+
+        response.EnsureSuccessStatusCode();
+
+        var updatedMission = await response.Content.ReadFromJsonAsync<MissionResponse>();
+
+        Assert.NotNull(updatedMission);
+        Assert.True(updatedMission.IsActive);
+    }
+
+    [Fact]
+    public async Task ActivateMission_ReturnsConflict_WhenMissionAlreadyActive()
+    {
+        await using var factory = new MissionApiFactory();
+        var mission = CreateEligibleMission("Already Active Mission");
+        mission.Activate();
+        await factory.SeedMissionAsync(mission);
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsync(
+            $"/api/mission-design/missions/{mission.Id}/activate",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ActivateMission_ReturnsBadRequest_WhenMissionIsNotEligible()
     {
         await using var factory = new MissionApiFactory();
         var mission = Mission.Create(
             Guid.NewGuid(),
-            "Deactivation Mission",
+            "Draft Mission",
             "Description.",
             "Easy",
             25,
             MissionGameType.TreasureHunt);
+        await factory.SeedMissionAsync(mission);
+        var client = factory.CreateAuthorizedClient();
+
+        var response = await client.PostAsync(
+            $"/api/mission-design/missions/{mission.Id}/activate",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeactivateMission_ReturnsInactiveMission()
+    {
+        await using var factory = new MissionApiFactory();
+        var mission = CreateEligibleMission("Deactivation Mission");
+        mission.Activate();
         await factory.SeedMissionAsync(mission);
         var client = factory.CreateAuthorizedClient();
 
@@ -470,7 +572,6 @@ public sealed class MissionEndpointTests
             "Easy",
             25,
             MissionGameType.TreasureHunt);
-        mission.Deactivate();
         await factory.SeedMissionAsync(mission);
         var client = factory.CreateAuthorizedClient();
 
@@ -479,6 +580,133 @@ public sealed class MissionEndpointTests
             content: null);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListEligibleMissionsForLiveSession_ReturnsOnlyActiveEligibleMissions()
+    {
+        await using var factory = new MissionApiFactory();
+        var eligibleMission = CreateEligibleMission("Eligible Mission");
+        eligibleMission.Activate();
+        await factory.SeedMissionAsync(eligibleMission);
+        await factory.SeedMissionAsync(Mission.Create(
+            Guid.NewGuid(),
+            "Draft Mission",
+            "Still drafting.",
+            "Easy",
+            30,
+            MissionGameType.TreasureHunt));
+        var client = factory.CreateOperatorClient();
+
+        var missions = await client.GetFromJsonAsync<List<EligibleMissionForLiveSessionSummaryResponse>>(
+            "/api/mission-design/missions/eligible-for-live-session");
+
+        Assert.NotNull(missions);
+        var mission = Assert.Single(missions);
+        Assert.Equal("Eligible Mission", mission.Name);
+        Assert.Equal(1, mission.ActiveMissionStageCount);
+    }
+
+    [Fact]
+    public async Task GetEligibleMissionForLiveSession_ReturnsFlattenedActiveMissionStageFlow()
+    {
+        await using var factory = new MissionApiFactory();
+        var mission = Mission.Create(
+            Guid.NewGuid(),
+            "Tree Mission",
+            "Ready for session.",
+            "Medium",
+            60,
+            MissionGameType.Trivia,
+            [
+                MissionNode.Create(
+                    Guid.NewGuid(),
+                    "Root Block",
+                    1,
+                    true,
+                    defaultTimeBudgetMinutes: 40,
+                    children:
+                    [
+                        MissionNode.Create(
+                            Guid.NewGuid(),
+                            "Inactive Stage",
+                            1,
+                            false,
+                            timeBudgetMinutes: null,
+                            gameType: MissionGameType.Trivia,
+                            triviaValidAnswer: "skip"),
+                        MissionNode.Create(
+                            Guid.NewGuid(),
+                            "Active Stage",
+                            2,
+                            true,
+                            timeBudgetMinutes: null,
+                            gameType: MissionGameType.Trivia,
+                            triviaValidAnswer: "answer",
+                            hints:
+                            [
+                                MissionHint.Create(
+                                    Guid.NewGuid(),
+                                    "Visible clue",
+                                    false)
+                            ])
+                    ])
+            ]);
+        mission.Activate();
+        await factory.SeedMissionAsync(mission);
+        var client = factory.CreateOperatorClient();
+
+        var eligibleMission = await client.GetFromJsonAsync<EligibleMissionForLiveSessionResponse>(
+            $"/api/mission-design/missions/eligible-for-live-session/{mission.Id}");
+
+        Assert.NotNull(eligibleMission);
+        var missionStage = Assert.Single(eligibleMission.MissionStages);
+        Assert.Equal("Active Stage", missionStage.Name);
+        Assert.Equal(1, missionStage.SessionStageOrder);
+        Assert.Equal(2, missionStage.SourceOrder);
+        Assert.Equal(40, missionStage.ResolvedTimeBudgetMinutes);
+        Assert.Equal("Visible clue", Assert.Single(missionStage.Hints).Content);
+    }
+
+    [Fact]
+    public async Task EligibleMissionRoutes_ReturnForbidden_ForParticipant()
+    {
+        await using var factory = new MissionApiFactory();
+        var client = factory.CreateParticipantClient();
+
+        var response = await client.GetAsync("/api/mission-design/missions/eligible-for-live-session");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private static Mission CreateEligibleMission(string missionName)
+    {
+        return Mission.Create(
+            Guid.NewGuid(),
+            missionName,
+            "Description.",
+            "Easy",
+            25,
+            MissionGameType.TreasureHunt,
+            [
+                MissionNode.Create(
+                    Guid.NewGuid(),
+                    "Root Block",
+                    1,
+                    true,
+                    defaultTimeBudgetMinutes: 25,
+                    children:
+                    [
+                        MissionNode.Create(
+                            Guid.NewGuid(),
+                            "Leaf Stage",
+                            1,
+                            true,
+                            timeBudgetMinutes: null,
+                            gameType: MissionGameType.TreasureHunt,
+                            expectedQrHash: "qr-hash-1")
+                    ])
+            ]);
     }
 }
 
@@ -520,11 +748,17 @@ internal sealed class MissionApiFactory : WebApplicationFactory<Program>
 
     public HttpClient CreateAuthorizedClient()
     {
-        var client = CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
-        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, UmbralRoles.Administrator);
+        return CreateClientForRole(UmbralRoles.Administrator);
+    }
 
-        return client;
+    public HttpClient CreateOperatorClient()
+    {
+        return CreateClientForRole(UmbralRoles.Operator);
+    }
+
+    public HttpClient CreateParticipantClient()
+    {
+        return CreateClientForRole(UmbralRoles.Participant);
     }
 
     public async Task SeedMissionAsync(Mission mission)
@@ -545,6 +779,15 @@ internal sealed class MissionApiFactory : WebApplicationFactory<Program>
         await dbContext.Database.EnsureCreatedAsync();
         dbContext.MissionStages.Add(missionStage);
         await dbContext.SaveChangesAsync();
+    }
+
+    private HttpClient CreateClientForRole(string role)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, role);
+
+        return client;
     }
 
     private sealed class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>

@@ -20,6 +20,23 @@ public sealed record MissionSummaryResponse(
     string GameType,
     bool IsActive);
 
+public sealed record EligibleMissionForLiveSessionSummaryResponse(
+    Guid Id,
+    string Name,
+    string Difficulty,
+    int MaximumDurationMinutes,
+    string GameType,
+    int ActiveMissionStageCount);
+
+public sealed record EligibleMissionForLiveSessionResponse(
+    Guid Id,
+    string Name,
+    string Description,
+    string Difficulty,
+    int MaximumDurationMinutes,
+    string GameType,
+    IReadOnlyList<EligibleMissionStageResponse> MissionStages);
+
 public sealed record CreateMissionRequest(
     string Name,
     string Description,
@@ -80,6 +97,18 @@ public sealed record MissionHintResponse(
     decimal? Latitude,
     decimal? Longitude);
 
+public sealed record EligibleMissionStageResponse(
+    Guid Id,
+    string Name,
+    int SessionStageOrder,
+    int SourceOrder,
+    int ResolvedTimeBudgetMinutes,
+    string GameType,
+    string? ExpectedQrHash,
+    string? TriviaValidAnswer,
+    string? TriviaInitialValidationCriterion,
+    IReadOnlyList<MissionHintResponse> Hints);
+
 public static class MissionMappings
 {
     public static MissionResponse ToResponse(this Mission mission)
@@ -108,6 +137,35 @@ public static class MissionMappings
             mission.MaximumDurationMinutes,
             mission.GameType,
             mission.IsActive);
+    }
+
+    public static EligibleMissionForLiveSessionSummaryResponse ToEligibleForLiveSessionSummaryResponse(this Mission mission)
+    {
+        ArgumentNullException.ThrowIfNull(mission);
+
+        var missionStages = mission.GetEligibleMissionStages().ToArray();
+
+        return new EligibleMissionForLiveSessionSummaryResponse(
+            mission.Id,
+            mission.Name,
+            mission.Difficulty,
+            mission.MaximumDurationMinutes,
+            mission.GameType,
+            missionStages.Length);
+    }
+
+    public static EligibleMissionForLiveSessionResponse ToEligibleForLiveSessionResponse(this Mission mission)
+    {
+        ArgumentNullException.ThrowIfNull(mission);
+
+        return new EligibleMissionForLiveSessionResponse(
+            mission.Id,
+            mission.Name,
+            mission.Description,
+            mission.Difficulty,
+            mission.MaximumDurationMinutes,
+            mission.GameType,
+            mission.GetEligibleMissionStages().ToArray());
     }
 
     public static MissionNode ToDomain(this MissionNodeRequest request)
@@ -170,5 +228,54 @@ public static class MissionMappings
             hint.IsSolution,
             hint.Latitude,
             hint.Longitude);
+    }
+
+    private static IEnumerable<EligibleMissionStageResponse> GetEligibleMissionStages(this Mission mission)
+    {
+        mission.EnsureEligibleForLiveSession();
+
+        var missionStages = new List<EligibleMissionStageResponse>();
+        EnumerateEligibleMissionStages(
+            mission.Nodes,
+            mission.MaximumDurationMinutes,
+            missionStages);
+
+        return missionStages;
+    }
+
+    private static void EnumerateEligibleMissionStages(
+        IEnumerable<MissionNode> nodes,
+        int inheritedTimeBudgetMinutes,
+        ICollection<EligibleMissionStageResponse> missionStages)
+    {
+        foreach (var node in nodes)
+        {
+            if (!node.IsActive)
+            {
+                continue;
+            }
+
+            var resolvedTimeBudgetMinutes = node.ResolveTimeBudgetMinutes(inheritedTimeBudgetMinutes);
+            if (node.IsLeaf)
+            {
+                missionStages.Add(new EligibleMissionStageResponse(
+                    node.Id,
+                    node.Name,
+                    missionStages.Count + 1,
+                    node.Order,
+                    resolvedTimeBudgetMinutes,
+                    node.GameType ?? string.Empty,
+                    node.ExpectedQrHash,
+                    node.TriviaValidAnswer,
+                    node.TriviaInitialValidationCriterion,
+                    node.Hints.Select(hint => hint.ToResponse()).ToArray()));
+                continue;
+            }
+
+            EnumerateEligibleMissionStages(
+                node.Children,
+                resolvedTimeBudgetMinutes,
+                missionStages);
+        }
     }
 }
