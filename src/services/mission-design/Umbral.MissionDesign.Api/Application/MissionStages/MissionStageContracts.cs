@@ -14,6 +14,7 @@ public sealed record MissionStageResponse(
     Guid MissionId,
     string Name,
     int Order,
+    string Difficulty,
     string GameType,
     string? ExpectedQrHash,
     string? TriviaValidationCriteria,
@@ -24,6 +25,7 @@ public sealed record MissionStageSummaryResponse(
     Guid Id,
     string Name,
     int Order,
+    string Difficulty,
     string GameType,
     bool IsActive,
     int HintCount);
@@ -31,6 +33,7 @@ public sealed record MissionStageSummaryResponse(
 public sealed record CreateMissionStageRequest(
     string Name,
     int Order,
+    string Difficulty,
     string GameType,
     string? ExpectedQrHash,
     string? TriviaValidationCriteria);
@@ -52,6 +55,7 @@ public static class MissionStageMappings
             missionStage.MissionId,
             missionStage.Name,
             missionStage.Order,
+            missionStage.Difficulty,
             missionStage.GameType,
             missionStage.ExpectedQrHash,
             missionStage.TriviaValidationCriteria,
@@ -70,6 +74,7 @@ public static class MissionStageMappings
             missionStage.Id,
             missionStage.Name,
             missionStage.Order,
+            missionStage.Difficulty,
             missionStage.GameType,
             missionStage.IsActive,
             missionStage.Hints.Count);

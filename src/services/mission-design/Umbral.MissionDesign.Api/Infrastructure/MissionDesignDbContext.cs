@@ -59,6 +59,9 @@ public sealed class MissionDesignDbContext(DbContextOptions<MissionDesignDbConte
                 .IsRequired();
             missionStage.Property(entity => entity.Order)
                 .IsRequired();
+            missionStage.Property(entity => entity.Difficulty)
+                .HasMaxLength(16)
+                .IsRequired();
             missionStage.Property(entity => entity.GameType)
                 .HasMaxLength(40)
                 .IsRequired();

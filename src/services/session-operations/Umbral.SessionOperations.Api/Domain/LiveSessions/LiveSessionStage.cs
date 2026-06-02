@@ -14,6 +14,8 @@ public sealed record LiveSessionStage
 
     public int ResolvedTimeBudgetMinutes { get; init; }
 
+    public string Difficulty { get; init; } = string.Empty;
+
     public string GameType { get; init; } = string.Empty;
 
     public string? ExpectedQrHash { get; init; }
@@ -30,6 +32,7 @@ public sealed record LiveSessionStage
         int sessionStageOrder,
         int sourceOrder,
         int resolvedTimeBudgetMinutes,
+        string difficulty,
         string gameType,
         string? expectedQrHash = null,
         string? triviaValidAnswer = null,
@@ -76,6 +79,14 @@ public sealed record LiveSessionStage
                 UmbralFailureCategory.Validation);
         }
 
+        if (string.IsNullOrWhiteSpace(difficulty))
+        {
+            throw new UmbralDomainException(
+                "live_session_stage_difficulty_required",
+                "LiveSession stage difficulty is required.",
+                UmbralFailureCategory.Validation);
+        }
+
         if (string.IsNullOrWhiteSpace(gameType))
         {
             throw new UmbralDomainException(
@@ -91,6 +102,7 @@ public sealed record LiveSessionStage
             SessionStageOrder = sessionStageOrder,
             SourceOrder = sourceOrder,
             ResolvedTimeBudgetMinutes = resolvedTimeBudgetMinutes,
+            Difficulty = difficulty.Trim(),
             GameType = gameType.Trim(),
             ExpectedQrHash = string.IsNullOrWhiteSpace(expectedQrHash) ? null : expectedQrHash.Trim(),
             TriviaValidAnswer = string.IsNullOrWhiteSpace(triviaValidAnswer) ? null : triviaValidAnswer.Trim(),

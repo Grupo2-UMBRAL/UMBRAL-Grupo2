@@ -107,6 +107,7 @@ public static class MissionEndpointRouteBuilderExtensions
                         missionId,
                         request.Name,
                         request.Order,
+                        request.Difficulty,
                         request.GameType,
                         request.ExpectedQrHash,
                         request.TriviaValidationCriteria),

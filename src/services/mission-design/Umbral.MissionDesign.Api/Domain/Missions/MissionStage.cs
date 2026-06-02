@@ -13,6 +13,7 @@ public sealed class MissionStage
         Guid missionId,
         string name,
         int order,
+        string difficulty,
         string gameType,
         string? expectedQrHash,
         string? triviaValidationCriteria,
@@ -22,6 +23,7 @@ public sealed class MissionStage
         MissionId = missionId;
         Name = name;
         Order = order;
+        Difficulty = difficulty;
         GameType = gameType;
         ExpectedQrHash = expectedQrHash;
         TriviaValidationCriteria = triviaValidationCriteria;
@@ -35,6 +37,8 @@ public sealed class MissionStage
     public string Name { get; private set; } = string.Empty;
 
     public int Order { get; private set; }
+
+    public string Difficulty { get; private set; } = string.Empty;
 
     public string GameType { get; private set; } = string.Empty;
 
@@ -51,12 +55,14 @@ public sealed class MissionStage
         Guid missionId,
         string name,
         int order,
+        string difficulty,
         string gameType,
         string? expectedQrHash,
         string? triviaValidationCriteria)
     {
         var normalizedName = NormalizeRequiredText(name, "mission_stage_name_required", "Mission Stage name is required.", 120);
         var normalizedOrder = NormalizeOrder(order);
+        var normalizedDifficulty = MissionStageDifficulty.Normalize(difficulty);
         var normalizedGameType = MissionGameType.Normalize(gameType);
         var normalizedExpectedQrHash = NormalizeOptionalText(expectedQrHash, "mission_stage_expected_qr_hash_too_long", 256);
         var normalizedTriviaValidationCriteria = NormalizeOptionalText(triviaValidationCriteria, "mission_stage_trivia_validation_criteria_too_long", 1_024);
@@ -101,6 +107,7 @@ public sealed class MissionStage
             missionId,
             normalizedName,
             normalizedOrder,
+            normalizedDifficulty,
             normalizedGameType,
             normalizedExpectedQrHash,
             normalizedTriviaValidationCriteria,

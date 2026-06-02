@@ -18,6 +18,7 @@ public sealed class MissionStageDomainTests
                 Guid.NewGuid(),
                 "Museum Path",
                 1,
+                MissionStageDifficulty.Easy,
                 MissionGameType.TreasureHunt,
                 expectedQrHash: null,
                 triviaValidationCriteria: null));
@@ -35,6 +36,7 @@ public sealed class MissionStageDomainTests
                 Guid.NewGuid(),
                 "Museum Path",
                 1,
+                MissionStageDifficulty.Medium,
                 MissionGameType.Trivia,
                 expectedQrHash: null,
                 triviaValidationCriteria: null));
@@ -51,6 +53,7 @@ public sealed class MissionStageDomainTests
             Guid.NewGuid(),
             "Museum Path",
             1,
+            MissionStageDifficulty.Hard,
             MissionGameType.Trivia,
             expectedQrHash: null,
             triviaValidationCriteria: "Answer must match");
@@ -89,6 +92,7 @@ public sealed class MissionStageEndpointTests
             new CreateMissionStageRequest(
                 "Second Stage",
                 2,
+                MissionStageDifficulty.Hard,
                 MissionGameType.TreasureHunt,
                 "qr-hash-2",
                 null));
@@ -99,6 +103,7 @@ public sealed class MissionStageEndpointTests
             new CreateMissionStageRequest(
                 "First Stage",
                 1,
+                MissionStageDifficulty.Easy,
                 MissionGameType.TreasureHunt,
                 "qr-hash-1",
                 null));
@@ -110,8 +115,16 @@ public sealed class MissionStageEndpointTests
         Assert.NotNull(stages);
         Assert.Collection(
             stages,
-            first => Assert.Equal("First Stage", first.Name),
-            second => Assert.Equal("Second Stage", second.Name));
+            first =>
+            {
+                Assert.Equal("First Stage", first.Name);
+                Assert.Equal(MissionStageDifficulty.Easy, first.Difficulty);
+            },
+            second =>
+            {
+                Assert.Equal("Second Stage", second.Name);
+                Assert.Equal(MissionStageDifficulty.Hard, second.Difficulty);
+            });
     }
 
     [Fact]
@@ -133,6 +146,7 @@ public sealed class MissionStageEndpointTests
             mission.Id,
             "Existing Stage",
             1,
+            MissionStageDifficulty.Medium,
             MissionGameType.Trivia,
             expectedQrHash: null,
             triviaValidationCriteria: "Criteria");
@@ -143,6 +157,7 @@ public sealed class MissionStageEndpointTests
             new CreateMissionStageRequest(
                 "Duplicate Stage",
                 1,
+                MissionStageDifficulty.Hard,
                 MissionGameType.Trivia,
                 null,
                 "Another criteria"));
@@ -167,6 +182,7 @@ public sealed class MissionStageEndpointTests
             mission.Id,
             "Hint Stage",
             1,
+            MissionStageDifficulty.Easy,
             MissionGameType.Trivia,
             expectedQrHash: null,
             triviaValidationCriteria: "Keep going");
@@ -187,6 +203,7 @@ public sealed class MissionStageEndpointTests
             $"/api/mission-design/stages/{stage.Id}");
 
         Assert.NotNull(stageDetail);
+        Assert.Equal(MissionStageDifficulty.Easy, stageDetail!.Difficulty);
         Assert.Single(stageDetail!.Hints);
         Assert.Equal("Look under the bench.", stageDetail.Hints[0].Content);
     }
@@ -208,6 +225,7 @@ public sealed class MissionStageEndpointTests
             mission.Id,
             "Deactivatable Stage",
             1,
+            MissionStageDifficulty.Medium,
             MissionGameType.TreasureHunt,
             "qr-hash-1",
             triviaValidationCriteria: null);

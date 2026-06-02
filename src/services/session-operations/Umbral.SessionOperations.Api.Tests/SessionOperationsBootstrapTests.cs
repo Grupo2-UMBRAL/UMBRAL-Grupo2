@@ -208,6 +208,7 @@ public sealed class LiveSessionDomainTests
                     1,
                     2,
                     35,
+                    "Medium",
                     "Trivia")
             ]);
 
@@ -231,12 +232,14 @@ public sealed class LiveSessionEndpointTests
                     Guid.Parse("11111111-1111-1111-1111-111111111111"),
                     "Stage 1",
                     sessionStageOrder: 1,
-                    sourceOrder: 10),
+                    sourceOrder: 10,
+                    difficulty: "Easy"),
                 CreateMissionStageSnapshot(
                     Guid.Parse("22222222-2222-2222-2222-222222222222"),
                     "Stage 2",
                     sessionStageOrder: 2,
-                    sourceOrder: 20)
+                    sourceOrder: 20,
+                    difficulty: "Hard")
             ]));
         var client = factory.CreateOperatorClient();
 
@@ -265,12 +268,14 @@ public sealed class LiveSessionEndpointTests
                 Assert.Equal("Stage 2", first.Name);
                 Assert.Equal(1, first.SessionStageOrder);
                 Assert.Equal(20, first.SourceOrder);
+                Assert.Equal("Hard", first.Difficulty);
             },
             second =>
             {
                 Assert.Equal("Stage 1", second.Name);
                 Assert.Equal(2, second.SessionStageOrder);
                 Assert.Equal(10, second.SourceOrder);
+                Assert.Equal("Easy", second.Difficulty);
             });
     }
 
@@ -302,7 +307,7 @@ public sealed class LiveSessionEndpointTests
         factory.SetEligibleMission(new EligibleMissionForLiveSessionSnapshot(
             Guid.NewGuid(),
             "Night Mission",
-            [CreateMissionStageSnapshot(Guid.NewGuid(), "Stage 1", 1, 1)]));
+            [CreateMissionStageSnapshot(Guid.NewGuid(), "Stage 1", 1, 1, "Medium")]));
         var client = factory.CreateOperatorClient();
 
         var response = await client.PostAsJsonAsync(
@@ -353,7 +358,8 @@ public sealed class LiveSessionEndpointTests
         Guid id,
         string name,
         int sessionStageOrder,
-        int sourceOrder)
+        int sourceOrder,
+        string difficulty)
     {
         return new EligibleMissionStageSnapshot(
             id,
@@ -361,6 +367,7 @@ public sealed class LiveSessionEndpointTests
             sessionStageOrder,
             sourceOrder,
             30,
+            difficulty,
             "Trivia",
             null,
             "answer",
@@ -385,6 +392,7 @@ public sealed class LiveSessionEndpointTests
                     1,
                     1,
                     30,
+                    "Medium",
                     "Trivia")
             ]);
     }

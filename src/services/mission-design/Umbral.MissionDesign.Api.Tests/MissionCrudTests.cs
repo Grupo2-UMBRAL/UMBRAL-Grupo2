@@ -65,6 +65,7 @@ public sealed class MissionDomainTests
             1,
             true,
             timeBudgetMinutes: 20,
+            difficulty: MissionStageDifficulty.Easy,
             gameType: MissionGameType.TreasureHunt,
             expectedQrHash: "hash-a");
         var duplicateOrderLeafB = MissionNode.Create(
@@ -73,6 +74,7 @@ public sealed class MissionDomainTests
             1,
             true,
             timeBudgetMinutes: 25,
+            difficulty: MissionStageDifficulty.Hard,
             gameType: MissionGameType.Trivia,
             triviaValidAnswer: "answer");
 
@@ -116,6 +118,7 @@ public sealed class MissionDomainTests
             1,
             true,
             timeBudgetMinutes: null,
+            difficulty: MissionStageDifficulty.Medium,
             gameType: MissionGameType.TreasureHunt,
             expectedQrHash: "expected-qr-hash",
             hints:
@@ -149,7 +152,36 @@ public sealed class MissionDomainTests
         var leafNode = rootNode.Children.Single();
 
         Assert.Equal(45, leafNode.ResolveTimeBudgetMinutes(rootNode.ResolveTimeBudgetMinutes(mission.MaximumDurationMinutes)));
+        Assert.Equal(MissionStageDifficulty.Medium, leafNode.Difficulty);
         Assert.Equal("Visible clue", leafNode.Hints.Single().Content);
+    }
+
+    [Fact]
+    public void Create_RejectsDifficultyOnCompositeMissionNode()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            MissionNode.Create(
+                Guid.NewGuid(),
+                "Composite",
+                1,
+                true,
+                defaultTimeBudgetMinutes: 45,
+                difficulty: MissionStageDifficulty.Easy,
+                children:
+                [
+                    MissionNode.Create(
+                        Guid.NewGuid(),
+                        "Leaf Stage",
+                        1,
+                        true,
+                        timeBudgetMinutes: 20,
+                        difficulty: MissionStageDifficulty.Medium,
+                        gameType: MissionGameType.Trivia,
+                        triviaValidAnswer: "answer")
+                ]));
+
+        Assert.Equal("mission_node_composite_invalid_payload", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
     }
 
     [Fact]
@@ -194,6 +226,7 @@ public sealed class MissionDomainTests
                             1,
                             true,
                             timeBudgetMinutes: null,
+                            difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.TreasureHunt,
                             expectedQrHash: "qr-hash-1")
                     ])
@@ -277,6 +310,7 @@ public sealed class MissionEndpointTests
                                 Order: 1,
                                 IsActive: true,
                                 TimeBudgetMinutes: null,
+                                Difficulty: MissionStageDifficulty.Medium,
                                 GameType: MissionGameType.TreasureHunt,
                                 ExpectedQrHash: "expected-qr-hash",
                                 Hints:
@@ -298,6 +332,7 @@ public sealed class MissionEndpointTests
         var leafNode = Assert.Single(rootNode.Children);
         Assert.Equal("Leaf Stage", leafNode.Name);
         Assert.Equal(40, leafNode.ResolvedTimeBudgetMinutes);
+        Assert.Equal(MissionStageDifficulty.Medium, leafNode.Difficulty);
         Assert.Equal("Visible clue", Assert.Single(leafNode.Hints).Content);
     }
 
@@ -399,6 +434,7 @@ public sealed class MissionEndpointTests
                                 Name: "Trivia Stage",
                                 Order: 1,
                                 IsActive: true,
+                                Difficulty: MissionStageDifficulty.Hard,
                                 GameType: MissionGameType.Trivia,
                                 TriviaValidAnswer: "42")
                         ])
@@ -412,6 +448,7 @@ public sealed class MissionEndpointTests
         Assert.Equal(MissionGameType.Trivia, mission.GameType);
         var rootNode = Assert.Single(mission.Nodes);
         var leafNode = Assert.Single(rootNode.Children);
+        Assert.Equal(MissionStageDifficulty.Hard, leafNode.Difficulty);
         Assert.Equal(MissionGameType.Trivia, leafNode.GameType);
         Assert.Equal(25, leafNode.ResolvedTimeBudgetMinutes);
     }
@@ -466,6 +503,7 @@ public sealed class MissionEndpointTests
                             1,
                             true,
                             timeBudgetMinutes: null,
+                            difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.Trivia,
                             triviaValidAnswer: "answer")
                     ])
@@ -633,6 +671,7 @@ public sealed class MissionEndpointTests
                             1,
                             false,
                             timeBudgetMinutes: null,
+                            difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.Trivia,
                             triviaValidAnswer: "skip"),
                         MissionNode.Create(
@@ -641,6 +680,7 @@ public sealed class MissionEndpointTests
                             2,
                             true,
                             timeBudgetMinutes: null,
+                            difficulty: MissionStageDifficulty.Hard,
                             gameType: MissionGameType.Trivia,
                             triviaValidAnswer: "answer",
                             hints:
@@ -665,6 +705,7 @@ public sealed class MissionEndpointTests
         Assert.Equal(1, missionStage.SessionStageOrder);
         Assert.Equal(2, missionStage.SourceOrder);
         Assert.Equal(40, missionStage.ResolvedTimeBudgetMinutes);
+        Assert.Equal(MissionStageDifficulty.Hard, missionStage.Difficulty);
         Assert.Equal("Visible clue", Assert.Single(missionStage.Hints).Content);
     }
 
@@ -699,12 +740,13 @@ public sealed class MissionEndpointTests
                     [
                         MissionNode.Create(
                             Guid.NewGuid(),
-                            "Leaf Stage",
-                            1,
-                            true,
-                            timeBudgetMinutes: null,
-                            gameType: MissionGameType.TreasureHunt,
-                            expectedQrHash: "qr-hash-1")
+                        "Leaf Stage",
+                        1,
+                        true,
+                        timeBudgetMinutes: null,
+                        difficulty: MissionStageDifficulty.Easy,
+                        gameType: MissionGameType.TreasureHunt,
+                        expectedQrHash: "qr-hash-1")
                     ])
             ]);
     }

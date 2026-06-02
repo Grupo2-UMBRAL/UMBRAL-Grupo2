@@ -10,6 +10,7 @@ public sealed record CreateMissionStageCommand(
     Guid MissionId,
     string Name,
     int Order,
+    string Difficulty,
     string GameType,
     string? ExpectedQrHash,
     string? TriviaValidationCriteria) : IRequest<MissionStageResponse>;
@@ -48,6 +49,7 @@ public sealed class CreateMissionStageCommandHandler(MissionDesignDbContext dbCo
             request.MissionId,
             request.Name,
             request.Order,
+            request.Difficulty,
             request.GameType,
             request.ExpectedQrHash,
             request.TriviaValidationCriteria);

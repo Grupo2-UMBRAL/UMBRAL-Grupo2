@@ -16,6 +16,8 @@ public sealed record MissionNode
 
     public int? TimeBudgetMinutes { get; init; }
 
+    public string? Difficulty { get; init; }
+
     public string? GameType { get; init; }
 
     public string? ExpectedQrHash { get; init; }
@@ -37,6 +39,7 @@ public sealed record MissionNode
         bool isActive,
         int? defaultTimeBudgetMinutes = null,
         int? timeBudgetMinutes = null,
+        string? difficulty = null,
         string? gameType = null,
         string? expectedQrHash = null,
         string? triviaValidAnswer = null,
@@ -61,7 +64,8 @@ public sealed record MissionNode
 
         if (normalizedChildren.Count > 0)
         {
-            if (!string.IsNullOrWhiteSpace(gameType) ||
+            if (!string.IsNullOrWhiteSpace(difficulty) ||
+                !string.IsNullOrWhiteSpace(gameType) ||
                 !string.IsNullOrWhiteSpace(expectedQrHash) ||
                 !string.IsNullOrWhiteSpace(triviaValidAnswer) ||
                 !string.IsNullOrWhiteSpace(triviaInitialValidationCriterion) ||
@@ -84,6 +88,7 @@ public sealed record MissionNode
                     UmbralFailureCategory.Validation);
             }
 
+            var normalizedDifficulty = MissionStageDifficulty.Normalize(difficulty);
             var normalizedGameType = MissionGameType.Normalize(gameType ?? string.Empty);
             var normalizedValidation = NormalizeLeafValidationData(
                 normalizedGameType,
@@ -98,6 +103,7 @@ public sealed record MissionNode
                 Order = order,
                 IsActive = isActive,
                 TimeBudgetMinutes = timeBudgetMinutes,
+                Difficulty = normalizedDifficulty,
                 GameType = normalizedGameType,
                 ExpectedQrHash = normalizedValidation.ExpectedQrHash,
                 TriviaValidAnswer = normalizedValidation.TriviaValidAnswer,
@@ -122,6 +128,19 @@ public sealed record MissionNode
     public int ResolveTimeBudgetMinutes(int inheritedTimeBudgetMinutes)
     {
         return TimeBudgetMinutes ?? DefaultTimeBudgetMinutes ?? inheritedTimeBudgetMinutes;
+    }
+
+    public string GetRequiredDifficulty()
+    {
+        if (!IsLeaf)
+        {
+            throw new UmbralDomainException(
+                "mission_node_composite_difficulty_not_allowed",
+                "Composite mission nodes cannot define difficulty.",
+                UmbralFailureCategory.Validation);
+        }
+
+        return MissionStageDifficulty.Normalize(Difficulty);
     }
 
     public static IReadOnlyList<MissionNode> NormalizeRoots(

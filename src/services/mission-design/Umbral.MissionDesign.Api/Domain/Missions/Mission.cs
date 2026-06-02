@@ -145,6 +145,7 @@ public sealed class Mission
 
         foreach (var missionStage in activeMissionStages)
         {
+            _ = missionStage.GetRequiredDifficulty();
             EnsureMissionStageValidationData(missionStage);
             EnsureMissionStageHintsAreConsistent(missionStage);
         }
