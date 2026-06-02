@@ -1,3 +1,4 @@
+using Umbral.ServiceDefaults;
 using MediatR;
 
 namespace Umbral.IdentityAccess.Api.Application.Operators;
@@ -7,7 +8,10 @@ public sealed record CreateOperatorCommand(
     string? Email,
     string? FirstName,
     string? LastName,
-    string? Password) : IRequest<OperatorUser>;
+    string? Password) : IRequest<OperatorUser>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class CreateOperatorCommandHandler(OperatorAdministrationService service)
     : IRequestHandler<CreateOperatorCommand, OperatorUser>

@@ -1,3 +1,4 @@
+using MediatR;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -24,7 +25,10 @@ public static class ServiceCollectionExtensions
         services.AddProblemDetails();
         services.AddExceptionHandler<UmbralExceptionHandler>();
         services.AddEndpointsApiExplorer();
+        services.AddHttpContextAccessor();
         services.AddHealthChecks();
+        services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestAuthorizationBehavior<,>));
         services.AddSingleton<IClaimsTransformation, KeycloakRoleClaimsTransformation>();
         services.AddAuthorization(options =>
         {

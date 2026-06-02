@@ -5,7 +5,10 @@ using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
 
-public sealed record GetEligibleMissionForLiveSessionQuery(Guid MissionId) : IRequest<EligibleMissionForLiveSessionResponse>;
+public sealed record GetEligibleMissionForLiveSessionQuery(Guid MissionId) : IRequest<EligibleMissionForLiveSessionResponse>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
+}
 
 public sealed class GetEligibleMissionForLiveSessionQueryHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<GetEligibleMissionForLiveSessionQuery, EligibleMissionForLiveSessionResponse>

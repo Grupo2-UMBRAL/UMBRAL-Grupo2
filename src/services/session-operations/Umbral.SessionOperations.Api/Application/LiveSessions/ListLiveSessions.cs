@@ -1,10 +1,14 @@
+using Umbral.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.LiveSessions;
 
-public sealed record ListLiveSessionsQuery : IRequest<IReadOnlyList<LiveSessionResponse>>;
+public sealed record ListLiveSessionsQuery : IRequest<IReadOnlyList<LiveSessionResponse>>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
+}
 
 public sealed class ListLiveSessionsQueryHandler(SessionOperationsDbContext dbContext)
     : IRequestHandler<ListLiveSessionsQuery, IReadOnlyList<LiveSessionResponse>>

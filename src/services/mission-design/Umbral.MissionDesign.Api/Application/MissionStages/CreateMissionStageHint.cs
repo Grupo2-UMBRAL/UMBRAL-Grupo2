@@ -11,7 +11,10 @@ public sealed record CreateMissionStageHintCommand(
     string Content,
     bool IsSolution,
     double? Latitude,
-    double? Longitude) : IRequest<MissionStageHintResponse>;
+    double? Longitude) : IRequest<MissionStageHintResponse>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class CreateMissionStageHintCommandHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionStageHintCommand, MissionStageHintResponse>

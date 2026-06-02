@@ -12,7 +12,10 @@ public sealed record CreateMissionCommand(
     string Difficulty,
     int MaximumDurationMinutes,
     string GameType,
-    IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>;
+    IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class CreateMissionCommandHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionCommand, MissionResponse>

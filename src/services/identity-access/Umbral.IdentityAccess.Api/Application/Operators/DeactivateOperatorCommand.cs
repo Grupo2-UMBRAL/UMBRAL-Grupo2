@@ -1,8 +1,12 @@
+using Umbral.ServiceDefaults;
 using MediatR;
 
 namespace Umbral.IdentityAccess.Api.Application.Operators;
 
-public sealed record DeactivateOperatorCommand(string UserId) : IRequest<OperatorUser>;
+public sealed record DeactivateOperatorCommand(string UserId) : IRequest<OperatorUser>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class DeactivateOperatorCommandHandler(OperatorAdministrationService service)
     : IRequestHandler<DeactivateOperatorCommand, OperatorUser>

@@ -13,7 +13,10 @@ public sealed record CreateMissionStageCommand(
     string Difficulty,
     string GameType,
     string? ExpectedQrHash,
-    string? TriviaValidationCriteria) : IRequest<MissionStageResponse>;
+    string? TriviaValidationCriteria) : IRequest<MissionStageResponse>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class CreateMissionStageCommandHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionStageCommand, MissionStageResponse>

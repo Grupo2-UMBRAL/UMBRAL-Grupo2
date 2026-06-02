@@ -212,6 +212,17 @@ public sealed class OperatorEndpointTests
     }
 
     [Fact]
+    public async Task ListOperators_ReturnsForbidden_ForOperator()
+    {
+        await using var factory = new IdentityAccessApiFactory();
+        var client = factory.CreateOperatorClient();
+
+        var response = await client.GetAsync("/api/identity-access/operators");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateOperator_ReturnsCreatedUser()
     {
         await using var factory = new IdentityAccessApiFactory();
@@ -374,9 +385,19 @@ internal sealed class IdentityAccessApiFactory : WebApplicationFactory<Program>
 
     public HttpClient CreateAuthorizedClient()
     {
+        return CreateClientForRole(UmbralRoles.Administrator);
+    }
+
+    public HttpClient CreateOperatorClient()
+    {
+        return CreateClientForRole(UmbralRoles.Operator);
+    }
+
+    private HttpClient CreateClientForRole(string role)
+    {
         var client = CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
-        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, UmbralRoles.Administrator);
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, role);
 
         return client;
     }

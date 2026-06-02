@@ -3,7 +3,10 @@ using Umbral.ServiceDefaults;
 
 namespace Umbral.SessionOperations.Api.Application.Bootstrap.Queries;
 
-public sealed record GetSessionOperationsBootstrapDetailsQuery : IRequest<ServiceBootstrapDetails>;
+public sealed record GetSessionOperationsBootstrapDetailsQuery : IRequest<ServiceBootstrapDetails>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AuthenticatedOnly;
+}
 
 public sealed class GetSessionOperationsBootstrapDetailsQueryHandler(IServiceBootstrapDetailsProvider bootstrapDetailsProvider)
     : IRequestHandler<GetSessionOperationsBootstrapDetailsQuery, ServiceBootstrapDetails>

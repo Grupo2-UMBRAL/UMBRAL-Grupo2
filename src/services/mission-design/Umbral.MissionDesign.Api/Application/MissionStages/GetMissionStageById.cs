@@ -5,7 +5,10 @@ using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.MissionStages;
 
-public sealed record GetMissionStageByIdQuery(Guid MissionStageId) : IRequest<MissionStageResponse>;
+public sealed record GetMissionStageByIdQuery(Guid MissionStageId) : IRequest<MissionStageResponse>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
+}
 
 public sealed class GetMissionStageByIdQueryHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<GetMissionStageByIdQuery, MissionStageResponse>

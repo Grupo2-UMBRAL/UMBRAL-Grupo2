@@ -1,10 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.MissionDesign.Api.Infrastructure;
+using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
 
-public sealed record ListEligibleMissionsForLiveSessionQuery : IRequest<IReadOnlyList<EligibleMissionForLiveSessionSummaryResponse>>;
+public sealed record ListEligibleMissionsForLiveSessionQuery : IRequest<IReadOnlyList<EligibleMissionForLiveSessionSummaryResponse>>, IAuthorizableRequest
+{
+    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
+}
 
 public sealed class ListEligibleMissionsForLiveSessionQueryHandler(MissionDesignDbContext dbContext)
     : IRequestHandler<ListEligibleMissionsForLiveSessionQuery, IReadOnlyList<EligibleMissionForLiveSessionSummaryResponse>>
