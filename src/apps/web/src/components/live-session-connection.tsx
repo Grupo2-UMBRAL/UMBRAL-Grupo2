@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { getClientConfig } from "@/lib/config";
-import { useSessionOperationsConnection } from "@/hooks/use-session-operations-connection";
+import {
+  type LiveSessionStateChangedEvent,
+  useSessionOperationsConnection
+} from "@/hooks/use-session-operations-connection";
 
 type LiveSessionConnectionProps = {
   accessToken: string;
@@ -15,13 +18,15 @@ export function LiveSessionConnection({
 }: LiveSessionConnectionProps) {
   const config = getClientConfig();
   const [resyncCount, setResyncCount] = useState(0);
+  const [lastStateChange, setLastStateChange] = useState<LiveSessionStateChangedEvent | null>(null);
   const connection = useSessionOperationsConnection({
     accessToken,
     hubUrl: config.sessionHubUrl,
     onResync: () => {
       setResyncCount((current) => current + 1);
       onResync();
-    }
+    },
+    onLiveSessionStateChanged: setLastStateChange
   });
 
   return (
@@ -52,6 +57,18 @@ export function LiveSessionConnection({
           <dd>{resyncCount}</dd>
         </div>
       </dl>
+
+      {lastStateChange ? (
+        <div className="signal-card signal-connected">
+          <strong>Last lifecycle event</strong>
+          <p>
+            {lastStateChange.previousState} -&gt; {lastStateChange.state}
+          </p>
+          <p>
+            Session {lastStateChange.liveSessionId} with {lastStateChange.registeredSessionTeamCount} team(s)
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }

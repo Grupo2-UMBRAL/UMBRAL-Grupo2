@@ -1,4 +1,5 @@
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 
 namespace Umbral.SessionOperations.Api.Application.LiveSessions;
 
@@ -16,6 +17,10 @@ public sealed record LiveSessionResponse(
     string State,
     DateTimeOffset? ScheduledStartAtUtc,
     DateTimeOffset CreatedAtUtc,
+    string? JoinCode,
+    DateTimeOffset? EnrollmentWindowOpenedAtUtc,
+    DateTimeOffset? EnrollmentWindowClosedAtUtc,
+    int RegisteredSessionTeamCount,
     IReadOnlyList<LiveSessionStageResponse> SessionStageFlow);
 
 public sealed record LiveSessionStageResponse(
@@ -84,7 +89,23 @@ public static class LiveSessionMappings
             liveSession.State,
             liveSession.ScheduledStartAtUtc,
             liveSession.CreatedAtUtc,
+            liveSession.JoinCodeValue,
+            liveSession.EnrollmentWindowOpenedAtUtc,
+            liveSession.EnrollmentWindowClosedAtUtc,
+            liveSession.SessionTeams.Count,
             liveSession.SessionStageFlow.Select(stage => stage.ToResponse()).ToArray());
+    }
+
+    public static LiveSessionStateResponse ToStateResponse(this LiveSession liveSession)
+    {
+        ArgumentNullException.ThrowIfNull(liveSession);
+
+        return new LiveSessionStateResponse(
+            liveSession.Id,
+            liveSession.State,
+            liveSession.SessionTeams.Count,
+            liveSession.EnrollmentWindowOpenedAtUtc,
+            liveSession.EnrollmentWindowClosedAtUtc);
     }
 
     public static LiveSessionStage ToDomain(this EligibleMissionStageSnapshot missionStage, int sessionStageOrder)

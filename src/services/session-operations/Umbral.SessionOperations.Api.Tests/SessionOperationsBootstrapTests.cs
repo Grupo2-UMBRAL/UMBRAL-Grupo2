@@ -13,6 +13,8 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Umbral.SessionOperations.Api.Application.Bootstrap.Queries;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
+using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
 using Umbral.SessionOperations.Api.Infrastructure;
 using Umbral.ServiceDefaults;
@@ -227,6 +229,96 @@ public sealed class LiveSessionDomainTests
         Assert.Single(liveSession.SessionStageFlow);
         Assert.Equal("Stage 1", liveSession.SessionStageFlow[0].Name);
     }
+
+    [Fact]
+    public void Start_RequiresAtLeastOneRegisteredSessionTeam()
+    {
+        var liveSession = CreateLiveSession("Friday run", new DateTimeOffset(2026, 6, 2, 12, 0, 0, TimeSpan.Zero));
+
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            liveSession.Start(new DateTimeOffset(2026, 6, 2, 12, 5, 0, TimeSpan.Zero)));
+
+        Assert.Equal("live_session_requires_session_teams", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Conflict, exception.Category);
+    }
+
+    [Fact]
+    public void Start_ClosesEnrollmentWindow_AndTransitionsToActive()
+    {
+        var liveSession = CreateLiveSession("Friday run", new DateTimeOffset(2026, 6, 2, 12, 0, 0, TimeSpan.Zero));
+        var joinCode = JoinCode.Parse("ABC234");
+        var openedAtUtc = new DateTimeOffset(2026, 6, 2, 12, 1, 0, TimeSpan.Zero);
+        var startedAtUtc = new DateTimeOffset(2026, 6, 2, 12, 5, 0, TimeSpan.Zero);
+        liveSession.AssignJoinCode(joinCode);
+        liveSession.OpenEnrollmentWindow(openedAtUtc);
+        liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", "participant-1", joinCode, openedAtUtc);
+
+        liveSession.Start(startedAtUtc);
+
+        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal(startedAtUtc, liveSession.EnrollmentWindowClosedAtUtc);
+    }
+
+    [Fact]
+    public void Pause_Resume_Finalize_FollowValidSequence()
+    {
+        var liveSession = CreateStartedLiveSession();
+
+        liveSession.Pause();
+        Assert.Equal(LiveSessionStates.Paused, liveSession.State);
+
+        liveSession.Resume();
+        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+
+        liveSession.FinalizeSession();
+        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+    }
+
+    [Fact]
+    public void Cancel_RejectsFinalizedSession()
+    {
+        var liveSession = CreateStartedLiveSession();
+        liveSession.FinalizeSession();
+
+        var exception = Assert.Throws<UmbralDomainException>(() => liveSession.Cancel());
+
+        Assert.Equal("live_session_cannot_cancel", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Conflict, exception.Category);
+    }
+
+    private static LiveSession CreateStartedLiveSession()
+    {
+        var nowUtc = new DateTimeOffset(2026, 6, 2, 12, 0, 0, TimeSpan.Zero);
+        var joinCode = JoinCode.Parse("ABC234");
+        var liveSession = CreateLiveSession("Started session", nowUtc);
+        liveSession.AssignJoinCode(joinCode);
+        liveSession.OpenEnrollmentWindow(nowUtc);
+        liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", "participant-1", joinCode, nowUtc);
+        liveSession.Start(nowUtc.AddMinutes(5));
+        return liveSession;
+    }
+
+    private static LiveSession CreateLiveSession(string name, DateTimeOffset createdAtUtc)
+    {
+        return LiveSession.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Night Mission",
+            name,
+            scheduledStartAtUtc: null,
+            createdAtUtc: createdAtUtc,
+            sessionStageFlow:
+            [
+                LiveSessionStage.Create(
+                    Guid.NewGuid(),
+                    "Stage 1",
+                    1,
+                    1,
+                    30,
+                    "Medium",
+                    "Trivia")
+            ]);
+    }
 }
 
 public sealed class LiveSessionEndpointTests
@@ -365,6 +457,77 @@ public sealed class LiveSessionEndpointTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task LifecycleStart_ReturnsConflict_WhenNoTeamsRegistered()
+    {
+        await using var factory = new SessionOperationsApiFactory();
+        var missionId = Guid.NewGuid();
+        var missionStageId = Guid.NewGuid();
+        factory.SetEligibleMission(CreateEligibleMission(missionId, missionStageId));
+        var operatorClient = factory.CreateOperatorClient();
+
+        var liveSession = await CreateLiveSessionAsync(operatorClient, missionId, missionStageId);
+
+        var response = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/lifecycle/start",
+            content: null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task LifecycleFlow_TransitionsState_ClosesEnrollmentWindow_AndNotifiesRealtime()
+    {
+        await using var factory = new SessionOperationsApiFactory();
+        var missionId = Guid.NewGuid();
+        var missionStageId = Guid.NewGuid();
+        factory.SetEligibleMission(CreateEligibleMission(missionId, missionStageId));
+        var operatorClient = factory.CreateOperatorClient();
+        var participantClient = factory.CreateParticipantClient("participant-99");
+
+        var liveSession = await CreateLiveSessionAsync(operatorClient, missionId, missionStageId);
+        var joinCode = await GenerateJoinCodeAsync(operatorClient, liveSession.Id);
+        var windowResponse = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/session-enrollment/window/open",
+            content: null);
+        windowResponse.EnsureSuccessStatusCode();
+        var registerResponse = await participantClient.PostAsJsonAsync(
+            "/api/session-operations/session-enrollment/teams",
+            new RegisterTeamRequest(joinCode, "Team Cave"));
+        registerResponse.EnsureSuccessStatusCode();
+
+        var startResponse = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/lifecycle/start",
+            content: null);
+        var pauseResponse = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/lifecycle/pause",
+            content: null);
+        var resumeResponse = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/lifecycle/resume",
+            content: null);
+        var finalizeResponse = await operatorClient.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSession.Id}/lifecycle/finalize",
+            content: null);
+
+        startResponse.EnsureSuccessStatusCode();
+        pauseResponse.EnsureSuccessStatusCode();
+        resumeResponse.EnsureSuccessStatusCode();
+        finalizeResponse.EnsureSuccessStatusCode();
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<SessionOperationsDbContext>();
+        var storedSession = await dbContext.LiveSessions.SingleAsync(session => session.Id == liveSession.Id);
+        Assert.Equal(LiveSessionStates.Finalized, storedSession.State);
+        Assert.NotNull(storedSession.EnrollmentWindowClosedAtUtc);
+
+        Assert.Collection(
+            factory.RecordedStateChanges,
+            first => Assert.Equal(LiveSessionStates.Active, first.State),
+            second => Assert.Equal(LiveSessionStates.Paused, second.State),
+            third => Assert.Equal(LiveSessionStates.Active, third.State),
+            fourth => Assert.Equal(LiveSessionStates.Finalized, fourth.State));
+    }
+
     private static EligibleMissionStageSnapshot CreateMissionStageSnapshot(
         Guid id,
         string name,
@@ -384,6 +547,49 @@ public sealed class LiveSessionEndpointTests
             "answer",
             null,
             []);
+    }
+
+    private static async Task<LiveSessionResponse> CreateLiveSessionAsync(
+        HttpClient client,
+        Guid missionId,
+        Guid missionStageId)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/session-operations/live-sessions",
+            new CreateLiveSessionRequest(missionId, "Session Alpha", null, [missionStageId]));
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<LiveSessionResponse>())!;
+    }
+
+    private static async Task<string> GenerateJoinCodeAsync(HttpClient client, Guid liveSessionId)
+    {
+        var response = await client.PostAsync(
+            $"/api/session-operations/live-sessions/{liveSessionId}/session-enrollment/join-code",
+            content: null);
+        response.EnsureSuccessStatusCode();
+        var joinCode = await response.Content.ReadFromJsonAsync<GenerateJoinCodeResponse>();
+        return joinCode!.JoinCode;
+    }
+
+    private static EligibleMissionForLiveSessionSnapshot CreateEligibleMission(Guid missionId, Guid missionStageId)
+    {
+        return new EligibleMissionForLiveSessionSnapshot(
+            missionId,
+            "Night Mission",
+            [
+                new EligibleMissionStageSnapshot(
+                    missionStageId,
+                    "Stage 1",
+                    1,
+                    1,
+                    30,
+                    "Medium",
+                    "Trivia",
+                    null,
+                    "answer",
+                    null,
+                    [])
+            ]);
     }
 
     private static LiveSession CreateLiveSession(string name, DateTimeOffset createdAtUtc)
@@ -413,6 +619,7 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
 {
     private readonly string databaseName = $"session-operations-tests-{Guid.NewGuid():N}";
     private readonly FakeMissionDesignLiveSessionCatalog missionDesignLiveSessionCatalog = new();
+    private readonly FakeLiveSessionStateNotifier liveSessionStateNotifier = new();
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -450,10 +657,15 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
             services.RemoveAll<IMissionDesignLiveSessionCatalog>();
             services.AddSingleton(missionDesignLiveSessionCatalog);
             services.AddSingleton<IMissionDesignLiveSessionCatalog>(missionDesignLiveSessionCatalog);
+            services.RemoveAll<ILiveSessionStateNotifier>();
+            services.AddSingleton(liveSessionStateNotifier);
+            services.AddSingleton<ILiveSessionStateNotifier>(liveSessionStateNotifier);
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(new FixedTimeProvider(new DateTimeOffset(2026, 6, 2, 12, 0, 0, TimeSpan.Zero)));
         });
     }
+
+    public IReadOnlyList<LiveSessionStateChangedEvent> RecordedStateChanges => liveSessionStateNotifier.Events;
 
     public HttpClient CreateOperatorClient()
     {
@@ -531,6 +743,21 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
         public override DateTimeOffset GetUtcNow()
         {
             return utcNow;
+        }
+    }
+
+    private sealed class FakeLiveSessionStateNotifier : ILiveSessionStateNotifier
+    {
+        private readonly List<LiveSessionStateChangedEvent> events = [];
+
+        public IReadOnlyList<LiveSessionStateChangedEvent> Events => events;
+
+        public Task NotifyStateChangedAsync(
+            LiveSessionStateChangedEvent stateChangedEvent,
+            CancellationToken cancellationToken)
+        {
+            events.Add(stateChangedEvent);
+            return Task.CompletedTask;
         }
     }
 

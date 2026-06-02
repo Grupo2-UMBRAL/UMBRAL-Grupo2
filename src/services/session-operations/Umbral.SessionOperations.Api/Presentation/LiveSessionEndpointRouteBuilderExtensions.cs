@@ -4,7 +4,7 @@ using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.Hints;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
-using Umbral.SessionOperations.Api.Application.SessionSnapshots;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 
 namespace Umbral.SessionOperations.Api.Presentation;
 
@@ -52,89 +52,38 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             });
 
         liveSessionRoutes.MapPost(
-            "/{liveSessionId:guid}/hints/{hintId:guid}/release",
-            async (
-                Guid liveSessionId,
-                Guid hintId,
-                [FromBody] ReleaseHintRequest? request,
-                ISender sender,
-                CancellationToken cancellationToken) =>
+            "/{liveSessionId:guid}/lifecycle/start",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
-                    new ReleaseHintCommand(liveSessionId, request?.SessionTeamId, hintId),
+                    new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Start),
                     cancellationToken)));
 
         liveSessionRoutes.MapPost(
-            "/{liveSessionId:guid}/stages/{missionStageId:guid}/hints",
-            async (
-                Guid liveSessionId,
-                Guid missionStageId,
-                [FromBody] CreateOperationalHintRequest request,
-                ISender sender,
-                CancellationToken cancellationToken) =>
+            "/{liveSessionId:guid}/lifecycle/pause",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
-                    new CreateOperationalHintCommand(
-                        liveSessionId,
-                        missionStageId,
-                        request.Content,
-                        request.Latitude,
-                        request.Longitude),
+                    new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Pause),
                     cancellationToken)));
 
         liveSessionRoutes.MapPost(
-            "/{liveSessionId:guid}/stages/{missionStageId:guid}/deactivate",
-            async (
-                Guid liveSessionId,
-                Guid missionStageId,
-                ISender sender,
-                CancellationToken cancellationToken) =>
+            "/{liveSessionId:guid}/lifecycle/resume",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
-                    new DeactivateStageCommand(liveSessionId, missionStageId),
+                    new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Resume),
                     cancellationToken)));
 
-        var participantSnapshotRoutes = authorizedApi
-            .MapGroup("/session-teams")
-            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
-
-        participantSnapshotRoutes.MapGet(
-            "/{sessionTeamId:guid}/snapshot",
-            async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
-                Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
-
-        participantSnapshotRoutes.MapPost(
-            "/{sessionTeamId:guid}/submissions",
-            async (
-                Guid sessionTeamId,
-                [FromBody] SubmitEvidenceRequest request,
-                ISender sender,
-                CancellationToken cancellationToken) =>
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/lifecycle/finalize",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
-                    new SubmitEvidenceCommand(sessionTeamId, request.QrHash),
+                    new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Finalize),
                     cancellationToken)));
 
-        participantSnapshotRoutes.MapPost(
-            "/{sessionTeamId:guid}/trivia-submissions",
-            async (
-                Guid sessionTeamId,
-                [FromBody] SubmitTriviaAnswerRequest request,
-                ISender sender,
-                CancellationToken cancellationToken) =>
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/lifecycle/cancel",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
-                    new SubmitTriviaAnswerCommand(sessionTeamId, request.AnswerText),
-                    cancellationToken)));
-
-        var evidenceSubmissionRoutes = authorizedApi
-            .MapGroup("/submissions")
-            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
-
-        evidenceSubmissionRoutes.MapPost(
-            "/{evidenceSubmissionId:guid}/override",
-            async (
-                Guid evidenceSubmissionId,
-                [FromBody] OverrideValidationOutcomeRequest request,
-                ISender sender,
-                CancellationToken cancellationToken) =>
-                Results.Ok(await sender.Send(
-                    new OverrideValidationOutcomeCommand(evidenceSubmissionId, request.IsAccepted, request.Reason),
+                    new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Cancel),
                     cancellationToken)));
 
         return authorizedApi;

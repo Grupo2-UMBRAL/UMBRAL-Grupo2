@@ -2,6 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getClientConfig } from "@/lib/config";
+import { useSessionOperationsConnection } from "@/hooks/use-session-operations-connection";
 
 type EligibleMissionSummary = {
   id: string;
@@ -72,45 +73,14 @@ type LiveSession = {
   state: string;
   scheduledStartAtUtc: string | null;
   createdAtUtc: string;
+  joinCode: string | null;
+  enrollmentWindowOpenedAtUtc: string | null;
+  enrollmentWindowClosedAtUtc: string | null;
+  registeredSessionTeamCount: number;
   sessionStageFlow: LiveSessionStage[];
 };
 
-type CurrentSessionStage = {
-  missionStageId: string;
-  name: string;
-  sessionStageOrder: number;
-  sourceOrder: number;
-  resolvedTimeBudgetMinutes: number;
-  difficulty: string;
-  gameType: string;
-};
-
-type ReleasedHint = {
-  hintId: string;
-  missionStageId: string;
-  content: string;
-  isSolution: boolean;
-  latitude: number | null;
-  longitude: number | null;
-  unlockedAtUtc: string;
-  unlockReason: string;
-};
-
-type LiveSessionOverviewTeam = {
-  sessionTeamId: string;
-  teamName: string;
-  participantCount: number;
-  progressState: string;
-  currentStage: CurrentSessionStage | null;
-  releasedHints?: ReleasedHint[];
-};
-
-type LiveSessionOverview = {
-  liveSessionId: string;
-  name: string;
-  sessionState: string;
-  sessionTeams: LiveSessionOverviewTeam[];
-};
+type LiveSessionLifecycleAction = "start" | "pause" | "resume" | "finalize" | "cancel";
 
 type LiveSessionDraft = {
   name: string;
@@ -253,8 +223,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
   const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmittingHint, setIsSubmittingHint] = useState(false);
-  const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
+  const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -266,6 +235,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/session-operations/api/session-operations/live-sessions`,
     []
   );
+  const sessionHubUrl = useMemo(() => getClientConfig().sessionHubUrl, []);
 
   const selectedLiveSession =
     liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? liveSessions[0] ?? null;
@@ -273,6 +243,52 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     selectedLiveSession !== null && ["Running", "Paused"].includes(selectedLiveSession.state);
   const isSelectedLiveSessionStageDeactivationAllowed =
     selectedLiveSession !== null && ["Scheduled", "Running", "Paused"].includes(selectedLiveSession.state);
+
+  const lifecycleActions = useMemo(() => {
+    if (!selectedLiveSession) {
+      return [];
+    }
+
+    const actions: Array<{
+      action: LiveSessionLifecycleAction;
+      label: string;
+      requiresConfirmation: boolean;
+      disabled: boolean;
+    }> = [
+      {
+        action: "start",
+        label: "Start session",
+        requiresConfirmation: false,
+        disabled: selectedLiveSession.state !== "Scheduled" || selectedLiveSession.registeredSessionTeamCount === 0
+      },
+      {
+        action: "pause",
+        label: "Pause session",
+        requiresConfirmation: false,
+        disabled: selectedLiveSession.state !== "Active"
+      },
+      {
+        action: "resume",
+        label: "Resume session",
+        requiresConfirmation: false,
+        disabled: selectedLiveSession.state !== "Paused"
+      },
+      {
+        action: "finalize",
+        label: "Finalize session",
+        requiresConfirmation: true,
+        disabled: !["Active", "Paused"].includes(selectedLiveSession.state)
+      },
+      {
+        action: "cancel",
+        label: "Cancel session",
+        requiresConfirmation: true,
+        disabled: !["Scheduled", "Active", "Paused"].includes(selectedLiveSession.state)
+      }
+    ];
+
+    return actions;
+  }, [selectedLiveSession]);
 
   const missionSummary = useMemo(() => {
     const totalActiveStages = missions.reduce((total, mission) => total + mission.activeMissionStageCount, 0);
@@ -429,6 +445,15 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [accessToken, eligibleMissionsUrl]
   );
 
+  useSessionOperationsConnection({
+    accessToken,
+    hubUrl: sessionHubUrl,
+    onResync: () => {
+      setIsLoadingLiveSessions(true);
+      void loadLiveSessions(selectedLiveSessionId ?? undefined);
+    }
+  });
+
   useEffect(() => {
     queueMicrotask(() => {
       void loadMissions();
@@ -560,51 +585,29 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
   }
 
-  async function handleReleaseHint(hintId: string, sessionTeamId: string | null) {
+  async function handleLifecycleAction(action: LiveSessionLifecycleAction) {
     if (!selectedLiveSession) {
       return;
     }
 
-    setIsSubmittingHint(true);
-    setFeedback(null);
-    setErrorMessage(null);
-
-    try {
-      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/hints/${hintId}/release`, {
-        method: "POST",
-        headers: {
-          ...createAuthorizedHeaders(accessToken),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          sessionTeamId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(await readFailureDetail(response));
-      }
-
-      setFeedback(sessionTeamId ? "Hint released to Session Team." : "Hint released to eligible Session Teams.");
-      await loadLiveSessionOverview(selectedLiveSession.id);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not release Hint.");
-    } finally {
-      setIsSubmittingHint(false);
-    }
-  }
-
-  async function handleDeactivateStage(missionStageId: string) {
-    if (!selectedLiveSession) {
+    const selectedAction = lifecycleActions.find((candidate) => candidate.action === action);
+    if (!selectedAction || selectedAction.disabled) {
       return;
     }
 
-    setDeactivatingStageId(missionStageId);
-    setFeedback(null);
+    if (
+      selectedAction.requiresConfirmation &&
+      !window.confirm(`Confirm ${selectedAction.label.toLowerCase()} for "${selectedLiveSession.name}"?`)
+    ) {
+      return;
+    }
+
+    setLifecycleActionPending(action);
     setErrorMessage(null);
+    setFeedback(null);
 
     try {
-      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${missionStageId}/deactivate`, {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/lifecycle/${action}`, {
         method: "POST",
         headers: createAuthorizedHeaders(accessToken)
       });
@@ -613,80 +616,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         throw new Error(await readFailureDetail(response));
       }
 
-      const updatedLiveSession = (await response.json()) as LiveSession;
-      setLiveSessions((current) =>
-        current.map((liveSession) => (liveSession.id === updatedLiveSession.id ? updatedLiveSession : liveSession))
-      );
-      setOperationalHintDraft((current) =>
-        current.missionStageId === missionStageId
-          ? {
-              ...current,
-              missionStageId: ""
-            }
-          : current
-      );
-      setFeedback("Etapa desactivada del Session Stage Flow.");
-      await loadLiveSessions(updatedLiveSession.id);
-      await loadLiveSessionOverview(updatedLiveSession.id);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not deactivate Session Stage.");
-    } finally {
-      setDeactivatingStageId(null);
-    }
-  }
-
-  async function handleCreateOperationalHint(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedLiveSession) {
-      return;
-    }
-
-    if (!operationalHintStageId) {
-      setErrorMessage("Select a Session Stage before adding a live Hint.");
-      return;
-    }
-
-    if (!operationalHintDraft.content.trim()) {
-      setErrorMessage("Hint content is required.");
-      return;
-    }
-
-    setIsSubmittingHint(true);
-    setFeedback(null);
-    setErrorMessage(null);
-
-    try {
-      const latitude = parseOptionalCoordinate(operationalHintDraft.latitude);
-      const longitude = parseOptionalCoordinate(operationalHintDraft.longitude);
-      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${operationalHintStageId}/hints`, {
-        method: "POST",
-        headers: {
-          ...createAuthorizedHeaders(accessToken),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          content: operationalHintDraft.content.trim(),
-          latitude,
-          longitude
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(await readFailureDetail(response));
-      }
-
-      setOperationalHintDraft((current) => ({
-        ...createEmptyOperationalHintDraft(),
-        missionStageId: current.missionStageId
-      }));
-      setFeedback("Operational Hint added to this LiveSession flow.");
       await loadLiveSessions(selectedLiveSession.id);
-      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback(`LiveSession moved through lifecycle action: ${action}.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not create operational Hint.");
+      setErrorMessage(error instanceof Error ? error.message : "Could not update Session Lifecycle.");
     } finally {
-      setIsSubmittingHint(false);
+      setLifecycleActionPending(null);
     }
   }
 
@@ -984,17 +919,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   </div>
                   <p>{liveSession.missionName}</p>
                   <dl className="mission-meta-grid">
-                    <div>
-                      <dt>Scheduled</dt>
-                      <dd>{formatTimestamp(liveSession.scheduledStartAtUtc)}</dd>
-                    </div>
-                    <div>
-                      <dt>Flow stages</dt>
-                      <dd>{liveSession.sessionStageFlow.length}</dd>
-                    </div>
-                  </dl>
-                </button>
-              ))}
+                  <div>
+                    <dt>Scheduled</dt>
+                    <dd>{formatTimestamp(liveSession.scheduledStartAtUtc)}</dd>
+                  </div>
+                  <div>
+                    <dt>Teams</dt>
+                    <dd>{liveSession.registeredSessionTeamCount}</dd>
+                  </div>
+                </dl>
+              </button>
+            ))}
             </div>
           </section>
 
@@ -1022,7 +957,47 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <dt>Created at</dt>
                     <dd>{formatTimestamp(selectedLiveSession.createdAtUtc)}</dd>
                   </div>
+                  <div>
+                    <dt>Join code</dt>
+                    <dd>{selectedLiveSession.joinCode ?? "Not generated yet"}</dd>
+                  </div>
+                  <div>
+                    <dt>Enrollment window</dt>
+                    <dd>
+                      {selectedLiveSession.enrollmentWindowOpenedAtUtc
+                        ? selectedLiveSession.enrollmentWindowClosedAtUtc
+                          ? `Closed at ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
+                          : `Open since ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
+                        : "Not opened"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Registered teams</dt>
+                    <dd>{selectedLiveSession.registeredSessionTeamCount}</dd>
+                  </div>
                 </dl>
+
+                <div className="mission-action-row">
+                  {lifecycleActions.map((action) => (
+                    <button
+                      className={action.action === "cancel" ? "ghost-button danger-button" : "ghost-button"}
+                      disabled={action.disabled || lifecycleActionPending !== null}
+                      key={action.action}
+                      onClick={() => {
+                        void handleLifecycleAction(action.action);
+                      }}
+                      type="button"
+                    >
+                      {lifecycleActionPending === action.action ? "Updating..." : action.label}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedLiveSession.state === "Scheduled" && selectedLiveSession.registeredSessionTeamCount === 0 ? (
+                  <p className="muted-copy">
+                    Start stays blocked until Session Enrollment registers at least one Session Team.
+                  </p>
+                ) : null}
 
                 <div className="live-session-flow-list">
                   {selectedLiveSession.sessionStageFlow.map((missionStage) => {

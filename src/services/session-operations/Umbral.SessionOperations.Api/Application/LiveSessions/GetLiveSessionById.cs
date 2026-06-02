@@ -21,6 +21,7 @@ public sealed class GetLiveSessionByIdQueryHandler(SessionOperationsDbContext db
 
         var liveSession = await dbContext.LiveSessions
             .AsNoTracking()
+            .Include(existingLiveSession => existingLiveSession.SessionTeams)
             .SingleOrDefaultAsync(
                 existingLiveSession => existingLiveSession.Id == request.LiveSessionId,
                 cancellationToken);

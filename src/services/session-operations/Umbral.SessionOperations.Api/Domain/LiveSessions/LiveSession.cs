@@ -112,67 +112,70 @@ public sealed class LiveSession
         SessionStageFlowJson = JsonSerializer.Serialize(normalizedSessionStageFlow, SessionStageFlowSerializerOptions);
     }
 
-    public bool IsStagePending(Guid missionStageId)
+    public void Start(DateTimeOffset startedAtUtc)
     {
-        var orderedStages = GetOrderedStages();
-        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
-        if (stageIndex < 0)
+        EnsureState(
+            LiveSessionStates.Scheduled,
+            "live_session_cannot_start",
+            "Only a Scheduled LiveSession can start.");
+
+        if (SessionTeams.Count == 0)
         {
             throw new UmbralDomainException(
-                "session_stage_not_in_flow",
-                "Mission Stage must belong to this LiveSession Session Stage Flow.",
-                UmbralFailureCategory.NotFound);
+                "live_session_requires_session_teams",
+                "LiveSession cannot start without at least one Session Team registered.",
+                UmbralFailureCategory.Conflict);
         }
 
-        return SessionTeams.All(sessionTeam =>
+        if (EnrollmentWindowOpenedAtUtc is not null && EnrollmentWindowClosedAtUtc is null)
         {
-            var progress = TeamProgressions.FirstOrDefault(existingProgress =>
-                existingProgress.SessionTeamId == sessionTeam.Id);
+            CloseEnrollmentWindow(startedAtUtc);
+        }
 
-            return progress is null
-                || (!string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal)
-                    && progress.CurrentStageIndex <= stageIndex);
-        });
+        State = LiveSessionStates.Active;
     }
 
-    public void DeactivateStage(Guid missionStageId, DateTimeOffset updatedAtUtc)
+    public void Pause()
     {
-        EnsureStageDeactivationAllowed();
+        EnsureState(
+            LiveSessionStates.Active,
+            "live_session_cannot_pause",
+            "Only an Active LiveSession can pause.");
 
-        var orderedStages = GetOrderedStages();
-        var removedStageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
-        if (removedStageIndex < 0)
-        {
-            throw new UmbralDomainException(
-                "session_stage_not_in_flow",
-                "Mission Stage must belong to this LiveSession Session Stage Flow.",
-                UmbralFailureCategory.NotFound);
-        }
+        State = LiveSessionStates.Paused;
+    }
 
-        if (!IsStagePending(missionStageId))
-        {
-            throw new UmbralDomainException(
-                "session_stage_not_pending",
-                "Only pending Session Stages can be deactivated.",
-                UmbralFailureCategory.Conflict);
-        }
+    public void Resume()
+    {
+        EnsureState(
+            LiveSessionStates.Paused,
+            "live_session_cannot_resume",
+            "Only a Paused LiveSession can resume.");
 
-        if (!orderedStages.Where((_, index) => index != removedStageIndex).Any(stage => IsStagePending(stage.MissionStageId)))
-        {
-            throw new UmbralDomainException(
-                "session_stage_flow_last_pending_stage",
-                "Session Stage Flow must keep at least one pending active Session Stage.",
-                UmbralFailureCategory.Conflict);
-        }
+        State = LiveSessionStates.Active;
+    }
 
-        var remainingStages = orderedStages
-            .Where((_, index) => index != removedStageIndex)
-            .Select((stage, index) => stage with { SessionStageOrder = index + 1 })
-            .ToArray();
+    public void FinalizeSession()
+    {
+        EnsureState(
+            LiveSessionStates.Active,
+            LiveSessionStates.Paused,
+            "live_session_cannot_finalize",
+            "Only an Active or Paused LiveSession can finalize.");
 
-        ReplaceSessionStageFlow(remainingStages);
-        RecalculateTeamProgressionsAfterStageDeactivation(removedStageIndex, remainingStages.Length, updatedAtUtc);
-        SequenceNumber++;
+        State = LiveSessionStates.Finalized;
+    }
+
+    public void Cancel()
+    {
+        EnsureState(
+            LiveSessionStates.Scheduled,
+            LiveSessionStates.Active,
+            LiveSessionStates.Paused,
+            "live_session_cannot_cancel",
+            "Only a Scheduled, Active or Paused LiveSession can cancel.");
+
+        State = LiveSessionStates.Canceled;
     }
 
     public void AssignJoinCode(JoinCode joinCode)
@@ -857,15 +860,41 @@ public sealed class LiveSession
 
     private void EnsureScheduled()
     {
-        if (string.Equals(State, LiveSessionStates.Scheduled, StringComparison.Ordinal))
+        EnsureState(
+            LiveSessionStates.Scheduled,
+            "live_session_not_scheduled",
+            "LiveSession must be scheduled to accept enrollment changes.");
+    }
+
+    private void EnsureState(string expectedState, string errorCode, string errorMessage)
+        => EnsureState([expectedState], errorCode, errorMessage);
+
+    private void EnsureState(
+        string expectedStateA,
+        string expectedStateB,
+        string errorCode,
+        string errorMessage)
+        => EnsureState([expectedStateA, expectedStateB], errorCode, errorMessage);
+
+    private void EnsureState(
+        string expectedStateA,
+        string expectedStateB,
+        string expectedStateC,
+        string errorCode,
+        string errorMessage)
+        => EnsureState([expectedStateA, expectedStateB, expectedStateC], errorCode, errorMessage);
+
+    private void EnsureState(
+        IReadOnlyCollection<string> expectedStates,
+        string errorCode,
+        string errorMessage)
+    {
+        if (expectedStates.Contains(State, StringComparer.Ordinal))
         {
             return;
         }
 
-        throw new UmbralDomainException(
-            "live_session_not_scheduled",
-            "LiveSession must be scheduled to accept enrollment changes.",
-            UmbralFailureCategory.Conflict);
+        throw new UmbralDomainException(errorCode, errorMessage, UmbralFailureCategory.Conflict);
     }
 
     private static Guid NormalizeGuid(Guid value, string errorCode, string errorMessage)

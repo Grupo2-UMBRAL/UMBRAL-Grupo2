@@ -1,5 +1,6 @@
 ﻿using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 
 namespace Umbral.SessionOperations.Api.Infrastructure;
@@ -18,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
-        services.AddScoped<Umbral.SessionOperations.Api.Application.EvidenceSubmissions.ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
+        services.AddScoped<ILiveSessionStateNotifier, SignalRLiveSessionStateNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionDesignLiveSessionCatalog, MissionDesignLiveSessionCatalog>(client =>

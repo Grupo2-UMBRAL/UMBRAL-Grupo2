@@ -8,6 +8,14 @@ import {
   type HubConnection
 } from "@microsoft/signalr";
 
+export type LiveSessionStateChangedEvent = {
+  liveSessionId: string;
+  previousState: string;
+  state: string;
+  registeredSessionTeamCount: number;
+  occurredAtUtc: string;
+};
+
 type ConnectionState =
   | { kind: "connecting"; detail: string }
   | { kind: "connected"; detail: string }
@@ -19,22 +27,36 @@ type ConnectionOptions = {
   accessToken: string;
   hubUrl: string;
   onResync?: () => void;
+  onLiveSessionStateChanged?: (stateChangedEvent: LiveSessionStateChangedEvent) => void;
 };
 
 export function useSessionOperationsConnection({
   accessToken,
   hubUrl,
-  onResync
+  onResync,
+  onLiveSessionStateChanged
 }: ConnectionOptions) {
+  const waitingState: ConnectionState = {
+    kind: "disconnected",
+    detail: "SignalR waiting for authenticated session."
+  };
   const [state, setState] = useState<ConnectionState>({
     kind: "connecting",
     detail: "Opening session stream."
   });
+  const shouldConnect = accessToken.trim().length > 0 && hubUrl.trim().length > 0;
   const runResync = useEffectEvent(() => onResync?.());
+  const notifyLiveSessionStateChanged = useEffectEvent((stateChangedEvent: LiveSessionStateChangedEvent) => {
+    onLiveSessionStateChanged?.(stateChangedEvent);
+  });
 
   useEffect(() => {
     let active = true;
     let connection: HubConnection | null = null;
+
+    if (!shouldConnect) {
+      return;
+    }
 
     async function startConnection() {
       setState({
@@ -51,6 +73,15 @@ export function useSessionOperationsConnection({
         .withAutomaticReconnect([0, 2000, 5000, 10000])
         .configureLogging(LogLevel.Warning)
         .build();
+
+      connection.on("liveSessionStateChanged", (stateChangedEvent: LiveSessionStateChangedEvent) => {
+        if (!active) {
+          return;
+        }
+
+        notifyLiveSessionStateChanged(stateChangedEvent);
+        runResync();
+      });
 
       connection.onreconnecting(() => {
         if (!active) {
@@ -119,7 +150,7 @@ export function useSessionOperationsConnection({
         void connection.stop();
       }
     };
-  }, [accessToken, hubUrl]);
+  }, [accessToken, hubUrl, shouldConnect]);
 
-  return state;
+  return shouldConnect ? state : waitingState;
 }

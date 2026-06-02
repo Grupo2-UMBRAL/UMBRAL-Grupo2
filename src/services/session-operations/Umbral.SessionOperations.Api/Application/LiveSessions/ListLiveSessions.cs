@@ -21,6 +21,7 @@ public sealed class ListLiveSessionsQueryHandler(SessionOperationsDbContext dbCo
 
         var liveSessions = await dbContext.LiveSessions
             .AsNoTracking()
+            .Include(liveSession => liveSession.SessionTeams)
             .OrderByDescending(liveSession => liveSession.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 

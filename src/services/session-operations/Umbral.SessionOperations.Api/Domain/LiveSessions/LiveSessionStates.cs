@@ -3,8 +3,8 @@
 public static class LiveSessionStates
 {
     public const string Scheduled = "Scheduled";
-    public const string Running = "Running";
+    public const string Active = "Active";
     public const string Paused = "Paused";
     public const string Finalized = "Finalized";
-    public const string Cancelled = "Cancelled";
+    public const string Canceled = "Canceled";
 }
