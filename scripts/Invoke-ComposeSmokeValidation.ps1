@@ -74,8 +74,8 @@ function Wait-HttpOk {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         try {
-            $statusCode = (& curl.exe --silent --show-error --output NUL --write-out "%{http_code}" --max-time 15 $Uri 2>$null).Trim()
-            if ($statusCode -eq "200") {
+            $response = Invoke-WebRequest -Uri $Uri -Method Get -TimeoutSec 15 -SkipHttpErrorCheck
+            if ($response.StatusCode -eq 200) {
                 return
             }
         }
@@ -119,6 +119,10 @@ function Assert-ContainerNamesAvailable {
 }
 
 function Get-ExcludedTcpPortRanges {
+    if (-not $IsWindows) {
+        return @()
+    }
+
     $ranges = @()
     $lines = & netsh interface ipv4 show excludedportrange protocol=tcp 2>$null
     foreach ($line in $lines) {
@@ -136,9 +140,8 @@ function Get-ExcludedTcpPortRanges {
 function Test-TcpPortListening {
     param([int]$Port)
 
-    $lines = & netstat -ano -p tcp 2>$null
-    $pattern = "^\s*TCP\s+\S+:$Port\s+\S+\s+LISTENING\s+"
-    return [bool]($lines | Where-Object { $_ -match $pattern } | Select-Object -First 1)
+    $listeners = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+    return [bool]($listeners | Where-Object { $_.Port -eq $Port } | Select-Object -First 1)
 }
 
 function Assert-HostPortsAvailable {

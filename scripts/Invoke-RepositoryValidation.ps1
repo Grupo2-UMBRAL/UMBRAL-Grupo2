@@ -44,12 +44,16 @@ function Invoke-NpmCommand {
         [string]$ComposeService
     )
 
-    if (Get-Command node -ErrorAction SilentlyContinue) {
-        $nodeCommand = (Get-Command node -ErrorAction Stop).Source
-        $npmCommand = Join-Path (Split-Path $nodeCommand -Parent) "npm.cmd"
+    $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+
+    if ($null -eq $npmCommand -and $IsWindows) {
+        $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    }
+
+    if ($null -ne $npmCommand) {
         Push-Location $WorkingDirectory
         try {
-            & $npmCommand @CommandArgs
+            & $npmCommand.Source @CommandArgs
         }
         finally {
             Pop-Location
