@@ -9,6 +9,19 @@ Modelo operativo para un agente orquestador que ejecuta trabajo desde tickets de
 - Aislar cada ticket en su propia branch y `git worktree`.
 - Delegar implementacion, review o validacion a otros agentes con permisos minimos.
 
+## Cola operativa por defecto
+
+Para detectar el siguiente ticket disponible, el orquestador debe usar primero la vista guardada de Linear `Next Ticket ready for agent`.
+
+Esa vista representa la cola de tickets realmente tomables y debe priorizar issues:
+
+- con label `ready-for-agent`
+- en estado `Backlog` o `Todo`
+- sin assignee
+- no bloqueados, cuando la relacion de dependencia este modelada en Linear
+
+Si la vista no existe, no es visible o parece desactualizada, reconstruirla manualmente con esos filtros antes de reclamar un ticket.
+
 ## Autoridad exclusiva del orquestador
 
 Solo el orquestador puede:
@@ -43,16 +56,17 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
 
 ## Flujo por ticket
 
-1. Leer ticket de Linear y verificar que tenga contexto suficiente.
-2. Si falta especificacion, mover a `needs-info` o `needs-triage`.
-3. Si esta listo, marcar `ready-for-agent` como tomado por el orquestador.
-4. Elegir prefijo de branch:
+1. Abrir la vista `Next Ticket ready for agent` y elegir el primer ticket disponible de la cola.
+2. Leer ticket de Linear y verificar que tenga contexto suficiente.
+3. Si falta especificacion, mover a `needs-info` o `needs-triage`.
+4. Si esta listo, marcar `ready-for-agent` como tomado por el orquestador.
+5. Elegir prefijo de branch:
    - `feature/` para capacidad nueva
    - `fix/` para correccion
    - `chore/` para trabajo tecnico sin cambio funcional
-5. Crear branch por ticket con formato `<tipo>/<issue-id>-<slug>`.
-6. Crear `git worktree` dedicado con formato `../wt-<issue-id>`.
-7. Inyectar al worker:
+6. Crear branch por ticket con formato `<tipo>/<issue-id>-<slug>`.
+7. Crear `git worktree` dedicado con formato `../wt-<issue-id>`.
+8. Inyectar al worker:
    - ID del ticket
    - ruta exacta del `worktree`
    - branch esperada
@@ -60,20 +74,20 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
    - bounded context afectado
    - ADRs relevantes
    - restricciones de permisos
-8. Antes de editar, exigir que el worker valide contexto con `assert-ticket-worktree.ps1`.
-9. Si el worker no puede demostrar que esta parado en el `worktree` correcto, abortar esa ejecucion.
-10. Mantener log operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/worker.log`.
-11. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
-12. Recibir resultado, correr validacion y review del alcance.
-13. Actualizar Linear con evidencia tecnica:
+9. Antes de editar, exigir que el worker valide contexto con `assert-ticket-worktree.ps1`.
+10. Si el worker no puede demostrar que esta parado en el `worktree` correcto, abortar esa ejecucion.
+11. Mantener log operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/worker.log`.
+12. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
+13. Recibir resultado, correr validacion y review del alcance.
+14. Actualizar Linear con evidencia tecnica:
    - branch
    - pruebas ejecutadas
    - riesgos abiertos
    - decision siguiente
-14. Esperar revision humana sobre la branch terminada antes de consolidar historial.
-15. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
-16. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
-17. Tras merge o cierre, limpiar `worktree` y branch local.
+15. Esperar revision humana sobre la branch terminada antes de consolidar historial.
+16. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
+17. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
+18. Tras merge o cierre, limpiar `worktree` y branch local.
 
 ## Convenciones de branch y worktree
 

@@ -28,16 +28,18 @@ Run ticket execution from Linear without letting workers own global repo state.
 
 ## Workflow
 
-1. Read the Linear ticket, comments, labels, and acceptance criteria.
-2. If context is incomplete, stop and return the ticket to `needs-info` or `needs-triage`.
-3. If the ticket is executable, claim it from the orchestrator role.
-4. Derive branch name:
+1. Select the next ticket from the Linear saved view `Next Ticket ready for agent`.
+   - If the view is unavailable, rebuild the same queue with `Team = Umbral Desarrollo`, `Label = ready-for-agent`, `Status in (Backlog, Todo)`, `Assignee = unassigned`, and blocked tickets excluded when dependency relations exist in Linear.
+2. Read the Linear ticket, comments, labels, and acceptance criteria.
+3. If context is incomplete, stop and return the ticket to `needs-info` or `needs-triage`.
+4. If the ticket is executable, claim it from the orchestrator role.
+5. Derive branch name:
    - `feature/<issue-id>-<slug>`
    - `fix/<issue-id>-<slug>`
    - `chore/<issue-id>-<slug>`
-5. Create a dedicated `git worktree` for that branch.
-6. Initialize runtime metadata and log files outside the branch content.
-7. Dispatch the worker with:
+6. Create a dedicated `git worktree` for that branch.
+7. Initialize runtime metadata and log files outside the branch content.
+8. Dispatch the worker with:
    - ticket ID
    - exact worktree path
    - expected branch
@@ -45,19 +47,19 @@ Run ticket execution from Linear without letting workers own global repo state.
    - bounded context
    - relevant ADRs
    - explicit do-not-cross boundaries
-8. Require the worker to validate context with `assert-ticket-worktree.ps1` before editing.
-9. If the worker cannot prove it is inside the assigned worktree, abort the run.
-10. Receive worker output and run validation.
+9. Require the worker to validate context with `assert-ticket-worktree.ps1` before editing.
+10. If the worker cannot prove it is inside the assigned worktree, abort the run.
+11. Receive worker output and run validation.
    - Use `.agents/skills/local-validation/` to choose the smallest repo validation command that still proves the ticket outcome.
-11. Decide next state:
+12. Decide next state:
    - keep moving toward PR
    - send back to human
    - split into follow-up tickets
    - return to triage
-12. Pause for human review of the completed branch.
-13. After explicit approval, squash to one final commit on the ticket branch.
-14. Update Linear with evidence and next action.
-15. Clean branch/worktree only after merge or explicit close.
+13. Pause for human review of the completed branch.
+14. After explicit approval, squash to one final commit on the ticket branch.
+15. Update Linear with evidence and next action.
+16. Clean branch/worktree only after merge or explicit close.
 
 ## Bundled scripts
 
