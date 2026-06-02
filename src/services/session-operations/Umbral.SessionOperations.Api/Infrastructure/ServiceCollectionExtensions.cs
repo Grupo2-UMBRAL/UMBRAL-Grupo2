@@ -1,5 +1,6 @@
-using Umbral.ServiceDefaults;
+﻿using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 
 namespace Umbral.SessionOperations.Api.Infrastructure;
 
@@ -15,6 +16,8 @@ public static class ServiceCollectionExtensions
         services.AddUmbralPostgresDbContext<SessionOperationsDbContext>(configuration, SessionOperationsPersistence.SchemaName);
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
+        services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionDesignLiveSessionCatalog, MissionDesignLiveSessionCatalog>(client =>

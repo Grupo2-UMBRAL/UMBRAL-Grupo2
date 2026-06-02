@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Umbral.ServiceDefaults;
@@ -52,9 +52,23 @@ public sealed class LiveSession
 
     public string SessionStageFlowJson { get; private set; } = "[]";
 
+    public string? JoinCodeValue { get; private set; }
+
+    public DateTimeOffset? EnrollmentWindowOpenedAtUtc { get; private set; }
+
+    public DateTimeOffset? EnrollmentWindowClosedAtUtc { get; private set; }
+
+    public ICollection<SessionTeam> SessionTeams { get; private set; } = new List<SessionTeam>();
+
+    public ICollection<TeamParticipation> TeamParticipations { get; private set; } = new List<TeamParticipation>();
+
     [JsonIgnore]
     [NotMapped]
     public IReadOnlyList<LiveSessionStage> SessionStageFlow => DeserializeSessionStageFlow(SessionStageFlowJson);
+
+    [JsonIgnore]
+    [NotMapped]
+    public EnrollmentWindow EnrollmentWindow => new(EnrollmentWindowOpenedAtUtc, EnrollmentWindowClosedAtUtc);
 
     public static LiveSession Create(
         Guid id,
@@ -86,6 +100,187 @@ public sealed class LiveSession
 
         var normalizedSessionStageFlow = NormalizeSessionStageFlow(sessionStageFlow);
         SessionStageFlowJson = JsonSerializer.Serialize(normalizedSessionStageFlow, SessionStageFlowSerializerOptions);
+    }
+
+    public void AssignJoinCode(JoinCode joinCode)
+    {
+        ArgumentNullException.ThrowIfNull(joinCode);
+
+        if (JoinCodeValue is null)
+        {
+            JoinCodeValue = joinCode.Value;
+            return;
+        }
+
+        if (string.Equals(JoinCodeValue, joinCode.Value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "live_session_join_code_already_assigned",
+            "LiveSession already has a Join Code assigned.",
+            UmbralFailureCategory.Conflict);
+    }
+
+    public void OpenEnrollmentWindow(DateTimeOffset openedAtUtc)
+    {
+        EnsureScheduled();
+
+        if (JoinCodeValue is null)
+        {
+            throw new UmbralDomainException(
+                "live_session_join_code_required_before_enrollment",
+                "A Join Code must be generated before opening enrollment.",
+                UmbralFailureCategory.Validation);
+        }
+
+        if (EnrollmentWindowClosedAtUtc is not null)
+        {
+            throw new UmbralDomainException(
+                "live_session_enrollment_window_closed",
+                "Enrollment window is already closed.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        if (EnrollmentWindowOpenedAtUtc is not null)
+        {
+            return;
+        }
+
+        EnrollmentWindowOpenedAtUtc = openedAtUtc;
+    }
+
+    public void CloseEnrollmentWindow(DateTimeOffset closedAtUtc)
+    {
+        if (EnrollmentWindowOpenedAtUtc is null)
+        {
+            throw new UmbralDomainException(
+                "live_session_enrollment_window_not_opened",
+                "Enrollment window has not been opened.",
+                UmbralFailureCategory.Validation);
+        }
+
+        if (EnrollmentWindowClosedAtUtc is not null)
+        {
+            return;
+        }
+
+        if (closedAtUtc < EnrollmentWindowOpenedAtUtc)
+        {
+            throw new UmbralDomainException(
+                "live_session_enrollment_window_close_time_invalid",
+                "Enrollment window cannot close before it opens.",
+                UmbralFailureCategory.Validation);
+        }
+
+        EnrollmentWindowClosedAtUtc = closedAtUtc;
+    }
+
+    public SessionTeam RegisterTeam(
+        Guid sessionTeamId,
+        string teamName,
+        string participantUserId,
+        JoinCode presentedJoinCode,
+        DateTimeOffset registeredAtUtc)
+    {
+        EnsureEnrollmentAllowed(presentedJoinCode, registeredAtUtc);
+
+        var normalizedTeamName = SessionTeam.NormalizeTeamName(teamName);
+        if (SessionTeams.Any(team => string.Equals(team.NormalizedName, normalizedTeamName, StringComparison.Ordinal)))
+        {
+            throw new UmbralDomainException(
+                "session_team_name_duplicate",
+                "Session Team name already exists in this LiveSession.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var sessionTeam = SessionTeam.Create(Id, sessionTeamId, teamName, registeredAtUtc);
+        SessionTeams.Add(sessionTeam);
+        EnrollParticipantInTeam(sessionTeam.Id, participantUserId, presentedJoinCode, registeredAtUtc);
+
+        return sessionTeam;
+    }
+
+    public TeamParticipation EnrollParticipantInTeam(
+        Guid sessionTeamId,
+        string participantUserId,
+        JoinCode presentedJoinCode,
+        DateTimeOffset enrolledAtUtc)
+    {
+        EnsureEnrollmentAllowed(presentedJoinCode, enrolledAtUtc);
+
+        if (SessionTeams.All(team => team.Id != sessionTeamId))
+        {
+            throw new UmbralDomainException(
+                "session_team_not_found",
+                "Session Team does not belong to this LiveSession.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        var normalizedParticipantUserId = ParticipantUserId.Parse(participantUserId);
+        var existingParticipation = TeamParticipations.FirstOrDefault(participation =>
+            string.Equals(participation.ParticipantUserId, normalizedParticipantUserId.Value, StringComparison.Ordinal));
+
+        if (existingParticipation is null)
+        {
+            var participation = TeamParticipation.Create(Id, sessionTeamId, normalizedParticipantUserId, enrolledAtUtc);
+            TeamParticipations.Add(participation);
+            return participation;
+        }
+
+        if (existingParticipation.SessionTeamId == sessionTeamId)
+        {
+            return existingParticipation;
+        }
+
+        existingParticipation.MoveToTeam(sessionTeamId, enrolledAtUtc);
+        return existingParticipation;
+    }
+
+    public bool IsEnrollmentOpenAt(DateTimeOffset nowUtc) => EnrollmentWindow.IsOpenAt(nowUtc);
+
+    private void EnsureEnrollmentAllowed(JoinCode presentedJoinCode, DateTimeOffset nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(presentedJoinCode);
+        EnsureScheduled();
+
+        if (JoinCodeValue is null)
+        {
+            throw new UmbralDomainException(
+                "live_session_join_code_not_generated",
+                "LiveSession does not have a Join Code generated.",
+                UmbralFailureCategory.Validation);
+        }
+
+        if (!string.Equals(JoinCodeValue, presentedJoinCode.Value, StringComparison.Ordinal))
+        {
+            throw new UmbralDomainException(
+                "join_code_invalid_for_live_session",
+                "Join Code is invalid for this LiveSession.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        if (!EnrollmentWindow.IsOpenAt(nowUtc))
+        {
+            throw new UmbralDomainException(
+                "live_session_enrollment_window_not_active",
+                "Enrollment window is not active.",
+                UmbralFailureCategory.Conflict);
+        }
+    }
+
+    private void EnsureScheduled()
+    {
+        if (string.Equals(State, LiveSessionStates.Scheduled, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "live_session_not_scheduled",
+            "LiveSession must be scheduled to accept enrollment changes.",
+            UmbralFailureCategory.Conflict);
     }
 
     private static Guid NormalizeGuid(Guid value, string errorCode, string errorMessage)

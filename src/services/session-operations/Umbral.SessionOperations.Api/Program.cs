@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MediatR;
 using Umbral.SessionOperations.Api.Application.Bootstrap.Commands;
 using Umbral.SessionOperations.Api.Application.Bootstrap.Queries;
@@ -49,6 +49,7 @@ authorizedApi
             Results.Ok(await sender.Send(new GetSessionOperationsBootstrapDetailsQuery(), cancellationToken)));
 authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
 authorizedApi.MapLiveSessionRoutes();
+authorizedApi.MapSessionEnrollmentRoutes();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {

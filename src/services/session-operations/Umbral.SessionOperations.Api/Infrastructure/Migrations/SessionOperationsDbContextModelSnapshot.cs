@@ -31,6 +31,19 @@ namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("EnrollmentWindowClosedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enrollment_window_closed_at_utc");
+
+                    b.Property<DateTimeOffset?>("EnrollmentWindowOpenedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enrollment_window_opened_at_utc");
+
+                    b.Property<string>("JoinCodeValue")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("join_code_value");
+
                     b.Property<Guid>("MissionId")
                         .HasColumnType("uuid");
 
@@ -60,9 +73,107 @@ namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
 
                     b.HasIndex("CreatedAtUtc");
 
+                    b.HasIndex("JoinCodeValue")
+                        .IsUnique()
+                        .HasDatabaseName("ix_live_sessions_join_code_value")
+                        .HasFilter("join_code_value IS NOT NULL");
+
                     b.HasIndex("MissionId");
 
                     b.ToTable("live_sessions", "session_operations");
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.SessionTeam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedNever()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveSessionId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_session_teams_live_session_id_normalized_name");
+
+                    b.ToTable("session_teams", "session_operations");
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.TeamParticipation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedNever()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("EnrolledAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ParticipantUserId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("SessionTeamId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LiveSessionId", "ParticipantUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_team_participations_live_session_id_participant_user_id");
+
+                    b.HasIndex("SessionTeamId");
+
+                    b.ToTable("team_participations", "session_operations");
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.SessionTeam", b =>
+                {
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.LiveSession", null)
+                        .WithMany("SessionTeams")
+                        .HasForeignKey("LiveSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.TeamParticipation", b =>
+                {
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.LiveSession", null)
+                        .WithMany("TeamParticipations")
+                        .HasForeignKey("LiveSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.SessionTeam", null)
+                        .WithMany()
+                        .HasForeignKey("SessionTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.LiveSession", b =>
+                {
+                    b.Navigation("SessionTeams");
+
+                    b.Navigation("TeamParticipations");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc.Testing;
+﻿using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -143,6 +143,7 @@ public sealed class SessionOperationsRoleSmokeRouteTests
     {
         public const string SchemeName = "Test";
         public const string RoleHeaderName = "X-Test-Role";
+        public const string UserIdHeaderName = "X-Test-User-Id";
 
         public TestAuthenticationHandler(
             IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -161,7 +162,17 @@ public sealed class SessionOperationsRoleSmokeRouteTests
 
             var claims = Request.Headers[RoleHeaderName]
                 .Where(static role => !string.IsNullOrWhiteSpace(role))
-                .Select(role => new Claim(ClaimTypes.Role, role!));
+                .Select(role => new Claim(ClaimTypes.Role, role!))
+                .ToList();
+            var userId = Request.Headers.TryGetValue(UserIdHeaderName, out var userIdValues)
+                ? userIdValues.FirstOrDefault()
+                : "test-user";
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userId!));
+                claims.Add(new Claim("sub", userId!));
+            }
+
             var identity = new ClaimsIdentity(claims, SchemeName);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, SchemeName);
@@ -449,9 +460,9 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
         return CreateClientForRole(UmbralRoles.Operator);
     }
 
-    public HttpClient CreateParticipantClient()
+    public HttpClient CreateParticipantClient(string participantUserId = "participant-1")
     {
-        return CreateClientForRole(UmbralRoles.Participant);
+        return CreateClientForRole(UmbralRoles.Participant, participantUserId);
     }
 
     public void SetEligibleMission(EligibleMissionForLiveSessionSnapshot eligibleMission)
@@ -474,11 +485,12 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
         await dbContext.SaveChangesAsync();
     }
 
-    private HttpClient CreateClientForRole(string role)
+    private HttpClient CreateClientForRole(string role, string userId = "operator-1")
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
         client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, role);
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, userId);
 
         return client;
     }
@@ -526,6 +538,7 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
     {
         public const string SchemeName = "Test";
         public const string RoleHeaderName = "X-Test-Role";
+        public const string UserIdHeaderName = "X-Test-User-Id";
 
         public TestAuthenticationHandler(
             IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -544,7 +557,17 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
 
             var claims = Request.Headers[RoleHeaderName]
                 .Where(static role => !string.IsNullOrWhiteSpace(role))
-                .Select(role => new Claim(ClaimTypes.Role, role!));
+                .Select(role => new Claim(ClaimTypes.Role, role!))
+                .ToList();
+            var userId = Request.Headers.TryGetValue(UserIdHeaderName, out var userIdValues)
+                ? userIdValues.FirstOrDefault()
+                : "test-user";
+            if (!string.IsNullOrWhiteSpace(userId))
+            {
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userId!));
+                claims.Add(new Claim("sub", userId!));
+            }
+
             var identity = new ClaimsIdentity(claims, SchemeName);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, SchemeName);
