@@ -59,6 +59,7 @@ Existen dos superficies principales:
 - `Substage` es una relacion padre-hijo recursiva entre `Mission Nodes` dentro de la misma `Mission`.
 - `Hint` pertenece directamente a un `Mission Stage` hoja, no a nodos compuestos.
 - Una `Mission` puede mezclar varios `Game Types`, pero cada `Mission Stage` tiene exactamente uno.
+- Cada `Mission Stage` hoja define exactamente una `Difficulty`: `Easy`, `Medium` o `Hard`.
 - Cuando un `Mission Node` compuesto representa un bloque tematico, sus descendientes jugables deben compartir el mismo `Game Type`.
 - El flujo operativo se deriva aplanando los `Mission Stages` hoja en recorrido depth-first de izquierda a derecha segun el orden definido entre hermanos.
 - Los nodos compuestos pueden definir `Default Time Budget` heredable por descendientes. Un valor mas especifico reemplaza por completo al heredado.
@@ -79,6 +80,9 @@ Existen dos superficies principales:
 
 - El puntaje base por evidencia validada depende de la `Difficulty` del `Mission Stage`.
 - Para primer release, la tabla base de puntaje es `Easy = 100`, `Medium = 200`, `Hard = 300`.
+- `Scoreboard` es la fuente de verdad del puntaje acumulado por `LiveSession`.
+- Cada cambio efectivo de puntaje queda explicado por uno o mas `Score Entries`.
+- La misma tabla base aplica para `Treasure Hunt` y `Trivia`.
 - Un `Mission Stage` resuelto otorga `0` o el puntaje completo que le corresponda; no existe `partial credit` en el primer release.
 - El instante oficial para medir `Resolution Time` es la recepcion del envio en backend.
 - La latencia y los tiempos de conexion se registran para auditoria, pero no corrigen el desempate con una formula compensatoria.

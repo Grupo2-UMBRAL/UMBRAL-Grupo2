@@ -9,7 +9,7 @@ Plantilla reusable que define una experiencia de juego. Una **Mission** contiene
 _Avoid_: LiveSession, partida, ejecucion
 
 **Mission Stage**:
-**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define su propia **Difficulty**, y es la unidad que luego puede participar en flujo operativo.
+**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define exactamente una **Difficulty**, y es la unidad que luego puede participar en flujo operativo.
 _Avoid_: Session Stage, etapa ejecutada, paso puramente visual
 
 **Mission Node**:
@@ -33,8 +33,8 @@ Clasificacion fija de un **Mission Stage** que determina su estrategia de valida
 _Avoid_: session mode, mission-wide rule cuando la mision mezcla tipos
 
 **Difficulty**:
-Clasificacion discreta de un **Mission Stage** usada para determinar su puntaje base cuando esa hoja se resuelve. En el primer release los valores canonicos son Easy, Medium y Hard.
-_Avoid_: dificultad global de la Mission, dificultad heredada desde Mission Node compuesto, estimacion informal del operador
+Clasificacion fija de un **Mission Stage** hoja que determina su puntaje base cuando la hoja queda validada. Los valores del primer release son Easy, Medium y Hard. La **Difficulty** no pertenece al **Mission Node** compuesto ni funciona como valor unico de una **Mission**.
+_Avoid_: mission-wide difficulty, puntaje libre por etapa, dificultad heredada desde nodo compuesto
 
 **Default Time Budget**:
 Valor temporal por defecto definido en un **Mission Node** compuesto para sus descendientes. Se hereda hacia abajo mientras un subnodo o un **Mission Stage** no declare su propio tiempo explicito. Cuando aparece un valor mas especifico, reemplaza por completo al heredado.

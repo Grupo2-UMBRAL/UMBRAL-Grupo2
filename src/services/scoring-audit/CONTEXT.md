@@ -5,7 +5,7 @@ Contexto responsable de transformar hechos operativos de una sesión en puntaje,
 ## Language
 
 **Score Entry**:
-Registro atómico que explica una variación de puntaje. Un **Score Entry** pertenece a una **LiveSession** y a un equipo dentro de esa sesión.
+Registro atómico que explica una variación de puntaje. Un **Score Entry** pertenece a una **LiveSession** y a un equipo dentro de esa sesión. Conserva el valor completo de una **Penalty** incluso cuando el puntaje visible del equipo satura en cero.
 _Avoid_: evidence submission, generic score
 
 **Single-Stage Credit**:
@@ -25,7 +25,7 @@ Capacidad interna de **Scoring and Audit** que transforma hechos operativos en p
 _Avoid_: session control, hint release
 
 **Scoreboard**:
-Agregado principal de **Scoring and Audit** para una **LiveSession**. El **Scoreboard** mantiene la consistencia del puntaje acumulado por equipo, aplica penalizaciones, resuelve criterios de desempate y sirve como fuente de verdad para derivar el **Ranking**.
+Agregado principal de **Scoring and Audit** para una **LiveSession**. El **Scoreboard** mantiene la consistencia del puntaje acumulado por equipo, aplica penalizaciones, impide credito positivo duplicado por **Mission Stage**, resuelve criterios de desempate y sirve como fuente de verdad para derivar el **Ranking**. El puntaje visible de un equipo tiene piso en cero.
 _Avoid_: pure read model, session controller
 
 **Score Floor**:
@@ -33,12 +33,12 @@ Regla por la que el puntaje acumulado visible de un equipo en el **Scoreboard** 
 _Avoid_: score negativo visible, borrar rastro de penalizacion por saturar en cero, delegar esta regla solo a UI
 
 **Penalty**:
-Descuento de puntaje aplicado con motivo explícito y momento registrado. Una **Penalty** se origina en **Session Operations** y puede originar uno o más **Score Entries** dentro del **Scoreboard**.
-_Avoid_: correction, warning
+Descuento de puntaje aplicado por un **Operator** con motivo explícito, momento registrado y **Penalty Severity** fija. Una **Penalty** se origina en **Session Operations** y puede originar uno o más **Score Entries** dentro del **Scoreboard**. Varias penalizaciones reales pueden afectar al mismo equipo en una **LiveSession**, pero el mismo comando técnico no puede aplicarse dos veces.
+_Avoid_: correction, warning, monto libre, penalizacion automatica por intento invalido
 
 **Penalty Severity**:
-Clasificacion predefinida que determina el descuento fijo de una **Penalty**. En el primer release los valores canonicos son Minor, Major y Critical.
-_Avoid_: numero libre ingresado por el operador, etiqueta informal sin efecto en scoring
+Clasificacion fija que determina el descuento de una **Penalty**. Los valores del primer release son Minor = -50, Major = -100 y Critical = -200.
+_Avoid_: monto libre, porcentaje dinamico, descuento implicito
 
 **Explicit Penalty Only**:
 Regla por la que un intento invalido o una evidencia rechazada no descuentan puntaje por si mismos. El **Scoreboard** solo reduce puntaje cuando recibe una **Penalty** explicita originada por el **Operator**.
@@ -49,7 +49,7 @@ Regla por la que varias **Penalty** pueden afectar al mismo equipo dentro de una
 _Avoid_: colapsar penalizaciones reales en una sola, sumar dos veces el mismo comando tecnico, perder trazabilidad entre eventos
 
 **Ranking**:
-Ordenamiento vigente de los equipos de una **LiveSession** según puntaje y criterio de desempate. El **Ranking** se deriva del **Scoreboard**, no es la fuente original de verdad.
+Ordenamiento vigente de los equipos de una **LiveSession** según puntaje y **Resolution Time**. El **Ranking** se deriva del **Scoreboard**, no es la fuente original de verdad. Cuando dos equipos coinciden en puntaje y **Resolution Time** a precision de 500 ms, conserva el empate sin tercer criterio oculto.
 _Avoid_: leaderboard snapshot as source of truth
 
 **Resolution Time**:
@@ -59,6 +59,10 @@ _Avoid_: multiplicador de score, latencia cruda de red como verdad oficial, tiem
 **Shared Rank Tie**:
 Resultado por el que dos o mas equipos conservan empate en el **Ranking** cuando coinciden tanto en puntaje como en **Resolution Time** a precision de medio segundo. No se rompe el empate con criterios internos no visibles al negocio.
 _Avoid_: desempate oculto por timestamp exacto, orden interno tecnico, criterio arbitrario no auditado
+
+**Stage Credit**:
+Credito positivo completo otorgado una sola vez a un equipo por cada **Mission Stage** resuelto dentro de una **LiveSession**. Depende de la **Difficulty** de la hoja: Easy = 100, Medium = 200 y Hard = 300. La misma tabla aplica para Trivia y Treasure Hunt.
+_Avoid_: partial credit, credito duplicado por override, puntaje distinto por game type
 
 **Audit Log**:
 Capacidad interna de **Scoring and Audit** que registra el historial auditable de hechos relevantes de una **LiveSession**.

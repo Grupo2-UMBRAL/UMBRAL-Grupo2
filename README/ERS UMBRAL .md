@@ -88,6 +88,17 @@ revelan automáticamente a todos los equipos.
 ● Se pueden crear pistas nuevas durante una sesión activa. El cambio se propaga en
 tiempo real a los equipos.
 
+Scoring Común a Ambos Tipos
+● Cada Mission Stage hoja define su Difficulty: Easy, Medium o Hard.
+● Una etapa validada otorga el puntaje completo según su Difficulty: Easy = 100,
+Medium = 200 y Hard = 300.
+● No existe puntaje parcial en el primer release.
+● El tiempo de resolución no modifica el puntaje. Solo se usa para desempatar el
+ranking y para auditoría, con precisión oficial de 500 ms desde la recepción del
+envío en backend.
+● Si dos equipos empatan en puntaje y tiempo de resolución a esa precisión, el
+ranking conserva el empate.
+
 ## Requerimientos Funcionales
 
 ## Código Requerimiento
@@ -129,11 +140,15 @@ sesión.
 RF-19 Cada envío de evidencia debe quedar registrado con fecha, equipo, sesión,
 etapa y estado de validación.
 RF-20 El sistema debe recalcular el puntaje del equipo cuando una evidencia sea
-validada o cuando se aplique una penalización.
+validada o cuando se aplique una penalización. Una etapa validada otorga el puntaje
+completo según la Difficulty de su Mission Stage hoja: Easy = 100, Medium = 200 y
+Hard = 300. No existe puntaje parcial.
 RF-21 El operador debe poder aplicar penalizaciones justificadas a un equipo
-registrando motivo y momento.
+registrando motivo, momento y severidad fija: Minor = -50, Major = -100 o
+Critical = -200. Un intento inválido no penaliza automáticamente.
 RF-22 El ranking de la sesión debe mostrarse y actualizarse en tiempo real, ordenado
-por puntaje y usando el tiempo de resolución como criterio de desempate.
+por puntaje y usando únicamente el tiempo de resolución como criterio de desempate,
+con precisión oficial de 500 ms. Si el empate persiste, debe conservarse.
 RF-23 El panel del operador debe reflejar cambios de estado y eventos relevantes de
 la sesión en tiempo real.
 
@@ -256,8 +271,18 @@ Reglas de Negocio
 ● Cada evidencia debe asociarse exactamente a un equipo, una sesión y una etapa.
 ● Toda penalización debe registrar motivo y momento de aplicación.
 ● El puntaje acumulado de un equipo no puede quedar sin trazabilidad de origen.
+● El puntaje base depende de la Difficulty del Mission Stage hoja: Easy = 100,
+Medium = 200 y Hard = 300. No existe puntaje parcial.
+● Un equipo solo puede recibir crédito positivo una vez por Mission Stage resuelto
+dentro de una LiveSession.
+● Solo una Penalty explícita del operador descuenta puntaje. Las severidades válidas
+son Minor = -50, Major = -100 y Critical = -200.
+● El puntaje acumulado visible tiene piso en 0, pero toda penalización conserva su
+valor completo en auditoría y Score Entries.
+● El sistema debe bloquear duplicados técnicos del mismo comando de penalización.
 ● El ranking debe ordenarse de mayor a menor puntaje y usar tiempo de resolución
-como criterio de desempate cuando aplique.
+como único criterio de desempate, con precisión oficial de 500 ms desde la recepción
+del envío en backend. Si el empate persiste, debe conservarse.
 ● Los cambios de estado de la sesión deben respetar las siguientes transiciones
 válidas: Programada → Activa → Pausada → Activa → Finalizada. Cualquier estado
 activo puede transicionar a Cancelada excepto Finalizada.
@@ -306,7 +331,7 @@ recursos correspondientes.
 CU-02: Crear Misión
 ## ● Actores: Administrador
 ● Descripción: El administrador crea una nueva misión definiendo nombre,
-descripción, dificultad, tipo de juego (BusquedaDelTesoro o Trivia) y tiempo máximo.
+descripción, tipo de juego (BusquedaDelTesoro o Trivia) y tiempo máximo.
 Al seleccionar BusquedaDelTesoro el sistema habilita un hash para validar las
 etapas. Este caso de uso incluye obligatoriamente gestionar etapas y configurar
 pistas.
@@ -315,7 +340,7 @@ pistas.
 - El administrador selecciona la opción de crear misión.
 
 
-- El administrador ingresa nombre, descripción, dificultad, tipo de juego y
+- El administrador ingresa nombre, descripción, tipo de juego y
 tiempo máximo.
 - El sistema valida los datos ingresados.
 - Si el tipo de juego es BusquedaDelTesoro el sistema habilita el campo hash
@@ -341,13 +366,13 @@ obligatoriamente).
 CU-03: Editar Misión
 ## ● Actores: Administrador
 ● Descripción: El administrador modifica los datos de una misión existente: nombre,
-descripción, dificultad y tiempo máximo. El tipo de juego no puede modificarse si la
+descripción y tiempo máximo. El tipo de juego no puede modificarse si la
 misión tiene sesiones asociadas. Puede también gestionar las etapas y pistas de la
 misión.
 ● Flujo principal:
 - El administrador accede al módulo de misiones.
 - El administrador selecciona una misión existente.
-- El administrador modifica nombre, descripción, dificultad o tiempo máximo.
+- El administrador modifica nombre, descripción o tiempo máximo.
 - El sistema valida los datos modificados.
 - El sistema guarda los cambios.
 - El sistema muestra mensaje de éxito.
@@ -371,7 +396,8 @@ modificarse.
 CU-04: Gestionar Etapas
 ## ● Actores: Administrador
 ● Descripción: El administrador agrega, edita o elimina etapas de una misión. Cada
-etapa tiene título, descripción, orden lineal y puntaje base. Si el tipo de juego es
+Mission Stage hoja tiene título, descripción, orden lineal y Difficulty: Easy, Medium
+o Hard. Si el tipo de juego es
 BusquedaDelTesoro, cada etapa requiere un hash único. Las etapas pueden tener
 subetapas mediante una relación jerárquica con la misma estructura. El orden de las
 etapas determina la secuencia lineal del juego y no puede saltarse. El administrador
@@ -380,7 +406,7 @@ aparece disponible para el operador al definir el flujo de una sesión.
 ● Flujo principal — agregar etapa:
 - El administrador accede a la gestión de etapas de una misión.
 - El administrador selecciona agregar nueva etapa.
-- El administrador ingresa título, descripción, order_index y puntaje base.
+- El administrador ingresa título, descripción, order_index y Difficulty.
 - Si el tipo de juego es BusquedaDelTesoro el administrador ingresa el hash
 único de la etapa.
 - El sistema valida los datos.
@@ -711,17 +737,21 @@ liberación manual.
 CU-13: Aplicar penalización
 ## ● Actores: Operador
 ● Descripción: El operador selecciona un equipo de la sesión activa y le aplica una
-penalización registrando el motivo, los puntos a descontar y el momento de
+penalización registrando el motivo, la severidad fija y el momento de
 aplicación. El sistema recalcula el puntaje del equipo y actualiza el ranking en tiempo
 real.
 ● Flujo principal:
 - El operador accede al panel de la sesión activa.
 - El operador selecciona la opción de aplicar penalización.
 - El operador selecciona el equipo a penalizar.
-- El operador registra el motivo de la penalización y los puntos a descontar.
+- El operador registra el motivo de la penalización y selecciona una severidad:
+Minor = -50, Major = -100 o Critical = -200.
 - El sistema valida que se haya registrado un motivo y el momento de
 aplicación.
+- El sistema rechaza duplicados técnicos del mismo comando de penalización.
 - El sistema aplica la penalización al equipo.
+- El sistema conserva el valor completo de la penalización en Score Entries y
+auditoría aunque el puntaje visible sature en 0.
 - El sistema recalcula el puntaje del equipo.
 - El sistema actualiza el ranking en tiempo real.
 - El sistema muestra mensaje de éxito.
@@ -733,20 +763,22 @@ aplicación.
 
 CU-14: Validar evidencia
 ## ● Actores: Operador
-● Descripción: En sesiones de tipo Trivia, el operador revisa las respuestas de texto
-enviadas por los equipos y decide si son correctas o incorrectas. Si la evidencia es
-aceptada, el sistema recalcula el puntaje y evalúa si la etapa fue completada. Si es
-rechazada, el operador puede registrar el motivo y decidir si aplica penalización.
-● Flujo principal — evidencia aceptada:
+● Descripción: En sesiones de tipo Trivia, el sistema valida respuestas de texto
+automáticamente por defecto. El operador puede aplicar un Validation Override cuando
+detecte una alternativa válida en un caso ambiguo o rechazado. Si el override acepta
+la evidencia, el equipo recibe el puntaje completo de la Mission Stage hoja una sola
+vez. Si la evidencia permanece rechazada, el operador puede registrar el motivo y
+decidir si aplica penalización.
+● Flujo principal — override de evidencia aceptada:
 - El operador accede al panel de la sesión activa de tipo Trivia.
-- El operador selecciona la opción de validar evidencia.
-- El operador selecciona una evidencia en estado Pendiente.
+- El operador selecciona la opción de corregir validación.
+- El operador selecciona una evidencia ambigua o rechazada.
 - El operador revisa la respuesta enviada por el equipo.
 - El operador determina que la evidencia es correcta.
 - El sistema marca la evidencia como Aceptada.
 
 
-- El sistema recalcula el puntaje del equipo.
+- El sistema recalcula el puntaje completo del equipo sin duplicar crédito positivo.
 - El sistema evalúa si la etapa fue completada.
 - El sistema notifica en tiempo real a todos los clientes conectados.
 - El sistema muestra mensaje de éxito.
@@ -881,8 +913,8 @@ BusquedaDelTesoro.
 flujo.
 - Los hashes coinciden.
 - El sistema acepta la evidencia automáticamente.
-- El sistema calcula el puntaje del equipo usando la estrategia correspondiente
-a la dificultad.
+- El sistema calcula el puntaje completo usando la Difficulty de la Mission Stage
+hoja.
 - El sistema marca la etapa como completada para este equipo.
 - El sistema notifica en tiempo real a todos los clientes conectados.
 - Si no hay siguiente etapa el sistema finaliza la sesión automáticamente.
@@ -918,19 +950,18 @@ CU-20: Enviar evidencia por texto
 ● Descripción:Es una instancia concreta del flujo unificado de envío de evidencia
 (RF-34) cuya estrategia de validación corresponde a este tipo de juego. Exclusivo
 para sesiones de tipo Trivia. El equipo escribe su respuesta en un campo de texto en
-la app móvil y la envía. El sistema registra la evidencia con estado Pendiente. El
-operador recibe la notificación en tiempo real y procede a validarla manualmente
-desde el panel web.
+la app móvil y la envía. El sistema registra la evidencia y la valida automáticamente
+por defecto. El operador interviene mediante Validation Override solo ante casos
+ambiguos o alternativas válidas rechazadas.
 ● Flujo principal:
 - El participante accede al tablero en la app móvil durante una sesión de tipo
 ## Trivia.
 - El participante selecciona la opción de enviar evidencia.
 - El participante escribe su respuesta en el campo de texto.
 - El participante envía la respuesta.
-- El sistema registra la evidencia con estado Pendiente, fecha, equipo, sesión
-y etapa.
-- El sistema notifica en tiempo real al operador que hay una evidencia
-pendiente de validación.
+- El sistema registra la evidencia con fecha, equipo, sesión y etapa.
+- El sistema resuelve automáticamente el resultado inicial.
+- Si el caso requiere atención, el sistema notifica en tiempo real al operador.
 - El sistema muestra al participante confirmación de que la respuesta fue
 enviada.
 ● Flujo alterno — sesión no activa:

@@ -25,7 +25,7 @@ Grupo creado o elegido por participantes dentro de una **LiveSession**. Un **Ses
 _Avoid_: team global, user
 
 **Session Stage Flow**:
-Secuencia efectiva de etapas que una **LiveSession** ejecuta. Se deriva aplanando los **Mission Stages** hoja del arbol de **Mission Nodes** en recorrido depth-first de izquierda a derecha y puede cambiar por desactivaciones propias de la sesion.
+Secuencia efectiva de etapas que una **LiveSession** ejecuta. Se deriva aplanando los **Mission Stages** hoja del arbol de **Mission Nodes** en recorrido depth-first de izquierda a derecha y puede cambiar por desactivaciones propias de la sesion. Conserva los datos operativos necesarios de cada hoja, incluida su **Difficulty**, para que el scoring de esa ejecucion no dependa de ediciones posteriores de la **Mission** reusable.
 _Avoid_: Mission Stage, flujo base
 
 **Session Progression**:
@@ -55,6 +55,14 @@ _Avoid_: nuevo intento disfrazado, doble premio por la misma etapa, cambio silen
 **Validation Outcome**:
 Resultado de evaluar una **Evidence Submission** dentro de una **LiveSession**. Puede resolverse automaticamente por regla o requerir intervencion manual del operador en casos ambiguos.
 _Avoid_: score entry, audit-only status
+
+**Validation Override**:
+Correccion manual del **Operator** sobre un **Validation Outcome** de Trivia cuando una respuesta ambigua o inicialmente rechazada corresponde a una alternativa valida. Puede habilitar el credito completo de la hoja una sola vez, pero no crea credito positivo duplicado.
+_Avoid_: revision humana obligatoria para toda respuesta Trivia, puntaje parcial, segundo credito por la misma hoja
+
+**Resolution Time**:
+Tiempo oficial de resolucion usado para desempatar **Ranking** y para auditoria. Se mide desde la recepcion del envio en backend con precision oficial de 500 ms. No modifica puntaje ni aplica compensacion por latencia.
+_Avoid_: bonus por velocidad, compensacion de conexion, tercer criterio oculto
 
 **Session State**:
 Estado operativo de una **LiveSession**. Controla si la sesion admite avances, evidencias y acciones del operador.
