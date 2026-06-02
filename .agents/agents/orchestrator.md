@@ -79,15 +79,13 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
 11. Mantener log operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/worker.log`.
 12. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
 13. Recibir resultado, correr validacion y review del alcance.
-14. Actualizar Linear con evidencia tecnica:
-   - branch
-   - pruebas ejecutadas
-   - riesgos abiertos
-   - decision siguiente
-15. Esperar revision humana sobre la branch terminada antes de consolidar historial.
-16. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
-17. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
-18. Tras merge o cierre, limpiar `worktree` y branch local.
+14. Antes de integracion, sincronizar la branch del ticket contra la rama de integracion remota con `fetch` + `rebase`, no con merges intermedios hacia `develop` local.
+15. Correr una sola validacion final despues de ese `rebase`.
+16. Actualizar Linear con evidencia tecnica: branch, pruebas ejecutadas, riesgos abiertos y decision siguiente.
+17. Esperar revision humana sobre la branch terminada antes de consolidar historial.
+18. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
+19. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
+20. Tras merge o cierre, limpiar `worktree` y branch local.
 
 ## Convenciones de branch y worktree
 
@@ -100,10 +98,18 @@ Ejemplos:
 Comandos de referencia:
 
 ```powershell
-git worktree add ../wt-LIN-123 -b feature/LIN-123-session-template-publication main
+git worktree add ../wt-LIN-123 -b feature/LIN-123-session-template-publication develop
 git -C ../wt-LIN-123 status --short
+git -C ../wt-LIN-123 fetch origin develop
+git -C ../wt-LIN-123 rebase origin/develop
 git worktree remove ../wt-LIN-123
 ```
+
+Preferencia:
+
+- si `new-ticket-worktree.ps1` recibe `-BaseRef` vacio, tomar la branch actual del orquestador como base
+- para integrar cambios, rebasear la branch del ticket sobre `origin/<rama-integracion>` y validar ahi
+- evitar secuencias manuales tipo `merge origin/develop -> develop local -> merge feature -> revalidar todo` salvo que un humano pida ese historial
 
 Usar un `worktree` por ticket evita contaminacion entre agentes y permite ejecutar varios tickets en paralelo.
 
@@ -115,7 +121,8 @@ Usar un `worktree` por ticket evita contaminacion entre agentes y permite ejecut
 - Los logs de worker deben vivir en `.worktrees/_runtime/<ISSUE-ID>/` para que el branch quede libre de ruido operacional.
 - Si el ticket requiere `docker compose`, usar `.agents/skills/docker-compose-context-hygiene/` para evitar floods de logs y mover evidencia ruidosa a archivos en `.worktrees/_runtime/<ISSUE-ID>/`.
 - La validacion final del orquestador debe ejecutarse con los scripts reales del repo, no con comandos armados ad hoc.
-- Comando por defecto para cambios de codigo: `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`.
+- Durante implementacion, usar el scope mas angosto posible: `-Scope Web`, `-Scope Mobile` o `-Scope Backend`.
+- Comando por defecto para cierre tecnico de cambios de codigo: `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`.
 - Si el ticket toca infraestructura, integracion o salud del stack, ampliar a `./scripts/Invoke-RepositoryValidation.ps1` o `./scripts/Invoke-ComposeSmokeValidation.ps1`.
 - Si una validacion completa queda bloqueada por entorno local, registrar el bloqueo exacto y correr el comando mas estrecho que siga dando evidencia util.
 
@@ -125,6 +132,7 @@ Scripts de soporte:
 
 - `scripts/initialize-ticket-runtime.ps1`
 - `scripts/assert-ticket-worktree.ps1`
+- `scripts/sync-ticket-branch.ps1`
 - `scripts/write-ticket-worker-log.ps1`
 - `scripts/watch-ticket-worker-log.ps1`
 

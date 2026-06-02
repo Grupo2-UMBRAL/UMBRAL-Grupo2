@@ -29,6 +29,7 @@ Leer en este orden:
 - Mantener commits atomicos: un solo cambio coherente por commit.
 - Usar mensajes `Conventional Commits` con referencia de tarea cuando exista: `feat[#Tarea]: mensaje`, `fix[#Tarea]: mensaje`.
 - Preferir `rebase` para mantener historial lineal y reducir ruido de merges intermedios.
+- Antes de integrar una branch de ticket, hacer `fetch` de la rama de integracion remota y `rebase` de la branch del ticket sobre esa referencia; evitar mezclar primero cambios en `develop` local salvo necesidad explicita.
 - Mantener pull requests pequenos. La referencia objetivo es un maximo de `300` lineas cambiadas de codigo productivo por PR. Si el cambio real necesita mas, dividirlo por slices verticales o justificar la excepcion.
 - Incluir en cada PR:
   - descripcion tecnica
@@ -62,6 +63,7 @@ Leer en este orden:
 - Si un cambio viola estas reglas por necesidad tecnica, explicitar el trade-off y dejarlo documentado en el cambio o en un ADR.
 - Cuando una regla sea repetible como procedimiento, apoyarse en skills; cuando sea una decision dificil de revertir, apoyarse en ADRs.
 - Cuando haya que elegir o ejecutar validacion local, usar `.agents/skills/local-validation/` para preferir los scripts reproducibles del repo sobre comandos armados ad hoc.
+- Durante el loop de implementacion, correr la validacion mas angosta que pruebe el area tocada; reservar la validacion completa para un solo gate final antes de merge o cierre tecnico.
 - Los agentes ejecutores no deben crear ramas, mezclar tickets en un mismo workspace ni mover estados criticos del tracker sin pasar por el orquestador.
 - En reviews, priorizar findings sobre testabilidad, fronteras de IO, manejo de errores, coherencia con lenguaje ubicuo y tamano del cambio.
 - Si el trabajo entra en loops de `docker compose`, preferir `ps`, `config`, logs acotados por servicio y archivos en `.worktrees/_runtime/` sobre streams largos en chat; para eso usar `.agents/skills/docker-compose-context-hygiene/`.

@@ -15,7 +15,11 @@ Use repo validation scripts before closing implementation, review, or bugfix wor
 
 ## Quick start
 
-- Code, build, tests, coverage, secrets:
+- Narrow loop by touched area:
+  `./scripts/Invoke-RepositoryValidation.ps1 -Scope Web -SkipComposeSmoke`
+  `./scripts/Invoke-RepositoryValidation.ps1 -Scope Mobile -SkipComposeSmoke`
+  `./scripts/Invoke-RepositoryValidation.ps1 -Scope Backend -SkipComposeSmoke`
+- Code, build, tests, coverage, secrets across repo:
   `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`
 - Full local validation including compose smoke:
   `./scripts/Invoke-RepositoryValidation.ps1`
@@ -25,17 +29,19 @@ Use repo validation scripts before closing implementation, review, or bugfix wor
 ## Workflow
 
 1. Pick the narrowest useful command.
-2. Run the real repo script instead of reassembling ad hoc test commands.
-3. If compose smoke is blocked by occupied ports or existing `umbral-*` containers, create an alternate env file and rerun with `-EnvironmentFilePath`.
-4. Read artifacts from `temp/validation/` instead of pasting long raw output.
-5. Report exactly what ran, what passed, what failed, and what stayed blocked.
-6. When acting as orchestrator or final integrator, prefer `Invoke-RepositoryValidation.ps1` as the authoritative pre-merge validation entrypoint.
+2. During implementation, prefer `-Scope Web`, `-Scope Mobile`, or `-Scope Backend` over repo-wide validation.
+3. Run the real repo script instead of reassembling ad hoc test commands.
+4. Before close or integration, run the full code gate once with `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`.
+5. If compose smoke is blocked by occupied ports or existing `umbral-*` containers, create an alternate env file and rerun with `-EnvironmentFilePath`.
+6. Read artifacts from `temp/validation/` instead of pasting long raw output.
+7. Report exactly what ran, what passed, what failed, and what stayed blocked.
+8. When acting as orchestrator or final integrator, prefer `Invoke-RepositoryValidation.ps1` as the authoritative pre-merge validation entrypoint.
 
 ## Rules
 
 - Do not claim tests passed unless the script or command actually passed.
 - Do not silently skip compose smoke; say why it was skipped or blocked.
-- Prefer `Invoke-RepositoryValidation.ps1` for implementation/review evidence because it already includes secret scan, frontend checks, backend build/tests, and coverage.
+- Prefer scoped `Invoke-RepositoryValidation.ps1` during the inner loop, then one repo-wide `Invoke-RepositoryValidation.ps1 -SkipComposeSmoke` before merge.
 - Treat the GitHub Actions workflow as a CI wrapper around the same repo scripts, not as a separate source of truth.
 - If host lacks `dotnet`, let the script use its container fallback.
 - If output is noisy, summarize and point to artifact files.

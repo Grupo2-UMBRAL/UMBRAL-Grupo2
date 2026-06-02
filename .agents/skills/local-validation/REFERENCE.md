@@ -2,6 +2,20 @@
 
 ## Main commands
 
+### Narrow validation by touched area
+
+```powershell
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Web -SkipComposeSmoke
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Mobile -SkipComposeSmoke
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Backend -SkipComposeSmoke
+```
+
+Runs `Test-VersionedSecrets.ps1` plus only selected area:
+
+- `Web`: `npm ci`, lint, typecheck, build for `src/apps/web`
+- `Mobile`: `npm ci`, typecheck, build for `src/apps/mobile`
+- `Backend`: `.NET` build, tests, coverage summary
+
 ### Code validation without compose smoke
 
 ```powershell
@@ -75,7 +89,7 @@ Use when default ports collide with another stack or Windows reserved ranges.
 
 ## Reporting template
 
-- Command: `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`
+- Command: `./scripts/Invoke-RepositoryValidation.ps1 -Scope Backend -SkipComposeSmoke`
 - Result: passed / failed / blocked
 - Evidence: artifact paths
 - Coverage: overall percent and threshold status

@@ -14,7 +14,15 @@ Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y
 
 ## Local run
 
-Codigo y cobertura:
+Loop angosto por area tocada:
+
+```powershell
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Web -SkipComposeSmoke
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Mobile -SkipComposeSmoke
+./scripts/Invoke-RepositoryValidation.ps1 -Scope Backend -SkipComposeSmoke
+```
+
+Gate unico de codigo antes de cerrar o integrar:
 
 ```powershell
 ./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke
@@ -40,6 +48,12 @@ Validacion completa:
 ```powershell
 ./scripts/Invoke-RepositoryValidation.ps1
 ```
+
+Politica operativa:
+
+- durante implementacion, correr el scope mas angosto que pruebe el comportamiento tocado
+- antes de cerrar o integrar, correr una sola vez el gate de codigo completo
+- ampliar a compose smoke solo si el ticket toca integracion, infraestructura o salud del stack
 
 Artefactos:
 

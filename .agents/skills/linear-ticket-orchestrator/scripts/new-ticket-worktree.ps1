@@ -11,7 +11,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Slug,
 
-    [string]$BaseRef = 'main',
+    [string]$BaseRef,
 
     [string]$WorktreeParent = '..'
 )
@@ -72,6 +72,15 @@ function Invoke-Git {
 $repositoryRoot = (Invoke-Git -Arguments @('rev-parse', '--show-toplevel') | Select-Object -First 1).Trim()
 $resolvedRepositoryRoot = (Resolve-Path -LiteralPath $repositoryRoot).Path
 $resolvedWorktreeParent = (Resolve-Path -LiteralPath $WorktreeParent).Path
+
+if ([string]::IsNullOrWhiteSpace($BaseRef)) {
+    $currentBranch = (Invoke-Git -Arguments @('branch', '--show-current') | Select-Object -First 1).Trim()
+    if ([string]::IsNullOrWhiteSpace($currentBranch)) {
+        throw 'BaseRef was not provided and repository is in detached HEAD state. Pass -BaseRef explicitly.'
+    }
+
+    $BaseRef = $currentBranch
+}
 
 $normalizedIssueId = $IssueId.ToUpperInvariant()
 $normalizedSlug = Normalize-Slug -Value $Slug

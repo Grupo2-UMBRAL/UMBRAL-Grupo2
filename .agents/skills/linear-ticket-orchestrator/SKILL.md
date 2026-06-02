@@ -51,15 +51,17 @@ Run ticket execution from Linear without letting workers own global repo state.
 10. If the worker cannot prove it is inside the assigned worktree, abort the run.
 11. Receive worker output and run validation.
    - Use `.agents/skills/local-validation/` to choose the smallest repo validation command that still proves the ticket outcome.
-12. Decide next state:
+12. Before integration, sync the ticket branch with `fetch` + `rebase` onto the remote integration branch instead of merging into local `develop` first.
+13. Run one final repo-wide code gate after the rebase.
+14. Decide next state:
    - keep moving toward PR
    - send back to human
    - split into follow-up tickets
    - return to triage
-13. Pause for human review of the completed branch.
-14. After explicit approval, squash to one final commit on the ticket branch.
-15. Update Linear with evidence and next action.
-16. Clean branch/worktree only after merge or explicit close.
+15. Pause for human review of the completed branch.
+16. After explicit approval, squash to one final commit on the ticket branch.
+17. Update Linear with evidence and next action.
+18. Clean branch/worktree only after merge or explicit close.
 
 ## Bundled scripts
 
@@ -68,6 +70,7 @@ Use these scripts instead of hand-writing `git worktree` commands each time:
 - `scripts/new-ticket-worktree.ps1`
 - `scripts/initialize-ticket-runtime.ps1`
 - `scripts/assert-ticket-worktree.ps1`
+- `scripts/sync-ticket-branch.ps1`
 - `scripts/remove-ticket-worktree.ps1`
 - `scripts/write-ticket-worker-log.ps1`
 - `scripts/watch-ticket-worker-log.ps1`

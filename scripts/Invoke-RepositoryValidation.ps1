@@ -2,6 +2,8 @@ param(
     [string]$ArtifactDirectory = "temp/validation",
     [string]$EnvironmentFilePath,
     [switch]$SkipComposeSmoke,
+    [ValidateSet("Full", "Frontend", "Web", "Mobile", "Backend")]
+    [string]$Scope = "Full",
     [int]$TemporaryCoverageThreshold = 10,
     [int]$TargetCoverage = 90
 )
@@ -36,6 +38,15 @@ $backendTestProjects = @(
     "src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj",
     "src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj"
 )
+
+function Test-Scope {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$AllowedScopes
+    )
+
+    return $AllowedScopes -contains $Scope
+}
 
 function Invoke-NpmCommand {
     param(
@@ -95,47 +106,53 @@ function Invoke-DotnetCommand {
 
 & (Join-Path $PSScriptRoot "Test-VersionedSecrets.ps1") -RepositoryRoot $repositoryRoot
 
-Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("ci")
-Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "lint")
-Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "typecheck")
-Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "build")
-
-Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("ci")
-Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("run", "typecheck")
-Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("run", "build")
-
-foreach ($project in $backendProjects) {
-    Invoke-DotnetCommand -Arguments @("build", $project, "--configuration", "Release")
+if (Test-Scope -AllowedScopes @("Full", "Frontend", "Web")) {
+    Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("ci")
+    Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "lint")
+    Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "typecheck")
+    Invoke-NpmCommand -WorkingDirectory $webDirectory -ComposeService "web-package-manager" -CommandArgs @("run", "build")
 }
 
-foreach ($testProject in $backendTestProjects) {
-    $projectName = [System.IO.Path]::GetFileNameWithoutExtension($testProject)
-    $projectResultsDirectory = Join-Path $testResultsDirectory $projectName
-    $null = New-Item -ItemType Directory -Force -Path $projectResultsDirectory
-    $dotnetResultsDirectory = if ($hasHostDotnet) {
-        $projectResultsDirectory
-    }
-    else {
-        "/workspace/$((Resolve-Path -Relative $projectResultsDirectory).TrimStart('.').TrimStart('\').Replace('\', '/'))"
-    }
-
-    Invoke-DotnetCommand -Arguments @(
-        "test",
-        $testProject,
-        "--configuration", "Release",
-        "--collect:XPlat Code Coverage",
-        "--results-directory", $dotnetResultsDirectory
-    )
+if (Test-Scope -AllowedScopes @("Full", "Frontend", "Mobile")) {
+    Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("ci")
+    Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("run", "typecheck")
+    Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("run", "build")
 }
 
-$coverageSummary = & (Join-Path $PSScriptRoot "Get-BackendCoverageSummary.ps1") `
-    -ResultsDirectory $testResultsDirectory `
-    -TemporaryThreshold $TemporaryCoverageThreshold `
-    -TargetThreshold $TargetCoverage
+if (Test-Scope -AllowedScopes @("Full", "Backend")) {
+    foreach ($project in $backendProjects) {
+        Invoke-DotnetCommand -Arguments @("build", $project, "--configuration", "Release")
+    }
 
-$coverageSummary | Out-File -FilePath (Join-Path $artifactRoot "backend-coverage-summary.json") -Encoding utf8
+    foreach ($testProject in $backendTestProjects) {
+        $projectName = [System.IO.Path]::GetFileNameWithoutExtension($testProject)
+        $projectResultsDirectory = Join-Path $testResultsDirectory $projectName
+        $null = New-Item -ItemType Directory -Force -Path $projectResultsDirectory
+        $dotnetResultsDirectory = if ($hasHostDotnet) {
+            $projectResultsDirectory
+        }
+        else {
+            "/workspace/$((Resolve-Path -Relative $projectResultsDirectory).TrimStart('.').TrimStart('\').Replace('\', '/'))"
+        }
 
-if (-not $SkipComposeSmoke) {
+        Invoke-DotnetCommand -Arguments @(
+            "test",
+            $testProject,
+            "--configuration", "Release",
+            "--collect:XPlat Code Coverage",
+            "--results-directory", $dotnetResultsDirectory
+        )
+    }
+
+    $coverageSummary = & (Join-Path $PSScriptRoot "Get-BackendCoverageSummary.ps1") `
+        -ResultsDirectory $testResultsDirectory `
+        -TemporaryThreshold $TemporaryCoverageThreshold `
+        -TargetThreshold $TargetCoverage
+
+    $coverageSummary | Out-File -FilePath (Join-Path $artifactRoot "backend-coverage-summary.json") -Encoding utf8
+}
+
+if (-not $SkipComposeSmoke -and $Scope -eq "Full") {
     $composeSmokeArguments = @{
         ArtifactDirectory = (Join-Path $ArtifactDirectory "compose")
     }
@@ -145,6 +162,9 @@ if (-not $SkipComposeSmoke) {
     }
 
     & (Join-Path $PSScriptRoot "Invoke-ComposeSmokeValidation.ps1") @composeSmokeArguments
+}
+elseif (-not $SkipComposeSmoke -and $Scope -ne "Full") {
+    Write-Warning "Compose smoke skipped because -Scope $Scope only supports code-scope validation. Use -Scope Full for compose smoke."
 }
 
 Write-Output "Repository validation passed."
