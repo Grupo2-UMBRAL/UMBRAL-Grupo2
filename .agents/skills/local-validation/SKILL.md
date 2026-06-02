@@ -29,12 +29,14 @@ Use repo validation scripts before closing implementation, review, or bugfix wor
 3. If compose smoke is blocked by occupied ports or existing `umbral-*` containers, create an alternate env file and rerun with `-EnvironmentFilePath`.
 4. Read artifacts from `temp/validation/` instead of pasting long raw output.
 5. Report exactly what ran, what passed, what failed, and what stayed blocked.
+6. When acting as orchestrator or final integrator, prefer `Invoke-RepositoryValidation.ps1` as the authoritative pre-merge validation entrypoint.
 
 ## Rules
 
 - Do not claim tests passed unless the script or command actually passed.
 - Do not silently skip compose smoke; say why it was skipped or blocked.
 - Prefer `Invoke-RepositoryValidation.ps1` for implementation/review evidence because it already includes secret scan, frontend checks, backend build/tests, and coverage.
+- Treat the GitHub Actions workflow as a CI wrapper around the same repo scripts, not as a separate source of truth.
 - If host lacks `dotnet`, let the script use its container fallback.
 - If output is noisy, summarize and point to artifact files.
 

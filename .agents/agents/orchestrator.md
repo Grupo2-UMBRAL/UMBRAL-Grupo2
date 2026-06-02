@@ -114,6 +114,10 @@ Usar un `worktree` por ticket evita contaminacion entre agentes y permite ejecut
 - Si `cwd`, branch o issue no coinciden con la sesion registrada, la ejecucion debe abortar.
 - Los logs de worker deben vivir en `.worktrees/_runtime/<ISSUE-ID>/` para que el branch quede libre de ruido operacional.
 - Si el ticket requiere `docker compose`, usar `.agents/skills/docker-compose-context-hygiene/` para evitar floods de logs y mover evidencia ruidosa a archivos en `.worktrees/_runtime/<ISSUE-ID>/`.
+- La validacion final del orquestador debe ejecutarse con los scripts reales del repo, no con comandos armados ad hoc.
+- Comando por defecto para cambios de codigo: `./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke`.
+- Si el ticket toca infraestructura, integracion o salud del stack, ampliar a `./scripts/Invoke-RepositoryValidation.ps1` o `./scripts/Invoke-ComposeSmokeValidation.ps1`.
+- Si una validacion completa queda bloqueada por entorno local, registrar el bloqueo exacto y correr el comando mas estrecho que siga dando evidencia util.
 
 ## Logs y observabilidad
 
