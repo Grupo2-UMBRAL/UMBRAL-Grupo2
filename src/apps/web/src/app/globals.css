@@ -582,7 +582,8 @@ textarea {
 
 .mission-node-list,
 .hint-editor-list,
-.node-subsection {
+.node-subsection,
+.live-session-flow-list {
   display: grid;
   gap: 1rem;
 }
@@ -599,7 +600,8 @@ textarea {
 }
 
 .mission-node-card,
-.hint-card {
+.hint-card,
+.live-session-flow-item {
   display: grid;
   gap: 1rem;
   padding: 1rem;
@@ -610,6 +612,10 @@ textarea {
 
 .mission-node-card {
   border-left: 4px solid rgba(39, 105, 199, 0.16);
+}
+
+.live-session-flow-item {
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .mission-node-header,

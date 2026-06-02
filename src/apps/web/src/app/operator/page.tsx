@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/dashboard-shell";
+import { LiveSessionsWorkspace } from "@/components/live-sessions-workspace";
 import { getRequiredSession } from "@/lib/session";
 
 export default async function OperatorPage() {
@@ -8,14 +9,15 @@ export default async function OperatorPage() {
     <DashboardShell
       focus={[
         "Protect operator route with role-aware middleware and server checks.",
-        "Keep live transport visible with reconnect and resync signals.",
-        "Show real backend readiness instead of fake rankings or fake missions.",
-        "Leave center pane ready for session dashboard follow-up ticket."
+        "Create Scheduled LiveSessions from active Mission snapshots exposed by Mission Design.",
+        "Let Operator trim and reorder Session Stage Flow without mutating reusable Mission data.",
+        "Keep live transport visible with reconnect and resync signals."
       ]}
+      mainContent={<LiveSessionsWorkspace accessToken={session.accessToken} />}
       role="Operator"
       session={session}
-      summary="Operator shell favors situational awareness, quick scan, and explicit failure states."
-      title="Operator base layout"
+      summary="Operator shell now schedules LiveSessions from active Missions and preserves explicit failure states."
+      title="Operator scheduling workspace"
     />
   );
 }

@@ -4,6 +4,7 @@ using Umbral.SessionOperations.Api.Application.Bootstrap.Commands;
 using Umbral.SessionOperations.Api.Application.Bootstrap.Queries;
 using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Infrastructure;
+using Umbral.SessionOperations.Api.Presentation;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +48,7 @@ authorizedApi
         async (ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetSessionOperationsBootstrapDetailsQuery(), cancellationToken)));
 authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
+authorizedApi.MapLiveSessionRoutes();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {
