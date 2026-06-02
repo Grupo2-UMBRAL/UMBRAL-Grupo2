@@ -11,6 +11,20 @@ public sealed record EnrollmentWindowResponse(
     DateTimeOffset? ClosedAtUtc,
     bool IsOpen);
 
+public sealed record ParticipantEnrollmentStatusResponse(
+    Guid LiveSessionId,
+    string SessionState,
+    DateTimeOffset? OpenedAtUtc,
+    DateTimeOffset? ClosedAtUtc,
+    bool IsOpen);
+
+public sealed record SessionTeamResponse(Guid Id, string Name);
+
+public sealed record SessionTeamsResponse(
+    Guid LiveSessionId,
+    bool IsOpen,
+    IReadOnlyList<SessionTeamResponse> Teams);
+
 public sealed record RegisterTeamRequest(string JoinCode, string TeamName);
 
 public sealed record RegisterTeamResponse(
@@ -19,6 +33,15 @@ public sealed record RegisterTeamResponse(
     string TeamName,
     string ParticipantUserId,
     DateTimeOffset RegisteredAtUtc);
+
+public sealed record JoinSessionTeamRequest(string JoinCode, Guid SessionTeamId);
+
+public sealed record JoinSessionTeamResponse(
+    Guid LiveSessionId,
+    Guid SessionTeamId,
+    string TeamName,
+    string ParticipantUserId,
+    DateTimeOffset EnrolledAtUtc);
 
 public interface IJoinCodeGenerator
 {

@@ -34,6 +34,16 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
             .MapGroup("/session-enrollment")
             .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
 
+        participantRoutes.MapGet(
+            "/{joinCode}/validate",
+            async (string joinCode, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new ValidateJoinCodeQuery(joinCode), cancellationToken)));
+
+        participantRoutes.MapGet(
+            "/{joinCode}/teams",
+            async (string joinCode, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new ListSessionTeamsQuery(joinCode), cancellationToken)));
+
         participantRoutes.MapPost(
             "/teams",
             async (
@@ -46,6 +56,16 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
                     $"/api/session-operations/live-sessions/{result.LiveSessionId}/session-teams/{result.SessionTeamId}",
                     result);
             });
+
+        participantRoutes.MapPost(
+            "/join",
+            async (
+                [FromBody] JoinSessionTeamRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new JoinSessionTeamCommand(request.JoinCode, request.SessionTeamId),
+                    cancellationToken)));
 
         return authorizedApi;
     }
