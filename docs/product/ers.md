@@ -55,6 +55,7 @@ Existen dos superficies principales:
 - `Substage` es una relacion padre-hijo recursiva entre `Mission Nodes` dentro de la misma `Mission`.
 - `Hint` pertenece directamente a un `Mission Stage` hoja, no a nodos compuestos.
 - Una `Mission` puede mezclar varios `Game Types`, pero cada `Mission Stage` tiene exactamente uno.
+- Cada `Mission Stage` hoja define exactamente una `Difficulty`: `Easy`, `Medium` o `Hard`.
 - Cuando un `Mission Node` compuesto representa un bloque tematico, sus descendientes jugables deben compartir el mismo `Game Type`.
 - El flujo operativo se deriva aplanando los `Mission Stages` hoja en recorrido depth-first de izquierda a derecha segun el orden definido entre hermanos.
 - Los nodos compuestos pueden definir `Default Time Budget` heredable por descendientes. Un valor mas especifico reemplaza por completo al heredado.
@@ -70,6 +71,26 @@ Existen dos superficies principales:
 - La validacion de respuestas de `Trivia` ocurre automaticamente por defecto.
 - El `Operator` puede corregir el resultado cuando detecte que la respuesta enviada corresponde a una alternativa valida.
 - No debe modelarse `Trivia` como un flujo donde toda evidencia entra primero en estado `Pending` para revision humana obligatoria.
+
+### Scoring y penalizaciones para primer release
+
+- `Scoreboard` es la fuente de verdad del puntaje acumulado por `LiveSession`.
+- Cada cambio efectivo de puntaje queda explicado por uno o mas `Score Entries`.
+- El puntaje base depende de la `Difficulty` del `Mission Stage` hoja validado: `Easy = 100`, `Medium = 200`, `Hard = 300`.
+- La misma tabla aplica para `Treasure Hunt` y `Trivia`.
+- No existe `partial credit`: una hoja otorga `0` o el puntaje completo.
+- Un `Session Team` solo puede recibir credito positivo una vez por cada `Mission Stage` resuelto dentro de una `LiveSession`.
+- Un `Validation Override` valido en `Trivia` otorga el puntaje completo de la hoja, sin duplicar credito positivo.
+- `Resolution Time` no modifica el puntaje. Solo se usa para desempatar el `Ranking` y para auditoria.
+- La precision oficial de `Resolution Time` para desempate es de `500 ms`, medida desde la recepcion del envio en backend.
+- La latencia y los tiempos de conexion se registran en auditoria, pero no ajustan el desempate.
+- Si dos equipos empatan en puntaje y tambien en `Resolution Time` a precision de `500 ms`, el `Ranking` conserva el empate.
+- Solo una `Penalty` explicita del `Operator` descuenta puntaje. Un intento invalido no penaliza automaticamente.
+- Una `Penalty` usa severidad fija: `Minor = -50`, `Major = -100`, `Critical = -200`.
+- El puntaje acumulado visible tiene piso en `0`, pero la penalizacion completa queda trazada en auditoria y `Score Entries`.
+- Un `Session Team` puede recibir varias penalizaciones reales dentro de una `LiveSession`.
+- El sistema debe bloquear duplicados tecnicos del mismo comando de penalizacion.
+- Cada intento, rechazo, override manual, penalizacion y cambio efectivo de puntaje queda reflejado en auditoria.
 
 ## Uso esperado
 
