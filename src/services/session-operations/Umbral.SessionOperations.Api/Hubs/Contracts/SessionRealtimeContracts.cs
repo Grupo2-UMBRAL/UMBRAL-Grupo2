@@ -9,6 +9,8 @@ public interface ISessionClient
 
     Task ReceiveTeamProgressChanged(TeamProgressChangedPayload payload);
 
+    Task ReceiveEvidenceSubmissionOutcomeChanged(EvidenceSubmissionOutcomeChangedPayload payload);
+
     Task ReceiveHintUnlocked(HintUnlockedPayload payload);
 }
 
@@ -37,6 +39,15 @@ public sealed record TeamProgressChangedPayload(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? PreviousStage,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? CurrentStage,
     string ProgressState);
+
+public sealed record EvidenceSubmissionOutcomeChangedPayload(
+    RealtimeEventMetadata Metadata,
+    Guid EvidenceSubmissionId,
+    Guid SessionTeamId,
+    Guid MissionStageId,
+    string CurrentOutcome,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreviousOutcome,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FailureReason);
 
 public sealed record HintUnlockedPayload(
     RealtimeEventMetadata Metadata,

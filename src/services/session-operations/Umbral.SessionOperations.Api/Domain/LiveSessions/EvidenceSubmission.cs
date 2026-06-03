@@ -5,6 +5,7 @@ namespace Umbral.SessionOperations.Api.Domain.LiveSessions;
 public sealed class EvidenceSubmission
 {
     public const int SubmittedHashMaximumLength = 512;
+    public const int SubmittedTextMaximumLength = 1000;
     public const int FailureReasonMaximumLength = 120;
 
     private EvidenceSubmission()
@@ -17,7 +18,8 @@ public sealed class EvidenceSubmission
         Guid sessionTeamId,
         Guid missionStageId,
         string gameType,
-        string submittedHash,
+        string? submittedHash,
+        string? submittedText,
         ValidationOutcome outcome,
         string? failureReason,
         DateTimeOffset submittedAtUtc)
@@ -28,6 +30,7 @@ public sealed class EvidenceSubmission
         MissionStageId = missionStageId;
         GameType = gameType;
         SubmittedHash = submittedHash;
+        SubmittedText = submittedText;
         Outcome = outcome;
         FailureReason = failureReason;
         SubmittedAtUtc = submittedAtUtc;
@@ -43,7 +46,9 @@ public sealed class EvidenceSubmission
 
     public string GameType { get; private set; } = string.Empty;
 
-    public string SubmittedHash { get; private set; } = string.Empty;
+    public string? SubmittedHash { get; private set; }
+
+    public string? SubmittedText { get; private set; }
 
     public ValidationOutcome Outcome { get; private set; }
 
@@ -52,6 +57,23 @@ public sealed class EvidenceSubmission
     public DateTimeOffset SubmittedAtUtc { get; private set; }
 
     public static EvidenceSubmission Create(
+        Guid liveSessionId,
+        Guid sessionTeamId,
+        LiveSessionStage stage,
+        string submittedHash,
+        ValidationOutcome outcome,
+        string? failureReason,
+        DateTimeOffset submittedAtUtc)
+        => CreateTreasureHunt(
+            liveSessionId,
+            sessionTeamId,
+            stage,
+            submittedHash,
+            outcome,
+            failureReason,
+            submittedAtUtc);
+
+    public static EvidenceSubmission CreateTreasureHunt(
         Guid liveSessionId,
         Guid sessionTeamId,
         LiveSessionStage stage,
@@ -69,9 +91,40 @@ public sealed class EvidenceSubmission
             NormalizeGuid(stage.MissionStageId, "evidence_submission_stage_required", "Evidence Submission must reference a Mission Stage."),
             NormalizeRequiredText(stage.GameType, "evidence_submission_game_type_required", "Evidence Submission game type is required.", 40),
             NormalizeRequiredText(submittedHash, "evidence_submission_hash_required", "Evidence Submission QR hash is required.", SubmittedHashMaximumLength),
+            null,
             outcome,
             NormalizeOptionalText(failureReason, FailureReasonMaximumLength),
             submittedAtUtc);
+    }
+
+    public static EvidenceSubmission CreateTrivia(
+        Guid liveSessionId,
+        Guid sessionTeamId,
+        LiveSessionStage stage,
+        string submittedText,
+        ValidationOutcome outcome,
+        string? failureReason,
+        DateTimeOffset submittedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+
+        return new EvidenceSubmission(
+            Guid.NewGuid(),
+            NormalizeGuid(liveSessionId, "evidence_submission_live_session_required", "Evidence Submission must belong to a LiveSession."),
+            NormalizeGuid(sessionTeamId, "evidence_submission_session_team_required", "Evidence Submission must belong to a Session Team."),
+            NormalizeGuid(stage.MissionStageId, "evidence_submission_stage_required", "Evidence Submission must reference a Mission Stage."),
+            NormalizeRequiredText(stage.GameType, "evidence_submission_game_type_required", "Evidence Submission game type is required.", 40),
+            null,
+            NormalizeRequiredText(submittedText, "evidence_submission_text_required", "Evidence Submission answer text is required.", SubmittedTextMaximumLength),
+            outcome,
+            NormalizeOptionalText(failureReason, FailureReasonMaximumLength),
+            submittedAtUtc);
+    }
+
+    public void ApplyOverride(ValidationOutcome newOutcome, string? failureReason)
+    {
+        Outcome = newOutcome;
+        FailureReason = NormalizeOptionalText(failureReason, FailureReasonMaximumLength);
     }
 
     private static Guid NormalizeGuid(Guid value, string errorCode, string errorMessage)

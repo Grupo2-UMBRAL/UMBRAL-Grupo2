@@ -15,6 +15,8 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
 
     public DbSet<EvidenceSubmission> EvidenceSubmissions => Set<EvidenceSubmission>();
 
+    public DbSet<ValidationOverrideLog> ValidationOverrideLogs => Set<ValidationOverrideLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -74,6 +76,10 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
             liveSession.HasMany(entity => entity.EvidenceSubmissions)
+                .WithOne()
+                .HasForeignKey(entity => entity.LiveSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            liveSession.HasMany(entity => entity.ValidationOverrideLogs)
                 .WithOne()
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -174,7 +180,10 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .IsRequired();
             evidenceSubmission.Property(entity => entity.SubmittedHash)
                 .HasMaxLength(EvidenceSubmission.SubmittedHashMaximumLength)
-                .IsRequired();
+                .IsRequired(false);
+            evidenceSubmission.Property(entity => entity.SubmittedText)
+                .HasMaxLength(EvidenceSubmission.SubmittedTextMaximumLength)
+                .IsRequired(false);
             evidenceSubmission.Property(entity => entity.Outcome)
                 .HasConversion<string>()
                 .HasMaxLength(20)
@@ -192,6 +201,57 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 })
                 .HasDatabaseName("ix_evidence_submissions_live_session_team_stage");
             evidenceSubmission.HasOne<SessionTeam>()
+                .WithMany()
+                .HasForeignKey(entity => entity.SessionTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ValidationOverrideLog>(validationOverrideLog =>
+        {
+            validationOverrideLog.ToTable("validation_override_logs");
+            validationOverrideLog.HasKey(entity => entity.Id);
+
+            validationOverrideLog.Property(entity => entity.Id)
+                .ValueGeneratedNever();
+            validationOverrideLog.Property(entity => entity.LiveSessionId)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.EvidenceSubmissionId)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.SessionTeamId)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.MissionStageId)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.OperatorUserId)
+                .HasMaxLength(ValidationOverrideLog.OperatorUserIdMaximumLength)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.Reason)
+                .HasMaxLength(ValidationOverrideLog.ReasonMaximumLength)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.PreviousOutcome)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.NewOutcome)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+            validationOverrideLog.Property(entity => entity.OverriddenAtUtc)
+                .IsRequired();
+
+            validationOverrideLog.HasIndex(entity => entity.EvidenceSubmissionId)
+                .HasDatabaseName("ix_validation_override_logs_evidence_submission_id");
+            validationOverrideLog.HasIndex(entity => new
+                {
+                    entity.LiveSessionId,
+                    entity.SessionTeamId,
+                    entity.MissionStageId
+                })
+                .HasDatabaseName("ix_validation_override_logs_live_session_team_stage");
+            validationOverrideLog.HasOne<EvidenceSubmission>()
+                .WithMany()
+                .HasForeignKey(entity => entity.EvidenceSubmissionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            validationOverrideLog.HasOne<SessionTeam>()
                 .WithMany()
                 .HasForeignKey(entity => entity.SessionTeamId)
                 .OnDelete(DeleteBehavior.Restrict);
