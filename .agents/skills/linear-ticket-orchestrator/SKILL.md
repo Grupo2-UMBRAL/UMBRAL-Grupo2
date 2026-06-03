@@ -60,8 +60,26 @@ Run ticket execution from Linear without letting workers own global repo state.
    - return to triage
 15. Pause for human review of the completed branch.
 16. After explicit approval, squash to one final commit on the ticket branch.
-17. Update Linear with evidence and next action.
-18. Clean branch/worktree only after merge or explicit close.
+17. Write the final commit with `Conventional Commits` plus issue ID in the header, for example `feat(LIN-123): publish session template`.
+18. If the change will go through a PR, add a non-closing Linear magic word in the final commit footer: `Refs LIN-123`.
+19. Open the PR with:
+   - the Linear issue ID in the PR title
+   - `Fixes LIN-123` in the PR description for the primary ticket
+   - `Refs <issue-id>` for any secondary linked tickets
+20. Only if there will be no PR, use a closing magic word in the final commit instead: `Fixes LIN-123`.
+21. Update Linear with evidence and next action.
+22. Clean branch/worktree only after merge or explicit close.
+
+## Linear linking contract
+
+When the workspace webhook and magic-word automation are active:
+
+- Branches must include the Linear issue ID.
+- PR titles must include the Linear issue ID.
+- PR descriptions should carry the primary closing link, by default `Fixes <issue-id>`.
+- Final commits should usually carry a non-closing link, by default `Refs <issue-id>`, when a PR will be opened.
+- If one PR covers multiple issues, keep one primary `Fixes <issue-id>` entry and add the rest as `Refs <issue-id>`, unless the workflow explicitly wants all of them closed on merge.
+- If there is no PR, the final commit becomes the closing link and should use `Fixes <issue-id>`.
 
 ## Bundled scripts
 
@@ -99,6 +117,7 @@ Before moving a ticket forward, verify:
 - docs changed when a contract, decision, or workflow changed
 - branch, worktree, and ticket ID still match
 - runtime session metadata still points to the same worktree and branch
+- the final PR/commit linking text matches the intended Linear automation behavior
 
 ## Handoff contract
 
@@ -112,6 +131,7 @@ Every worker return should include:
 - tests run
 - open risks
 - recommended next action
+- whether the orchestrator should use `Fixes` or `Refs` when creating the PR and final commit
 
 ## Output format
 

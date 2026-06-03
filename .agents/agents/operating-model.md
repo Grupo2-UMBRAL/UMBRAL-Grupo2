@@ -26,12 +26,18 @@ Leer en este orden:
 - Hacer desarrollo solo en ramas `feature/*`, `fix/*` o equivalentes por cambio aislado.
 - Cuando haya multiples agentes trabajando desde tickets, asignar un unico orquestador como autoridad de Linear y `git`.
 - Cada ticket activo debe vivir en su propia branch y su propio `git worktree`.
+- Incluir siempre el identificador de Linear en la branch: `<tipo>/<issue-id>-<slug>`.
 - Mantener commits atomicos: un solo cambio coherente por commit.
-- Usar mensajes `Conventional Commits` con referencia de tarea cuando exista: `feat[#Tarea]: mensaje`, `fix[#Tarea]: mensaje`.
+- Usar mensajes `Conventional Commits` con referencia de Linear en el encabezado cuando aplique: `feat(LIN-123): mensaje`, `fix(LIN-123): mensaje`.
+- Si el cambio va a abrir pull request, enlazar el commit con un magic word no cerrador en el footer: `Refs LIN-123`.
+- Si el cambio se integrara sin PR por una excepcion explicita, usar un magic word cerrador en el commit final: `Fixes LIN-123`.
 - Preferir `rebase` para mantener historial lineal y reducir ruido de merges intermedios.
 - Antes de integrar una branch de ticket, hacer `fetch` de la rama de integracion remota y `rebase` de la branch del ticket sobre esa referencia; evitar mezclar primero cambios en `develop` local salvo necesidad explicita.
 - Mantener pull requests pequenos. La referencia objetivo es un maximo de `300` lineas cambiadas de codigo productivo por PR. Si el cambio real necesita mas, dividirlo por slices verticales o justificar la excepcion.
 - Incluir en cada PR:
+  - issue ID de Linear en el titulo
+  - magic word + issue ID en el cuerpo para el ticket principal, por defecto `Fixes LIN-123`
+  - `Refs <issue-id>` para tickets secundarios cuando un PR toca mas de un issue
   - descripcion tecnica
   - criterios de aceptacion
   - evidencia de pruebas ejecutadas

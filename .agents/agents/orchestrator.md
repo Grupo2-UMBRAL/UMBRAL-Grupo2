@@ -84,8 +84,14 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
 16. Actualizar Linear con evidencia tecnica: branch, pruebas ejecutadas, riesgos abiertos y decision siguiente.
 17. Esperar revision humana sobre la branch terminada antes de consolidar historial.
 18. Si el humano aprueba, hacer `squash` a un solo commit final en la branch del ticket.
-19. Abrir PR o fusionar hacia la rama de integracion objetivo solo despues de esa aprobacion explicita.
-20. Tras merge o cierre, limpiar `worktree` y branch local.
+19. Escribir el commit final con `Conventional Commits` e issue ID en el encabezado, por ejemplo `feat(LIN-123): publish session template`.
+20. Si habra PR, agregar footer `Refs LIN-123` en el commit final para mantener el enlace sin cerrar el issue por commit.
+21. Abrir PR solo despues de esa aprobacion explicita con:
+   - issue ID en el titulo
+   - `Fixes <issue-id>` en la descripcion para el ticket principal
+   - `Refs <issue-id>` para tickets relacionados adicionales
+22. Si por excepcion no habra PR, usar un magic word cerrador en el commit final, por ejemplo `Fixes LIN-123`.
+23. Tras merge o cierre, limpiar `worktree` y branch local.
 
 ## Convenciones de branch y worktree
 
@@ -94,6 +100,14 @@ Ejemplos:
 - `feature/LIN-123-session-template-publication`
 - `fix/LIN-241-refresh-token-expiry`
 - `chore/LIN-310-compose-bootstrap`
+
+Convenciones de enlace con Linear:
+
+- branch: siempre incluir el issue ID en el nombre
+- PR title: incluir el issue ID, por ejemplo `LIN-123 Publish session template`
+- PR description: incluir `Fixes LIN-123` para el ticket principal
+- commit final con PR: usar footer `Refs LIN-123`
+- commit final sin PR: usar footer `Fixes LIN-123`
 
 Comandos de referencia:
 
