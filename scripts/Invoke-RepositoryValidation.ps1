@@ -13,7 +13,8 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $artifactRoot = [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $ArtifactDirectory))
 $testResultsDirectory = Join-Path $artifactRoot "TestResults"
-$null = New-Item -ItemType Directory -Force -Path $artifactRoot, $testResultsDirectory
+$backendCoverageReportDirectory = Join-Path $artifactRoot "backend-coverage-report"
+$null = New-Item -ItemType Directory -Force -Path $artifactRoot, $testResultsDirectory, $backendCoverageReportDirectory
 $hasHostDotnet = $null -ne (Get-Command dotnet -ErrorAction SilentlyContinue)
 
 $webDirectory = Join-Path $repositoryRoot "src/apps/web"
@@ -120,6 +121,14 @@ if (Test-Scope -AllowedScopes @("Full", "Frontend", "Mobile")) {
 }
 
 if (Test-Scope -AllowedScopes @("Full", "Backend")) {
+    foreach ($coverageArtifactDirectory in @($testResultsDirectory, $backendCoverageReportDirectory)) {
+        if (Test-Path -LiteralPath $coverageArtifactDirectory) {
+            Remove-Item -LiteralPath $coverageArtifactDirectory -Recurse -Force
+        }
+
+        $null = New-Item -ItemType Directory -Force -Path $coverageArtifactDirectory
+    }
+
     foreach ($project in $backendProjects) {
         Invoke-DotnetCommand -Arguments @("build", $project, "--configuration", "Release")
     }
@@ -150,6 +159,10 @@ if (Test-Scope -AllowedScopes @("Full", "Backend")) {
         -TargetThreshold $TargetCoverage
 
     $coverageSummary | Out-File -FilePath (Join-Path $artifactRoot "backend-coverage-summary.json") -Encoding utf8
+
+    & (Join-Path $PSScriptRoot "Publish-BackendCoverageReports.ps1") `
+        -ResultsDirectory $testResultsDirectory `
+        -OutputDirectory $backendCoverageReportDirectory | Out-Null
 }
 
 if (-not $SkipComposeSmoke -and $Scope -eq "Full") {

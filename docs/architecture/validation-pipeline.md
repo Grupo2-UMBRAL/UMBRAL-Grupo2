@@ -8,7 +8,8 @@ Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y
 - lint y typecheck de `web`
 - typecheck y build de `mobile`
 - build y tests `.NET` para `building-blocks`, `identity-access`, `mission-design`, `session-operations` y `scoring-audit`
-- cobertura backend con `XPlat Code Coverage`
+- cobertura backend con `Coverlet`
+- reportes agregados de cobertura con `ReportGenerator`
 - smoke tests de `docker compose` para `edge-proxy`, servicios backend, `Keycloak`, `PostgreSQL` y `RabbitMQ`
 - scan basico para detectar secretos versionados fuera de archivos seed aprobados
 
@@ -59,10 +60,19 @@ Artefactos:
 
 - `temp/validation/backend-coverage-summary.json`
 - `temp/validation/TestResults/`
+- `temp/validation/backend-coverage-report/index.html`
+- `temp/validation/backend-coverage-report/Cobertura.xml`
+- `temp/validation/backend-coverage-report/Summary.txt`
 - `temp/validation/compose/compose-config.txt`
 - `temp/validation/compose/compose-up.txt`
 - `temp/validation/compose/compose-ps.txt`
 - `temp/validation/compose/auth-smoke-tests.txt`
+
+Cobertura backend:
+
+- `coverlet.collector` genera resultados crudos `coverage.cobertura.xml` por proyecto de test bajo `temp/validation/TestResults/`.
+- `ReportGenerator` agrega esos resultados en `temp/validation/backend-coverage-report/`.
+- No hay exclusiones explicitas de assemblies, namespaces o archivos en este flujo. Si se agregan, deben quedar documentadas y justificadas aqui.
 
 ## Coverage policy
 
