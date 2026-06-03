@@ -70,6 +70,32 @@ public static class LiveSessionEndpointRouteBuilderExtensions
                     new SubmitEvidenceCommand(sessionTeamId, request.QrHash),
                     cancellationToken)));
 
+        participantSnapshotRoutes.MapPost(
+            "/{sessionTeamId:guid}/trivia-submissions",
+            async (
+                Guid sessionTeamId,
+                [FromBody] SubmitTriviaAnswerRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new SubmitTriviaAnswerCommand(sessionTeamId, request.AnswerText),
+                    cancellationToken)));
+
+        var evidenceSubmissionRoutes = authorizedApi
+            .MapGroup("/submissions")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
+
+        evidenceSubmissionRoutes.MapPost(
+            "/{evidenceSubmissionId:guid}/override",
+            async (
+                Guid evidenceSubmissionId,
+                [FromBody] OverrideValidationOutcomeRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new OverrideValidationOutcomeCommand(evidenceSubmissionId, request.IsAccepted, request.Reason),
+                    cancellationToken)));
+
         return authorizedApi;
     }
 }

@@ -55,9 +55,12 @@ namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SubmittedHash")
-                        .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SubmittedText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.HasKey("Id");
 
@@ -226,10 +229,86 @@ namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
                     b.ToTable("team_participations", "session_operations");
                 });
 
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.ValidationOverrideLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EvidenceSubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MissionStageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NewOutcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("OperatorUserId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTimeOffset>("OverriddenAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PreviousOutcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SessionTeamId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EvidenceSubmissionId")
+                        .HasDatabaseName("ix_validation_override_logs_evidence_submission_id");
+
+                    b.HasIndex("LiveSessionId");
+
+                    b.HasIndex("SessionTeamId");
+
+                    b.HasIndex("LiveSessionId", "SessionTeamId", "MissionStageId")
+                        .HasDatabaseName("ix_validation_override_logs_live_session_team_stage");
+
+                    b.ToTable("validation_override_logs", "session_operations");
+                });
+
             modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.EvidenceSubmission", b =>
                 {
                     b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.LiveSession", null)
                         .WithMany("EvidenceSubmissions")
+                        .HasForeignKey("LiveSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.SessionTeam", null)
+                        .WithMany()
+                        .HasForeignKey("SessionTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Umbral.SessionOperations.Api.Domain.LiveSessions.ValidationOverrideLog", b =>
+                {
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.EvidenceSubmission", null)
+                        .WithMany()
+                        .HasForeignKey("EvidenceSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Umbral.SessionOperations.Api.Domain.LiveSessions.LiveSession", null)
+                        .WithMany("ValidationOverrideLogs")
                         .HasForeignKey("LiveSessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -289,6 +368,8 @@ namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
                     b.Navigation("TeamParticipations");
 
                     b.Navigation("TeamProgressions");
+
+                    b.Navigation("ValidationOverrideLogs");
                 });
 #pragma warning restore 612, 618
         }

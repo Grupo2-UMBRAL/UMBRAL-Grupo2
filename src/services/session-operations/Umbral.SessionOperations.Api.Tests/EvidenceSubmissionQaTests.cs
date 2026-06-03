@@ -71,6 +71,97 @@ public sealed class EvidenceSubmissionQaTests
         Assert.Equal(1, liveSession.SequenceNumber);
     }
 
+    [Fact]
+    public void SubmitTriviaAnswer_AcceptsMatchingAnswerIgnoringCaseAndOuterSpaces_AndAdvancesTeamToNextStage()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, "  CARACAS  ", NowUtc);
+
+        Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
+        Assert.Equal("CARACAS", submission.SubmittedText);
+        Assert.Equal(SessionTeamProgressStates.InProgress, liveSession.GetProgressStateForTeam(TeamId));
+        Assert.Equal("Trivia Stage 2", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
+        Assert.Equal(1, liveSession.SequenceNumber);
+    }
+
+    [Fact]
+    public void SubmitTriviaAnswer_RejectsMismatchingAnswer_AndKeepsTeamOnCurrentStage()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+
+        Assert.Equal(ValidationOutcome.Rejected, submission.Outcome);
+        Assert.Equal("trivia_answer_mismatch", submission.FailureReason);
+        Assert.Equal(SessionTeamProgressStates.InProgress, liveSession.GetProgressStateForTeam(TeamId));
+        Assert.Equal("Trivia Stage 1", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
+        Assert.Equal(1, liveSession.SequenceNumber);
+    }
+
+    [Fact]
+    public void OverrideValidationOutcome_AcceptsRejectedTriviaSubmission_AndAdvancesTeam()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+
+        var overrideLog = liveSession.OverrideValidationOutcome(
+            submission.Id,
+            "operator-1",
+            isAccepted: true,
+            "Respuesta equivalente aceptada por operador.",
+            NowUtc.AddMinutes(1));
+
+        Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
+        Assert.Null(submission.FailureReason);
+        Assert.Equal(ValidationOutcome.Rejected, overrideLog.PreviousOutcome);
+        Assert.Equal(ValidationOutcome.Accepted, overrideLog.NewOutcome);
+        Assert.Equal("operator-1", overrideLog.OperatorUserId);
+        Assert.Equal("Respuesta equivalente aceptada por operador.", overrideLog.Reason);
+        Assert.Equal(submission.Id, overrideLog.EvidenceSubmissionId);
+        Assert.Equal(TeamId, overrideLog.SessionTeamId);
+        Assert.Equal(submission.MissionStageId, overrideLog.MissionStageId);
+        Assert.Equal("Trivia Stage 2", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
+        Assert.Equal(2, liveSession.SequenceNumber);
+        Assert.Single(liveSession.ValidationOverrideLogs);
+    }
+
+    [Fact]
+    public void OverrideValidationOutcome_DoesNotAdvanceAgain_WhenSubmissionWasAlreadyAccepted()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 3);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, "caracas", NowUtc);
+
+        var overrideLog = liveSession.OverrideValidationOutcome(
+            submission.Id,
+            "operator-1",
+            isAccepted: true,
+            "Confirmacion administrativa.",
+            NowUtc.AddMinutes(1));
+
+        Assert.Equal(ValidationOutcome.Accepted, overrideLog.PreviousOutcome);
+        Assert.Equal(ValidationOutcome.Accepted, overrideLog.NewOutcome);
+        Assert.Equal("Trivia Stage 2", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
+        Assert.Equal(2, liveSession.SequenceNumber);
+        Assert.Single(liveSession.ValidationOverrideLogs);
+    }
+
+    [Fact]
+    public void SubmitTriviaAnswer_ResolvesAutomaticallyByDefault_WithoutPendingReviewState()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+
+        var acceptedSubmission = liveSession.SubmitTriviaAnswer(TeamId, "caracas", NowUtc);
+        var rejectedSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+        var rejectedSubmission = rejectedSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+
+        Assert.Equal(ValidationOutcome.Accepted, acceptedSubmission.Outcome);
+        Assert.Equal(ValidationOutcome.Rejected, rejectedSubmission.Outcome);
+        Assert.DoesNotContain("Pending", Enum.GetNames<ValidationOutcome>());
+        Assert.DoesNotContain("Review", acceptedSubmission.Outcome.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Review", rejectedSubmission.Outcome.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static LiveSession CreateLiveSessionWithTeam(int stageCount)
     {
         var liveSession = LiveSession.Create(
@@ -90,6 +181,32 @@ public sealed class EvidenceSubmissionQaTests
                     "Medium",
                     "TreasureHunt",
                     expectedQrHash: $"qr-stage-{stageOrder}"))
+                .ToArray());
+
+        liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-20)));
+
+        return liveSession;
+    }
+
+    private static LiveSession CreateTriviaLiveSessionWithTeam(int stageCount)
+    {
+        var liveSession = LiveSession.Create(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            "Trivia Mission",
+            "Live Trivia Run",
+            scheduledStartAtUtc: null,
+            createdAtUtc: NowUtc.AddMinutes(-30),
+            sessionStageFlow: Enumerable.Range(1, stageCount)
+                .Select(stageOrder => LiveSessionStage.Create(
+                    Guid.Parse($"eeeeeeee-eeee-eeee-eeee-{stageOrder:000000000000}"),
+                    $"Trivia Stage {stageOrder}",
+                    stageOrder,
+                    stageOrder,
+                    10,
+                    "Medium",
+                    "Trivia",
+                    triviaValidAnswer: "Caracas"))
                 .ToArray());
 
         liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-20)));

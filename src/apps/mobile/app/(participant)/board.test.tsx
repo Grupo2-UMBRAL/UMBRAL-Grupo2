@@ -49,6 +49,10 @@ jest.mock("../../src/lib/api-client", () => {
 type MockBoardApiClient = {
   getSessionTeamSnapshot: jest.Mock<Promise<SessionTeamSnapshot>, [string]>;
   submitEvidence: jest.Mock<Promise<{ validationOutcome: string }>, [{ sessionTeamId: string; qrHash: string }]>;
+  submitTriviaAnswer: jest.Mock<
+    Promise<{ validationOutcome: string }>,
+    [{ sessionTeamId: string; answerText: string }]
+  >;
 };
 
 type ConnectionOptions = {
@@ -82,7 +86,8 @@ const mockConnection = {
 function createMockApiClient(): MockBoardApiClient {
   return {
     getSessionTeamSnapshot: jest.fn(),
-    submitEvidence: jest.fn().mockResolvedValue({ validationOutcome: "Accepted" })
+    submitEvidence: jest.fn().mockResolvedValue({ validationOutcome: "Accepted" }),
+    submitTriviaAnswer: jest.fn().mockResolvedValue({ validationOutcome: "Accepted" })
   };
 }
 
@@ -118,6 +123,20 @@ function createSnapshot(overrides: Partial<SessionTeamSnapshot> = {}): SessionTe
       serverTimeUtc: "2026-06-03T08:00:00Z"
     },
     ...overrides
+  };
+}
+
+function createTreasureHuntSnapshot(overrides: Partial<SessionTeamSnapshot> = {}): SessionTeamSnapshot {
+  const snapshot = createSnapshot(overrides);
+
+  return {
+    ...snapshot,
+    currentStage: snapshot.currentStage
+      ? {
+          ...snapshot.currentStage,
+          gameType: "TreasureHunt"
+        }
+      : snapshot.currentStage
   };
 }
 
@@ -304,7 +323,7 @@ test("resync callback fetches a fresh snapshot after SignalR reconnect", async (
 
 test("submits scanned QR evidence and renders accepted feedback", async () => {
   const apiClient = createMockApiClient();
-  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createTreasureHuntSnapshot());
   apiClient.submitEvidence.mockResolvedValue({ validationOutcome: "Accepted" });
 
   renderBoard(apiClient);
@@ -334,7 +353,7 @@ test("submits scanned QR evidence and renders accepted feedback", async () => {
 
 test("submits scanned QR evidence and renders rejected feedback", async () => {
   const apiClient = createMockApiClient();
-  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createTreasureHuntSnapshot());
   apiClient.submitEvidence.mockResolvedValue({ validationOutcome: "Rejected" });
 
   renderBoard(apiClient);
@@ -360,4 +379,50 @@ test("submits scanned QR evidence and renders rejected feedback", async () => {
     });
   });
   expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
+});
+
+test("submits Trivia answer and renders accepted feedback", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.submitTriviaAnswer.mockResolvedValue({ validationOutcome: "Accepted" });
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText("Escribe tu respuesta...")).toBeTruthy();
+  });
+
+  fireEvent.changeText(screen.getByPlaceholderText("Escribe tu respuesta..."), " caracas ");
+  fireEvent.press(screen.getByText("Enviar"));
+
+  await waitFor(() => {
+    expect(apiClient.submitTriviaAnswer).toHaveBeenCalledWith({
+      sessionTeamId: "team-1",
+      answerText: "caracas"
+    });
+  });
+  expect(screen.getByText(/Respuesta correcta/)).toBeTruthy();
+});
+
+test("submits Trivia answer and renders rejected feedback", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.submitTriviaAnswer.mockResolvedValue({ validationOutcome: "Rejected" });
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText("Escribe tu respuesta...")).toBeTruthy();
+  });
+
+  fireEvent.changeText(screen.getByPlaceholderText("Escribe tu respuesta..."), "valencia");
+  fireEvent.press(screen.getByText("Enviar"));
+
+  await waitFor(() => {
+    expect(apiClient.submitTriviaAnswer).toHaveBeenCalledWith({
+      sessionTeamId: "team-1",
+      answerText: "valencia"
+    });
+  });
+  expect(screen.getByText(/Respuesta incorrecta, intenta de nuevo/)).toBeTruthy();
 });

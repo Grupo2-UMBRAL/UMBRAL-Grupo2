@@ -115,6 +115,11 @@ export type SubmitEvidenceInput = {
   qrHash: string;
 };
 
+export type SubmitTriviaAnswerInput = {
+  sessionTeamId: string;
+  answerText: string;
+};
+
 export type SubmitEvidenceResult = {
   liveSessionId: string;
   sessionTeamId: string;
@@ -293,6 +298,17 @@ export function createAuthorizedApiClient(accessToken: string) {
           method: "POST",
           body: JSON.stringify({
             qrHash: input.qrHash
+          })
+        }
+      );
+    },
+    submitTriviaAnswer(input: SubmitTriviaAnswerInput) {
+      return requestJson<SubmitEvidenceResult>(
+        `/api/session-operations/session-teams/${encodeURIComponent(input.sessionTeamId)}/trivia-submissions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            answerText: input.answerText
           })
         }
       );

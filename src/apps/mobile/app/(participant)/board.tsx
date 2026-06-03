@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { Redirect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { LoadingScreen } from "../../src/components/loading-screen";
 import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
 import { StatusChip } from "../../src/components/status-chip";
@@ -33,6 +33,11 @@ type QRSubmissionStatus =
   | "accepted"
   | "rejected"
   | "error";
+
+const GameTypes = {
+  treasureHunt: "treasurehunt",
+  trivia: "trivia"
+} as const;
 
 type ApiClient = ReturnType<typeof createAuthorizedApiClient>;
 
@@ -116,6 +121,10 @@ function formatDateTime(value?: string) {
   return new Date(value).toLocaleString();
 }
 
+function normalizeGameType(gameType?: string) {
+  return gameType?.replace(/\s+/g, "").toLowerCase() ?? "";
+}
+
 export default function BoardPage() {
   const { session } = useSession();
   const config = useMemo(() => getClientConfig(), []);
@@ -135,6 +144,7 @@ export default function BoardPage() {
   const [scannerLocked, setScannerLocked] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<QRSubmissionStatus>("idle");
   const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
+  const [triviaAnswerText, setTriviaAnswerText] = useState("");
   const apiClientRef = useRef<ApiClient | null>(null);
   const enrollmentRef = useRef<StoredEnrollment | null>(null);
   const snapshotRef = useRef<SessionTeamSnapshot | null>(null);
@@ -226,6 +236,53 @@ export default function BoardPage() {
       setScannerLocked(false);
     }
   }, []);
+
+  const submitTriviaAnswer = useCallback(async () => {
+    const client = apiClientRef.current;
+    const enrollment = enrollmentRef.current;
+    const answerText = triviaAnswerText.trim();
+
+    if (!client || !enrollment) {
+      setSubmissionStatus("error");
+      setSubmissionMessage("No hay sesion participante lista para enviar evidencia.");
+      return;
+    }
+
+    if (!snapshotRef.current?.currentStage) {
+      setSubmissionStatus("error");
+      setSubmissionMessage("No hay etapa activa para enviar evidencia.");
+      return;
+    }
+
+    if (!answerText) {
+      setSubmissionStatus("error");
+      setSubmissionMessage("Escribe una respuesta antes de enviar.");
+      return;
+    }
+
+    setSubmissionStatus("submitting");
+    setSubmissionMessage("Enviando respuesta...");
+
+    try {
+      const result = await client.submitTriviaAnswer({
+        sessionTeamId: enrollment.teamId,
+        answerText
+      });
+
+      if (result.validationOutcome.toLowerCase() === "accepted") {
+        setSubmissionStatus("accepted");
+        setTriviaAnswerText("");
+        setSubmissionMessage("Respuesta correcta. El tablero avanzara con el evento realtime.");
+        return;
+      }
+
+      setSubmissionStatus("rejected");
+      setSubmissionMessage("Respuesta incorrecta, intenta de nuevo.");
+    } catch (error) {
+      setSubmissionStatus("error");
+      setSubmissionMessage(readErrorMessage(error));
+    }
+  }, [triviaAnswerText]);
 
   const openQrScanner = useCallback(async () => {
     if (!snapshotRef.current?.currentStage) {
@@ -468,11 +525,18 @@ export default function BoardPage() {
   const streamStatus = resolveStreamStatus(connectionState.kind);
   const dataStatus = resolveSnapshotStatus(snapshotStatus);
   const currentStage = snapshot?.currentStage;
+  const currentGameType = normalizeGameType(currentStage?.gameType);
+  const currentStageIsTreasureHunt = currentGameType === GameTypes.treasureHunt;
+  const currentStageIsTrivia = currentGameType === GameTypes.trivia;
   const currentStageHints = currentStage
     ? visibleHints.filter((hint) => hint.missionStageId === currentStage.missionStageId)
     : [];
   const evidenceIsBusy = submissionStatus === "requestingPermission" || submissionStatus === "submitting";
-  const canScanEvidence = Boolean(currentStage) && !evidenceIsBusy;
+  const canScanEvidence = Boolean(currentStage) && currentStageIsTreasureHunt && !evidenceIsBusy;
+  const canSubmitTrivia = Boolean(currentStage)
+    && currentStageIsTrivia
+    && triviaAnswerText.trim().length > 0
+    && !evidenceIsBusy;
 
   return (
     <ScreenShell
@@ -545,6 +609,8 @@ export default function BoardPage() {
 
       <View style={shellStyles.card}>
         <Text style={shellStyles.cardTitle}>Evidence submission</Text>
+        {currentStageIsTreasureHunt ? (
+          <>
         <Text style={shellStyles.cardText}>
           Escanea el QR físico de Treasure Hunt para enviar el hash de evidencia al backend de Session Operations.
         </Text>
@@ -561,10 +627,46 @@ export default function BoardPage() {
         >
           <Text style={styles.primaryButtonLabel}>Escanear QR</Text>
         </Pressable>
+          </>
+        ) : null}
+        {currentStageIsTrivia ? (
+          <>
+            <Text style={shellStyles.cardText}>
+              Envia tu respuesta de Trivia para validacion automatica de Session Operations.
+            </Text>
+            <TextInput
+              editable={!evidenceIsBusy}
+              onChangeText={setTriviaAnswerText}
+              onSubmitEditing={() => {
+                if (canSubmitTrivia) {
+                  void submitTriviaAnswer();
+                }
+              }}
+              placeholder="Escribe tu respuesta..."
+              placeholderTextColor="#68777d"
+              returnKeyType="send"
+              style={styles.triviaInput}
+              value={triviaAnswerText}
+            />
+            <Pressable
+              disabled={!canSubmitTrivia}
+              onPress={() => {
+                void submitTriviaAnswer();
+              }}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                !canSubmitTrivia && styles.disabledButton,
+                pressed && canSubmitTrivia && styles.buttonPressed
+              ]}
+            >
+              <Text style={styles.primaryButtonLabel}>Enviar</Text>
+            </Pressable>
+          </>
+        ) : null}
         {submissionStatus === "submitting" ? (
           <View style={styles.inlineStatus}>
             <ActivityIndicator color="#17313b" />
-            <Text style={styles.inlineStatusText}>Enviando evidencia...</Text>
+            <Text style={styles.inlineStatusText}>{submissionMessage ?? "Enviando evidencia..."}</Text>
           </View>
         ) : null}
         {submissionStatus === "accepted" ? (
@@ -701,6 +803,17 @@ const styles = StyleSheet.create({
     color: "#9e6f00",
     fontSize: 14,
     lineHeight: 20
+  },
+  triviaInput: {
+    backgroundColor: "#f7fbfc",
+    borderColor: "#b8c8cc",
+    borderRadius: 16,
+    borderWidth: 1,
+    color: "#17313b",
+    fontSize: 16,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12
   },
   scannerModal: {
     backgroundColor: "#000",

@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
+        services.AddScoped<Umbral.SessionOperations.Api.Application.EvidenceSubmissions.ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionDesignLiveSessionCatalog, MissionDesignLiveSessionCatalog>(client =>
