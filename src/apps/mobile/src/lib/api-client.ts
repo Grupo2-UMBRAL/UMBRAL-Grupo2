@@ -110,6 +110,81 @@ export type EnrollmentResult = {
   enrolledAtUtc?: string;
 };
 
+export type SnapshotSyncMetadata = {
+  sequenceNumber: number;
+  lastUpdatedUtc: string;
+  serverTimeUtc: string;
+};
+
+export type CurrentSessionStageSnapshot = {
+  missionStageId: string;
+  name: string;
+  sessionStageOrder: number;
+  sourceOrder: number;
+  resolvedTimeBudgetMinutes: number;
+  difficulty: string;
+  gameType: string;
+};
+
+export type VisibleHintSnapshot = {
+  hintId: string;
+  missionStageId: string;
+  content: string;
+  isSolution: boolean;
+  latitude?: number;
+  longitude?: number;
+  unlockedAtUtc: string;
+  unlockReason: string;
+};
+
+export type SessionTeamSnapshot = {
+  liveSessionId: string;
+  sessionTeamId: string;
+  teamName: string;
+  sessionState: string;
+  progressState: string;
+  currentStage?: CurrentSessionStageSnapshot;
+  visibleHints: VisibleHintSnapshot[];
+  sync: SnapshotSyncMetadata;
+};
+
+export const SnapshotRefreshPolicies = {
+  applyIncremental: 1,
+  refreshSnapshot: 2
+} as const;
+
+export type SnapshotRefreshPolicy =
+  (typeof SnapshotRefreshPolicies)[keyof typeof SnapshotRefreshPolicies];
+
+export type RealtimeEventMetadata = {
+  liveSessionId: string;
+  sequenceNumber: number;
+  occurredAtUtc: string;
+  refreshPolicy: SnapshotRefreshPolicy;
+  reason: string;
+};
+
+export type SessionStateChangedPayload = {
+  metadata: RealtimeEventMetadata;
+  previousState: string;
+  currentState: string;
+  remainingSeconds?: number;
+};
+
+export type TeamProgressChangedPayload = {
+  metadata: RealtimeEventMetadata;
+  sessionTeamId: string;
+  previousStage?: CurrentSessionStageSnapshot;
+  currentStage?: CurrentSessionStageSnapshot;
+  progressState: string;
+};
+
+export type HintUnlockedPayload = {
+  metadata: RealtimeEventMetadata;
+  sessionTeamId: string;
+  hint: VisibleHintSnapshot;
+};
+
 export function createAuthorizedApiClient(accessToken: string) {
   const config = getClientConfig();
 
@@ -189,6 +264,11 @@ export function createAuthorizedApiClient(accessToken: string) {
           teamName: input.teamName
         })
       });
+    },
+    getSessionTeamSnapshot(sessionTeamId: string) {
+      return requestJson<SessionTeamSnapshot>(
+        `/api/session-operations/session-teams/${encodeURIComponent(sessionTeamId)}/snapshot`
+      );
     }
   };
 }

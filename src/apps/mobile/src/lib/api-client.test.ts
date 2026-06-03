@@ -71,3 +71,16 @@ test("calls create team endpoint with expected network payload", async () => {
   expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
   expect((init.headers as Headers).get("content-type")).toBe("application/json");
 });
+
+test("calls session team snapshot endpoint with participant token", async () => {
+  const apiClient = createAuthorizedApiClient("participant-token");
+
+  await apiClient.getSessionTeamSnapshot("team-1");
+
+  expect(fetch).toHaveBeenCalledWith(
+    "https://edge.test/api/session-operations/session-teams/team-1/snapshot",
+    expect.objectContaining({})
+  );
+  const [, init] = (fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+  expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
+});

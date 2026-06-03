@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import {
   HubConnectionBuilder,
   HttpTransportType,
@@ -6,7 +6,7 @@ import {
   type HubConnection
 } from "@microsoft/signalr";
 
-type ConnectionState =
+export type ConnectionState =
   | { kind: "connecting"; detail: string }
   | { kind: "connected"; detail: string }
   | { kind: "reconnecting"; detail: string }
@@ -16,18 +16,21 @@ type ConnectionState =
 type ConnectionOptions = {
   accessToken: string;
   hubUrl: string;
+  enabled?: boolean;
   onResync?: () => void;
 };
 
 export function useSessionOperationsConnection({
   accessToken,
   hubUrl,
+  enabled = true,
   onResync
 }: ConnectionOptions) {
   const [state, setState] = useState<ConnectionState>({
     kind: "connecting",
     detail: "Opening participant stream."
   });
+  const [connectionInstance, setConnectionInstance] = useState<HubConnection | null>(null);
   const resyncRef = useRef(onResync);
 
   useEffect(() => {
@@ -37,6 +40,17 @@ export function useSessionOperationsConnection({
   useEffect(() => {
     let active = true;
     let connection: HubConnection | null = null;
+
+    if (!enabled || !accessToken) {
+      setConnectionInstance(null);
+      setState({
+        kind: "disconnected",
+        detail: "Participant stream waiting for authenticated session."
+      });
+      return () => {
+        active = false;
+      };
+    }
 
     async function startConnection() {
       setState({
@@ -53,6 +67,8 @@ export function useSessionOperationsConnection({
         .withAutomaticReconnect([0, 2000, 5000, 10000])
         .configureLogging(LogLevel.Warning)
         .build();
+
+      setConnectionInstance(connection);
 
       connection.onreconnecting(() => {
         if (!active) {
@@ -82,6 +98,7 @@ export function useSessionOperationsConnection({
           return;
         }
 
+        setConnectionInstance(null);
         setState({
           kind: error ? "error" : "disconnected",
           detail: error
@@ -106,6 +123,7 @@ export function useSessionOperationsConnection({
           return;
         }
 
+        setConnectionInstance(null);
         setState({
           kind: "error",
           detail: error instanceof Error ? error.message : "SignalR startup failed."
@@ -117,11 +135,15 @@ export function useSessionOperationsConnection({
 
     return () => {
       active = false;
+      setConnectionInstance(null);
       if (connection) {
         void connection.stop();
       }
     };
-  }, [accessToken, hubUrl]);
+  }, [accessToken, enabled, hubUrl]);
 
-  return state;
+  return {
+    ...state,
+    connection: connectionInstance
+  };
 }
