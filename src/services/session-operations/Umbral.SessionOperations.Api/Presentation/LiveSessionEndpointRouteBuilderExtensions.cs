@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
 namespace Umbral.SessionOperations.Api.Presentation;
 
@@ -25,6 +26,11 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new GetLiveSessionByIdQuery(liveSessionId), cancellationToken)));
 
+        liveSessionRoutes.MapGet(
+            "/{liveSessionId:guid}/overview",
+            async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetLiveSessionOverviewQuery(liveSessionId), cancellationToken)));
+
         liveSessionRoutes.MapPost(
             "/",
             async (
@@ -42,6 +48,15 @@ public static class LiveSessionEndpointRouteBuilderExtensions
 
                 return Results.Created($"/api/session-operations/live-sessions/{liveSession.Id}", liveSession);
             });
+
+        var participantSnapshotRoutes = authorizedApi
+            .MapGroup("/session-teams")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
+
+        participantSnapshotRoutes.MapGet(
+            "/{sessionTeamId:guid}/snapshot",
+            async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
 
         return authorizedApi;
     }
