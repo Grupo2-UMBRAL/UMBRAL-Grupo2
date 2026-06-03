@@ -1,7 +1,16 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { getClientConfig } from "@/lib/config";
+import { HintEditor } from "./hint-editor";
+import { GameTypeConfig } from "./game-type-config";
 
 type MissionSummary = {
   id: string;
@@ -123,15 +132,22 @@ type MissionNodeEditorProps = {
     nodeClientId: string,
     hintClientId: string,
     field: keyof MissionHintDraft,
-    value: string | boolean
+    value: string | boolean,
   ) => void;
-  onUpdateNode: (nodeClientId: string, field: keyof MissionNodeDraft, value: string | boolean) => void;
+  onUpdateNode: (
+    nodeClientId: string,
+    field: keyof MissionNodeDraft,
+    value: string | boolean,
+  ) => void;
 };
 
 const gameTypeOptions = ["Treasure Hunt", "Trivia"] as const;
 
 function createClientId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
@@ -144,11 +160,14 @@ function createEmptyHintDraft(): MissionHintDraft {
     content: "",
     isSolution: false,
     latitude: "",
-    longitude: ""
+    longitude: "",
   };
 }
 
-function createEmptyNodeDraft(kind: "leaf" | "composite", order: number): MissionNodeDraft {
+function createEmptyNodeDraft(
+  kind: "leaf" | "composite",
+  order: number,
+): MissionNodeDraft {
   return {
     clientId: createClientId(),
     name: "",
@@ -161,7 +180,7 @@ function createEmptyNodeDraft(kind: "leaf" | "composite", order: number): Missio
     triviaValidAnswer: "",
     triviaInitialValidationCriterion: "",
     hints: [],
-    children: kind === "composite" ? [createEmptyNodeDraft("leaf", 1)] : []
+    children: kind === "composite" ? [createEmptyNodeDraft("leaf", 1)] : [],
   };
 }
 
@@ -172,13 +191,13 @@ function createEmptyMissionDraft(): MissionDraft {
     difficulty: "",
     maximumDurationMinutes: "60",
     gameType: gameTypeOptions[0],
-    nodes: []
+    nodes: [],
   };
 }
 
 function createAuthorizedHeaders(accessToken: string) {
   return {
-    Authorization: `Bearer ${accessToken}`
+    Authorization: `Bearer ${accessToken}`,
   };
 }
 
@@ -194,15 +213,27 @@ async function readFailureDetail(response: Response) {
       }
 
       if (payload && typeof payload === "object") {
-        if ("detail" in payload && typeof payload.detail === "string" && payload.detail.trim()) {
+        if (
+          "detail" in payload &&
+          typeof payload.detail === "string" &&
+          payload.detail.trim()
+        ) {
           return payload.detail;
         }
 
-        if ("title" in payload && typeof payload.title === "string" && payload.title.trim()) {
+        if (
+          "title" in payload &&
+          typeof payload.title === "string" &&
+          payload.title.trim()
+        ) {
           return payload.title;
         }
 
-        if ("message" in payload && typeof payload.message === "string" && payload.message.trim()) {
+        if (
+          "message" in payload &&
+          typeof payload.message === "string" &&
+          payload.message.trim()
+        ) {
           return payload.message;
         }
       }
@@ -226,7 +257,7 @@ function toHintDraft(hint: MissionHint): MissionHintDraft {
     content: hint.content,
     isSolution: hint.isSolution,
     latitude: hint.latitude?.toString() ?? "",
-    longitude: hint.longitude?.toString() ?? ""
+    longitude: hint.longitude?.toString() ?? "",
   };
 }
 
@@ -242,9 +273,10 @@ function toNodeDraft(node: MissionNode): MissionNodeDraft {
     gameType: node.gameType ?? gameTypeOptions[0],
     expectedQrHash: node.expectedQrHash ?? "",
     triviaValidAnswer: node.triviaValidAnswer ?? "",
-    triviaInitialValidationCriterion: node.triviaInitialValidationCriterion ?? "",
+    triviaInitialValidationCriterion:
+      node.triviaInitialValidationCriterion ?? "",
     hints: node.hints.map(toHintDraft),
-    children: node.children.map(toNodeDraft)
+    children: node.children.map(toNodeDraft),
   };
 }
 
@@ -255,7 +287,7 @@ function toDraft(mission: MissionDetail): MissionDraft {
     difficulty: mission.difficulty,
     maximumDurationMinutes: String(mission.maximumDurationMinutes),
     gameType: mission.gameType,
-    nodes: mission.nodes.map(toNodeDraft)
+    nodes: mission.nodes.map(toNodeDraft),
   };
 }
 
@@ -265,7 +297,7 @@ function summarizeSelection(missions: MissionSummary[]) {
   return {
     total: missions.length,
     active,
-    inactive: missions.length - active
+    inactive: missions.length - active,
   };
 }
 
@@ -276,32 +308,41 @@ function summarizeMissionTree(nodes: MissionNodeDraft[]): MissionTreeStats {
 
       return {
         totalNodes: summary.totalNodes + 1 + childSummary.totalNodes,
-        leafStages: summary.leafStages + (node.children.length === 0 ? 1 : 0) + childSummary.leafStages,
+        leafStages:
+          summary.leafStages +
+          (node.children.length === 0 ? 1 : 0) +
+          childSummary.leafStages,
         compositeBlocks:
-          summary.compositeBlocks + (node.children.length > 0 ? 1 : 0) + childSummary.compositeBlocks,
-        hints: summary.hints + node.hints.length + childSummary.hints
+          summary.compositeBlocks +
+          (node.children.length > 0 ? 1 : 0) +
+          childSummary.compositeBlocks,
+        hints: summary.hints + node.hints.length + childSummary.hints,
       };
     },
     {
       totalNodes: 0,
       leafStages: 0,
       compositeBlocks: 0,
-      hints: 0
-    }
+      hints: 0,
+    },
   );
 }
 
 function getNextOrder(nodes: MissionNodeDraft[]) {
-  return nodes.reduce((maximum, node) => {
-    const numericOrder = Number.parseInt(node.order, 10);
-    return Number.isFinite(numericOrder) ? Math.max(maximum, numericOrder) : maximum;
-  }, 0) + 1;
+  return (
+    nodes.reduce((maximum, node) => {
+      const numericOrder = Number.parseInt(node.order, 10);
+      return Number.isFinite(numericOrder)
+        ? Math.max(maximum, numericOrder)
+        : maximum;
+    }, 0) + 1
+  );
 }
 
 function updateNodeInTree(
   nodes: MissionNodeDraft[],
   targetClientId: string,
-  updater: (node: MissionNodeDraft) => MissionNodeDraft
+  updater: (node: MissionNodeDraft) => MissionNodeDraft,
 ): MissionNodeDraft[] {
   return nodes.map((node) => {
     if (node.clientId === targetClientId) {
@@ -314,17 +355,20 @@ function updateNodeInTree(
 
     return {
       ...node,
-      children: updateNodeInTree(node.children, targetClientId, updater)
+      children: updateNodeInTree(node.children, targetClientId, updater),
     };
   });
 }
 
-function removeNodeFromTree(nodes: MissionNodeDraft[], targetClientId: string): MissionNodeDraft[] {
+function removeNodeFromTree(
+  nodes: MissionNodeDraft[],
+  targetClientId: string,
+): MissionNodeDraft[] {
   return nodes
     .filter((node) => node.clientId !== targetClientId)
     .map((node) => ({
       ...node,
-      children: removeNodeFromTree(node.children, targetClientId)
+      children: removeNodeFromTree(node.children, targetClientId),
     }));
 }
 
@@ -359,7 +403,7 @@ function serializeHintDraft(hint: MissionHintDraft): MissionHintPayload {
     content: hint.content,
     isSolution: hint.isSolution,
     latitude: parseOptionalDecimal(hint.latitude),
-    longitude: parseOptionalDecimal(hint.longitude)
+    longitude: parseOptionalDecimal(hint.longitude),
   };
 }
 
@@ -371,22 +415,34 @@ function serializeNodeDraft(node: MissionNodeDraft): MissionNodePayload {
     name: node.name,
     order: Number.parseInt(node.order, 10),
     isActive: node.isActive,
-    defaultTimeBudgetMinutes: isLeaf ? null : parseOptionalInteger(node.defaultTimeBudgetMinutes),
-    timeBudgetMinutes: isLeaf ? parseOptionalInteger(node.timeBudgetMinutes) : null,
+    defaultTimeBudgetMinutes: isLeaf
+      ? null
+      : parseOptionalInteger(node.defaultTimeBudgetMinutes),
+    timeBudgetMinutes: isLeaf
+      ? parseOptionalInteger(node.timeBudgetMinutes)
+      : null,
     gameType: isLeaf ? node.gameType : null,
-    expectedQrHash: isLeaf && node.gameType === "Treasure Hunt" ? trimToNull(node.expectedQrHash) : null,
-    triviaValidAnswer: isLeaf && node.gameType === "Trivia" ? trimToNull(node.triviaValidAnswer) : null,
+    expectedQrHash:
+      isLeaf && node.gameType === "Treasure Hunt"
+        ? trimToNull(node.expectedQrHash)
+        : null,
+    triviaValidAnswer:
+      isLeaf && node.gameType === "Trivia"
+        ? trimToNull(node.triviaValidAnswer)
+        : null,
     triviaInitialValidationCriterion:
-      isLeaf && node.gameType === "Trivia" ? trimToNull(node.triviaInitialValidationCriterion) : null,
+      isLeaf && node.gameType === "Trivia"
+        ? trimToNull(node.triviaInitialValidationCriterion)
+        : null,
     hints: isLeaf ? node.hints.map(serializeHintDraft) : [],
-    children: isLeaf ? [] : node.children.map(serializeNodeDraft)
+    children: isLeaf ? [] : node.children.map(serializeNodeDraft),
   };
 }
 
 function findValidationIssue(
   nodes: MissionNodeDraft[],
   inheritedBudgetMinutes: number | null,
-  pathPrefix: string
+  pathPrefix: string,
 ): string | null {
   const orders = new Map<number, string>();
 
@@ -433,7 +489,10 @@ function findValidationIssue(
         return `${label}: leaf stage needs a game type.`;
       }
 
-      if (node.gameType === "Treasure Hunt" && !trimToNull(node.expectedQrHash)) {
+      if (
+        node.gameType === "Treasure Hunt" &&
+        !trimToNull(node.expectedQrHash)
+      ) {
         return `${label}: Treasure Hunt stage needs expected QR hash.`;
       }
 
@@ -457,11 +516,17 @@ function findValidationIssue(
           return `${hintLabel}: coordinates need both latitude and longitude.`;
         }
 
-        if (hasLatitude && !Number.isFinite(parseOptionalDecimal(hint.latitude))) {
+        if (
+          hasLatitude &&
+          !Number.isFinite(parseOptionalDecimal(hint.latitude))
+        ) {
           return `${hintLabel}: latitude must be numeric.`;
         }
 
-        if (hasLongitude && !Number.isFinite(parseOptionalDecimal(hint.longitude))) {
+        if (
+          hasLongitude &&
+          !Number.isFinite(parseOptionalDecimal(hint.longitude))
+        ) {
           return `${hintLabel}: longitude must be numeric.`;
         }
       }
@@ -470,7 +535,11 @@ function findValidationIssue(
     }
 
     const nextInheritedBudget = defaultBudget ?? inheritedBudgetMinutes;
-    const issue = findValidationIssue(node.children, nextInheritedBudget, label);
+    const issue = findValidationIssue(
+      node.children,
+      nextInheritedBudget,
+      label,
+    );
     if (issue) {
       return issue;
     }
@@ -489,64 +558,101 @@ function MissionNodeEditor({
   onRemoveHint,
   onRemoveNode,
   onUpdateHint,
-  onUpdateNode
+  onUpdateNode,
 }: MissionNodeEditorProps) {
   const isLeaf = node.children.length === 0;
 
   return (
-    <article className="mission-node-card" style={{ marginLeft: `${depth * 16}px` }}>
+    <article
+      className="mission-node-card"
+      style={{ marginLeft: `${depth * 16}px` }}
+    >
       <div className="mission-node-header">
         <div>
           <div className="node-chip-row">
-            <span className={isLeaf ? "node-chip is-leaf" : "node-chip is-composite"}>
-              {isLeaf ? "Leaf stage" : "Composite block"}
+            <span
+              className={
+                isLeaf ? "node-chip is-leaf" : "node-chip is-composite"
+              }
+            >
+              {isLeaf ? "🎯 Ronda" : "📋 Etapa"}
             </span>
-            <span className={node.isActive ? "status-pill status-ok" : "status-pill status-error"}>
-              {node.isActive ? "active" : "inactive"}
+            <span
+              className={
+                node.isActive
+                  ? "status-pill status-ok"
+                  : "status-pill status-error"
+              }
+            >
+              {node.isActive ? "activa" : "inactiva"}
             </span>
           </div>
-          <h4>{node.name.trim() || (isLeaf ? "Untitled stage" : "Untitled block")}</h4>
+          <h4>
+            {node.name.trim() ||
+              (isLeaf ? "Ronda sin título" : "Etapa sin título")}
+          </h4>
           <p className="muted-copy">
             {isLeaf
-              ? "Playable stage with game validation, hints, and optional local time budget."
-              : "Structural block. Children inherit mission time budget unless the block overrides it."}
+              ? "Actividad jugable con validación, pistas y tiempo configurables."
+              : "Etapa compuesta. Las rondas hijas heredan el tiempo de esta etapa salvo que definan el propio."}
           </p>
         </div>
 
         <div className="node-actions">
           {isLeaf ? (
-            <button className="ghost-button" onClick={() => onMakeComposite(node.clientId)} type="button">
-              Make block
+            <button
+              className="ghost-button"
+              onClick={() => onMakeComposite(node.clientId)}
+              type="button"
+            >
+              Convertir en etapa
             </button>
           ) : (
-            <button className="ghost-button" onClick={() => onMakeLeaf(node.clientId)} type="button">
-              Clear to leaf
+            <button
+              className="ghost-button"
+              onClick={() => onMakeLeaf(node.clientId)}
+              type="button"
+            >
+              Convertir en ronda
             </button>
           )}
-          <button className="ghost-button danger-button" onClick={() => onRemoveNode(node.clientId)} type="button">
-            Remove
+          <button
+            className="ghost-button danger-button"
+            onClick={() => onRemoveNode(node.clientId)}
+            type="button"
+          >
+            Eliminar
           </button>
         </div>
       </div>
 
       <div className="node-grid">
         <label className="field">
-          <span>Name</span>
+          <span>Nombre *</span>
           <input
             className="input"
             maxLength={120}
-            onChange={(event) => onUpdateNode(node.clientId, "name", event.target.value)}
+            onChange={(event) =>
+              onUpdateNode(node.clientId, "name", event.target.value)
+            }
+            placeholder={
+              isLeaf
+                ? "Ej: Curiosidades de Halloween"
+                : "Ej: Recolección de información"
+            }
             required
             value={node.name}
           />
         </label>
 
         <label className="field">
-          <span>Order</span>
+          <span>Orden</span>
           <input
             className="input"
             min={1}
-            onChange={(event) => onUpdateNode(node.clientId, "order", event.target.value)}
+            onChange={(event) =>
+              onUpdateNode(node.clientId, "order", event.target.value)
+            }
             required
             type="number"
             value={node.order}
@@ -554,10 +660,12 @@ function MissionNodeEditor({
         </label>
 
         <label className="field inline-toggle">
-          <span>Node active</span>
+          <span>Activa</span>
           <input
             checked={node.isActive}
-            onChange={(event) => onUpdateNode(node.clientId, "isActive", event.target.checked)}
+            onChange={(event) =>
+              onUpdateNode(node.clientId, "isActive", event.target.checked)
+            }
             type="checkbox"
           />
         </label>
@@ -571,18 +679,28 @@ function MissionNodeEditor({
               <input
                 className="input"
                 min={1}
-                onChange={(event) => onUpdateNode(node.clientId, "timeBudgetMinutes", event.target.value)}
+                onChange={(event) =>
+                  onUpdateNode(
+                    node.clientId,
+                    "timeBudgetMinutes",
+                    event.target.value,
+                  )
+                }
                 type="number"
                 value={node.timeBudgetMinutes}
               />
-              <span className="field-hint">Leave empty to inherit the mission or parent block budget.</span>
+              <span className="field-hint">
+                Leave empty to inherit the mission or parent block budget.
+              </span>
             </label>
 
             <label className="field">
               <span>Game Type</span>
               <select
                 className="input"
-                onChange={(event) => onUpdateNode(node.clientId, "gameType", event.target.value)}
+                onChange={(event) =>
+                  onUpdateNode(node.clientId, "gameType", event.target.value)
+                }
                 value={node.gameType}
               >
                 {gameTypeOptions.map((gameType) => (
@@ -594,44 +712,21 @@ function MissionNodeEditor({
             </label>
           </div>
 
-          {node.gameType === "Treasure Hunt" ? (
-            <label className="field">
-              <span>Expected QR hash</span>
-              <input
-                className="input"
-                maxLength={256}
-                onChange={(event) => onUpdateNode(node.clientId, "expectedQrHash", event.target.value)}
-                required
-                value={node.expectedQrHash}
-              />
-            </label>
-          ) : null}
-
-          {node.gameType === "Trivia" ? (
-            <div className="node-grid">
-              <label className="field">
-                <span>Valid answer</span>
-                <input
-                  className="input"
-                  maxLength={512}
-                  onChange={(event) => onUpdateNode(node.clientId, "triviaValidAnswer", event.target.value)}
-                  value={node.triviaValidAnswer}
-                />
-              </label>
-
-              <label className="field">
-                <span>Validation criterion</span>
-                <input
-                  className="input"
-                  maxLength={512}
-                  onChange={(event) =>
-                    onUpdateNode(node.clientId, "triviaInitialValidationCriterion", event.target.value)
-                  }
-                  value={node.triviaInitialValidationCriterion}
-                />
-              </label>
-            </div>
-          ) : null}
+          <GameTypeConfig
+            gameType={node.gameType}
+            expectedQrHash={node.expectedQrHash}
+            triviaValidAnswer={node.triviaValidAnswer}
+            triviaInitialValidationCriterion={
+              node.triviaInitialValidationCriterion
+            }
+            onUpdate={(field, value) =>
+              onUpdateNode(
+                node.clientId,
+                field as keyof MissionNodeDraft,
+                value,
+              )
+            }
+          />
 
           <section className="node-subsection">
             <div className="mission-list-header">
@@ -639,7 +734,11 @@ function MissionNodeEditor({
                 <p className="eyebrow">Hints</p>
                 <h5>Clues and solution drops</h5>
               </div>
-              <button className="ghost-button" onClick={() => onAddHint(node.clientId)} type="button">
+              <button
+                className="ghost-button"
+                onClick={() => onAddHint(node.clientId)}
+                type="button"
+              >
                 Add hint
               </button>
             </div>
@@ -647,71 +746,24 @@ function MissionNodeEditor({
             {node.hints.length === 0 ? (
               <div className="tree-empty-state">
                 <strong>No hints yet.</strong>
-                <p>Treasure Hunt and Trivia stages can carry visible clues or final solution drops.</p>
+                <p>
+                  Treasure Hunt and Trivia stages can carry visible clues or
+                  final solution drops.
+                </p>
               </div>
             ) : null}
 
             <div className="hint-editor-list">
               {node.hints.map((hint, index) => (
-                <article className="hint-card" key={hint.clientId}>
-                  <div className="mission-list-header">
-                    <div>
-                      <p className="eyebrow">Hint {index + 1}</p>
-                    </div>
-                    <button
-                      className="ghost-button danger-button"
-                      onClick={() => onRemoveHint(node.clientId, hint.clientId)}
-                      type="button"
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  <label className="field">
-                    <span>Content</span>
-                    <textarea
-                      className="input textarea-input"
-                      maxLength={1024}
-                      onChange={(event) => onUpdateHint(node.clientId, hint.clientId, "content", event.target.value)}
-                      required
-                      rows={3}
-                      value={hint.content}
-                    />
-                  </label>
-
-                  <div className="node-grid">
-                    <label className="field inline-toggle">
-                      <span>Reveal as solution</span>
-                      <input
-                        checked={hint.isSolution}
-                        onChange={(event) =>
-                          onUpdateHint(node.clientId, hint.clientId, "isSolution", event.target.checked)
-                        }
-                        type="checkbox"
-                      />
-                    </label>
-
-                    <label className="field">
-                      <span>Latitude</span>
-                      <input
-                        className="input"
-                        onChange={(event) => onUpdateHint(node.clientId, hint.clientId, "latitude", event.target.value)}
-                        type="number"
-                        value={hint.latitude}
-                      />
-                    </label>
-
-                    <label className="field">
-                      <span>Longitude</span>
-                      <input
-                        className="input"
-                        onChange={(event) => onUpdateHint(node.clientId, hint.clientId, "longitude", event.target.value)}
-                        type="number"
-                        value={hint.longitude}
-                      />
-                    </label>
-                  </div>
-                </article>
+                <HintEditor
+                  key={hint.clientId}
+                  hint={hint}
+                  index={index}
+                  onUpdate={(field, value) =>
+                    onUpdateHint(node.clientId, hint.clientId, field, value)
+                  }
+                  onRemove={() => onRemoveHint(node.clientId, hint.clientId)}
+                />
               ))}
             </div>
           </section>
@@ -723,11 +775,20 @@ function MissionNodeEditor({
             <input
               className="input"
               min={1}
-              onChange={(event) => onUpdateNode(node.clientId, "defaultTimeBudgetMinutes", event.target.value)}
+              onChange={(event) =>
+                onUpdateNode(
+                  node.clientId,
+                  "defaultTimeBudgetMinutes",
+                  event.target.value,
+                )
+              }
               type="number"
               value={node.defaultTimeBudgetMinutes}
             />
-            <span className="field-hint">Optional override for all descendants that do not define a leaf budget.</span>
+            <span className="field-hint">
+              Optional override for all descendants that do not define a leaf
+              budget.
+            </span>
           </label>
 
           <section className="node-subsection">
@@ -737,10 +798,18 @@ function MissionNodeEditor({
                 <h5>Nested flow</h5>
               </div>
               <div className="node-actions">
-                <button className="ghost-button" onClick={() => onAddChild(node.clientId, "leaf")} type="button">
+                <button
+                  className="ghost-button"
+                  onClick={() => onAddChild(node.clientId, "leaf")}
+                  type="button"
+                >
                   Add stage
                 </button>
-                <button className="ghost-button" onClick={() => onAddChild(node.clientId, "composite")} type="button">
+                <button
+                  className="ghost-button"
+                  onClick={() => onAddChild(node.clientId, "composite")}
+                  type="button"
+                >
                   Add block
                 </button>
               </div>
@@ -770,14 +839,20 @@ function MissionNodeEditor({
   );
 }
 
-export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspaceProps) {
+export function MissionsAdminWorkspace({
+  accessToken,
+}: MissionsAdminWorkspaceProps) {
   const config = getClientConfig();
   const missionsUrl = `${config.edgeProxyPublicBaseUrl}/mission-design/api/mission-design/missions`;
   const listRequestSequenceRef = useRef(0);
   const detailRequestSequenceRef = useRef(0);
   const [missions, setMissions] = useState<MissionSummary[]>([]);
-  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
-  const [selectedMission, setSelectedMission] = useState<MissionDetail | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
+    null,
+  );
+  const [selectedMission, setSelectedMission] = useState<MissionDetail | null>(
+    null,
+  );
   const [draft, setDraft] = useState<MissionDraft>(createEmptyMissionDraft);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
   const [isLoadingList, setIsLoadingList] = useState(true);
@@ -785,8 +860,14 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const selectionSummary = useMemo(() => summarizeSelection(missions), [missions]);
-  const missionTreeStats = useMemo(() => summarizeMissionTree(draft.nodes), [draft.nodes]);
+  const selectionSummary = useMemo(
+    () => summarizeSelection(missions),
+    [missions],
+  );
+  const missionTreeStats = useMemo(
+    () => summarizeMissionTree(draft.nodes),
+    [draft.nodes],
+  );
 
   const loadMissions = useCallback(
     async (preferredMissionId?: string | null) => {
@@ -796,7 +877,7 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
 
       try {
         const response = await fetch(missionsUrl, {
-          headers: createAuthorizedHeaders(accessToken)
+          headers: createAuthorizedHeaders(accessToken),
         });
 
         if (!response.ok) {
@@ -811,9 +892,10 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         setMissions(payload);
 
         const nextMissionId =
-          preferredMissionId && payload.some((mission) => mission.id === preferredMissionId)
+          preferredMissionId &&
+          payload.some((mission) => mission.id === preferredMissionId)
             ? preferredMissionId
-            : payload[0]?.id ?? null;
+            : (payload[0]?.id ?? null);
 
         setSelectedMissionId(nextMissionId);
 
@@ -827,14 +909,16 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
           return;
         }
 
-        setErrorMessage(error instanceof Error ? error.message : "Could not load Missions.");
+        setErrorMessage(
+          error instanceof Error ? error.message : "Could not load Missions.",
+        );
       } finally {
         if (requestSequence === listRequestSequenceRef.current) {
           setIsLoadingList(false);
         }
       }
     },
-    [accessToken, missionsUrl]
+    [accessToken, missionsUrl],
   );
 
   const loadMissionDetail = useCallback(
@@ -845,7 +929,7 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
 
       try {
         const response = await fetch(`${missionsUrl}/${missionId}`, {
-          headers: createAuthorizedHeaders(accessToken)
+          headers: createAuthorizedHeaders(accessToken),
         });
 
         if (!response.ok) {
@@ -853,7 +937,10 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         }
 
         const mission = (await response.json()) as MissionDetail;
-        if (requestSequence !== detailRequestSequenceRef.current || mission.id !== missionId) {
+        if (
+          requestSequence !== detailRequestSequenceRef.current ||
+          mission.id !== missionId
+        ) {
           return;
         }
 
@@ -865,14 +952,18 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
           return;
         }
 
-        setErrorMessage(error instanceof Error ? error.message : "Could not load Mission detail.");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load Mission detail.",
+        );
       } finally {
         if (requestSequence === detailRequestSequenceRef.current) {
           setIsLoadingDetail(false);
         }
       }
     },
-    [accessToken, missionsUrl]
+    [accessToken, missionsUrl],
   );
 
   useEffect(() => {
@@ -891,28 +982,40 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
     });
   }, [loadMissionDetail, selectedMissionId]);
 
-  const updateDraftField = useCallback((field: keyof MissionDraft, value: string) => {
-    setDraft((current) => ({
-      ...current,
-      [field]: value
-    }));
-  }, []);
+  const updateDraftField = useCallback(
+    (field: keyof MissionDraft, value: string) => {
+      setDraft((current) => ({
+        ...current,
+        [field]: value,
+      }));
+    },
+    [],
+  );
 
   const updateNodeField = useCallback(
-    (nodeClientId: string, field: keyof MissionNodeDraft, value: string | boolean) => {
+    (
+      nodeClientId: string,
+      field: keyof MissionNodeDraft,
+      value: string | boolean,
+    ) => {
       setDraft((current) => ({
         ...current,
         nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
           ...node,
-          [field]: value
-        }))
+          [field]: value,
+        })),
       }));
     },
-    []
+    [],
   );
 
   const updateHintField = useCallback(
-    (nodeClientId: string, hintClientId: string, field: keyof MissionHintDraft, value: string | boolean) => {
+    (
+      nodeClientId: string,
+      hintClientId: string,
+      field: keyof MissionHintDraft,
+      value: string | boolean,
+    ) => {
       setDraft((current) => ({
         ...current,
         nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
@@ -921,72 +1024,87 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
             hint.clientId === hintClientId
               ? {
                   ...hint,
-                  [field]: value
+                  [field]: value,
                 }
-              : hint
-          )
-        }))
+              : hint,
+          ),
+        })),
       }));
     },
-    []
+    [],
   );
 
   const addRootNode = useCallback((kind: "leaf" | "composite") => {
     setDraft((current) => ({
       ...current,
-      nodes: [...current.nodes, createEmptyNodeDraft(kind, getNextOrder(current.nodes))]
+      nodes: [
+        ...current.nodes,
+        createEmptyNodeDraft(kind, getNextOrder(current.nodes)),
+      ],
     }));
   }, []);
 
-  const addChildNode = useCallback((nodeClientId: string, kind: "leaf" | "composite") => {
-    setDraft((current) => ({
-      ...current,
-      nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
-        ...node,
-        children: [...node.children, createEmptyNodeDraft(kind, getNextOrder(node.children))]
-      }))
-    }));
-  }, []);
+  const addChildNode = useCallback(
+    (nodeClientId: string, kind: "leaf" | "composite") => {
+      setDraft((current) => ({
+        ...current,
+        nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
+          ...node,
+          children: [
+            ...node.children,
+            createEmptyNodeDraft(kind, getNextOrder(node.children)),
+          ],
+        })),
+      }));
+    },
+    [],
+  );
 
   const addHint = useCallback((nodeClientId: string) => {
     setDraft((current) => ({
       ...current,
       nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
         ...node,
-        hints: [...node.hints, createEmptyHintDraft()]
-      }))
+        hints: [...node.hints, createEmptyHintDraft()],
+      })),
     }));
   }, []);
 
   const removeNode = useCallback((nodeClientId: string) => {
     setDraft((current) => ({
       ...current,
-      nodes: removeNodeFromTree(current.nodes, nodeClientId)
+      nodes: removeNodeFromTree(current.nodes, nodeClientId),
     }));
   }, []);
 
-  const removeHint = useCallback((nodeClientId: string, hintClientId: string) => {
-    setDraft((current) => ({
-      ...current,
-      nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
-        ...node,
-        hints: node.hints.filter((hint) => hint.clientId !== hintClientId)
-      }))
-    }));
-  }, []);
+  const removeHint = useCallback(
+    (nodeClientId: string, hintClientId: string) => {
+      setDraft((current) => ({
+        ...current,
+        nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
+          ...node,
+          hints: node.hints.filter((hint) => hint.clientId !== hintClientId),
+        })),
+      }));
+    },
+    [],
+  );
 
   const makeComposite = useCallback((nodeClientId: string) => {
     setDraft((current) => ({
       ...current,
       nodes: updateNodeInTree(current.nodes, nodeClientId, (node) => ({
         ...node,
-        children: node.children.length > 0 ? node.children : [createEmptyNodeDraft("leaf", 1)],
+        children:
+          node.children.length > 0
+            ? node.children
+            : [createEmptyNodeDraft("leaf", 1)],
         hints: [],
         timeBudgetMinutes: "",
         expectedQrHash: "",
         triviaValidAnswer: "",
-        triviaInitialValidationCriterion: ""
-      }))
+        triviaInitialValidationCriterion: "",
+      })),
     }));
   }, []);
 
@@ -997,8 +1115,8 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         ...node,
         children: [],
         defaultTimeBudgetMinutes: "",
-        gameType: node.gameType || gameTypeOptions[0]
-      }))
+        gameType: node.gameType || gameTypeOptions[0],
+      })),
     }));
   }, []);
 
@@ -1021,11 +1139,14 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
     setFeedback(null);
     setErrorMessage(null);
 
-    const maximumDurationMinutes = Number.parseInt(draft.maximumDurationMinutes, 10);
+    const maximumDurationMinutes = Number.parseInt(
+      draft.maximumDurationMinutes,
+      10,
+    );
     const validationIssue = findValidationIssue(
       draft.nodes,
       Number.isFinite(maximumDurationMinutes) ? maximumDurationMinutes : null,
-      draft.name.trim() || "Mission"
+      draft.name.trim() || "Mission",
     );
     if (validationIssue) {
       setErrorMessage(validationIssue);
@@ -1042,7 +1163,7 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
             difficulty: draft.difficulty,
             maximumDurationMinutes,
             gameType: draft.gameType,
-            nodes: serializedNodes
+            nodes: serializedNodes,
           }
         : {
             name: draft.name,
@@ -1050,10 +1171,13 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
             difficulty: draft.difficulty,
             maximumDurationMinutes,
             gameType: draft.gameType,
-            nodes: serializedNodes
+            nodes: serializedNodes,
           };
 
-    const requestUrl = editorMode === "create" ? missionsUrl : `${missionsUrl}/${selectedMissionId}`;
+    const requestUrl =
+      editorMode === "create"
+        ? missionsUrl
+        : `${missionsUrl}/${selectedMissionId}`;
     const method = editorMode === "create" ? "POST" : "PUT";
 
     try {
@@ -1061,9 +1185,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         method,
         headers: {
           ...createAuthorizedHeaders(accessToken),
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -1075,10 +1199,14 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
       setSelectedMissionId(mission.id);
       setDraft(toDraft(mission));
       setEditorMode("edit");
-      setFeedback(editorMode === "create" ? "Mission created." : "Mission updated.");
+      setFeedback(
+        editorMode === "create" ? "Mission created." : "Mission updated.",
+      );
       await loadMissions(mission.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not save Mission.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "Could not save Mission.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1094,10 +1222,13 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`${missionsUrl}/${selectedMissionId}/deactivate`, {
-        method: "POST",
-        headers: createAuthorizedHeaders(accessToken)
-      });
+      const response = await fetch(
+        `${missionsUrl}/${selectedMissionId}/deactivate`,
+        {
+          method: "POST",
+          headers: createAuthorizedHeaders(accessToken),
+        },
+      );
 
       if (!response.ok) {
         throw new Error(await readFailureDetail(response));
@@ -1109,7 +1240,11 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
       setFeedback("Mission deactivated.");
       await loadMissions(mission.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not deactivate Mission.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not deactivate Mission.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1123,8 +1258,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
           <h2>Missions workspace</h2>
         </div>
         <p className="section-copy">
-          Reading this as: administrator control surface for mission authors, with a calm operational language,
-          leaning toward the existing warm shell plus denser nested editing blocks.
+          Reading this as: administrator control surface for mission authors,
+          with a calm operational language, leaning toward the existing warm
+          shell plus denser nested editing blocks.
         </p>
       </div>
 
@@ -1135,11 +1271,15 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         </article>
         <article className="signal-card">
           <strong>Active</strong>
-          <p className="metric-value metric-success">{selectionSummary.active}</p>
+          <p className="metric-value metric-success">
+            {selectionSummary.active}
+          </p>
         </article>
         <article className="signal-card">
           <strong>Inactive</strong>
-          <p className="metric-value metric-danger">{selectionSummary.inactive}</p>
+          <p className="metric-value metric-danger">
+            {selectionSummary.inactive}
+          </p>
         </article>
       </div>
 
@@ -1153,24 +1293,36 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               <p className="eyebrow">Catalog</p>
               <h3>Missions</h3>
             </div>
-            <button className="ghost-button" onClick={handleCreateMode} type="button">
+            <button
+              className="ghost-button"
+              onClick={handleCreateMode}
+              type="button"
+            >
               New Mission
             </button>
           </div>
 
-          {isLoadingList ? <p className="muted-copy">Loading Missions.</p> : null}
+          {isLoadingList ? (
+            <p className="muted-copy">Loading Missions.</p>
+          ) : null}
 
           {!isLoadingList && missions.length === 0 ? (
             <div className="empty-state">
               <strong>No Missions yet.</strong>
-              <p>Create the first reusable Mission for the administrator catalog.</p>
+              <p>
+                Create the first reusable Mission for the administrator catalog.
+              </p>
             </div>
           ) : null}
 
           <div className="mission-list">
             {missions.map((mission) => (
               <button
-                className={mission.id === selectedMissionId ? "mission-list-item is-active" : "mission-list-item"}
+                className={
+                  mission.id === selectedMissionId
+                    ? "mission-list-item is-active"
+                    : "mission-list-item"
+                }
                 key={mission.id}
                 onClick={() => {
                   setFeedback(null);
@@ -1180,7 +1332,13 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               >
                 <div className="mission-list-item-top">
                   <strong>{mission.name}</strong>
-                  <span className={mission.isActive ? "status-pill status-ok" : "status-pill status-error"}>
+                  <span
+                    className={
+                      mission.isActive
+                        ? "status-pill status-ok"
+                        : "status-pill status-error"
+                    }
+                  >
                     {mission.isActive ? "active" : "inactive"}
                   </span>
                 </div>
@@ -1203,17 +1361,31 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
         <section className="mission-editor-panel">
           <div className="mission-list-header">
             <div>
-              <p className="eyebrow">{editorMode === "create" ? "Create" : "Selected Mission"}</p>
-              <h3>{editorMode === "create" ? "New Mission" : selectedMission?.name ?? "Mission detail"}</h3>
+              <p className="eyebrow">
+                {editorMode === "create" ? "Create" : "Selected Mission"}
+              </p>
+              <h3>
+                {editorMode === "create"
+                  ? "New Mission"
+                  : (selectedMission?.name ?? "Mission detail")}
+              </h3>
             </div>
             {selectedMission ? (
-              <span className={selectedMission.isActive ? "status-pill status-ok" : "status-pill status-error"}>
+              <span
+                className={
+                  selectedMission.isActive
+                    ? "status-pill status-ok"
+                    : "status-pill status-error"
+                }
+              >
                 {selectedMission.isActive ? "active" : "inactive"}
               </span>
             ) : null}
           </div>
 
-          {isLoadingDetail ? <p className="muted-copy">Loading Mission detail.</p> : null}
+          {isLoadingDetail ? (
+            <p className="muted-copy">Loading Mission detail.</p>
+          ) : null}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="tree-stat-grid">
@@ -1227,7 +1399,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               </article>
               <article className="signal-card">
                 <strong>Blocks</strong>
-                <p className="metric-value">{missionTreeStats.compositeBlocks}</p>
+                <p className="metric-value">
+                  {missionTreeStats.compositeBlocks}
+                </p>
               </article>
               <article className="signal-card">
                 <strong>Hints</strong>
@@ -1240,7 +1414,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               <input
                 className="input"
                 maxLength={120}
-                onChange={(event) => updateDraftField("name", event.target.value)}
+                onChange={(event) =>
+                  updateDraftField("name", event.target.value)
+                }
                 required
                 value={draft.name}
               />
@@ -1251,7 +1427,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               <textarea
                 className="input textarea-input"
                 maxLength={1024}
-                onChange={(event) => updateDraftField("description", event.target.value)}
+                onChange={(event) =>
+                  updateDraftField("description", event.target.value)
+                }
                 required
                 rows={5}
                 value={draft.description}
@@ -1264,7 +1442,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
                 <input
                   className="input"
                   maxLength={60}
-                  onChange={(event) => updateDraftField("difficulty", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftField("difficulty", event.target.value)
+                  }
                   required
                   value={draft.difficulty}
                 />
@@ -1276,7 +1456,12 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
                   className="input"
                   max={1440}
                   min={1}
-                  onChange={(event) => updateDraftField("maximumDurationMinutes", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftField(
+                      "maximumDurationMinutes",
+                      event.target.value,
+                    )
+                  }
                   required
                   type="number"
                   value={draft.maximumDurationMinutes}
@@ -1288,7 +1473,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               <span>Catalog Game Type</span>
               <select
                 className="input"
-                onChange={(event) => updateDraftField("gameType", event.target.value)}
+                onChange={(event) =>
+                  updateDraftField("gameType", event.target.value)
+                }
                 value={draft.gameType}
               >
                 {gameTypeOptions.map((gameType) => (
@@ -1298,8 +1485,9 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
                 ))}
               </select>
               <span className="field-hint">
-                Mission stages can mix game types now. Keep this catalog label aligned with how the Mission should be
-                listed in current backend summaries.
+                Mission stages can mix game types now. Keep this catalog label
+                aligned with how the Mission should be listed in current backend
+                summaries.
               </span>
             </label>
 
@@ -1310,10 +1498,18 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
                   <h4>Mission node tree</h4>
                 </div>
                 <div className="node-actions">
-                  <button className="ghost-button" onClick={() => addRootNode("leaf")} type="button">
+                  <button
+                    className="ghost-button"
+                    onClick={() => addRootNode("leaf")}
+                    type="button"
+                  >
                     Add root stage
                   </button>
-                  <button className="ghost-button" onClick={() => addRootNode("composite")} type="button">
+                  <button
+                    className="ghost-button"
+                    onClick={() => addRootNode("composite")}
+                    type="button"
+                  >
                     Add root block
                   </button>
                 </div>
@@ -1322,7 +1518,10 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
               {draft.nodes.length === 0 ? (
                 <div className="tree-empty-state">
                   <strong>No nodes yet.</strong>
-                  <p>Start with a playable stage or a composite block that nests a deeper flow.</p>
+                  <p>
+                    Start with a playable stage or a composite block that nests
+                    a deeper flow.
+                  </p>
                 </div>
               ) : (
                 <div className="mission-node-list">
@@ -1346,7 +1545,11 @@ export function MissionsAdminWorkspace({ accessToken }: MissionsAdminWorkspacePr
             </section>
 
             <div className="mission-action-row">
-              <button className="primary-button" disabled={isSubmitting} type="submit">
+              <button
+                className="primary-button"
+                disabled={isSubmitting}
+                type="submit"
+              >
                 {editorMode === "create" ? "Create Mission" : "Save changes"}
               </button>
 

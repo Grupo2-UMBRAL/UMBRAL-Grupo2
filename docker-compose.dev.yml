@@ -32,7 +32,8 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 12
+      start_period: 30s
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
