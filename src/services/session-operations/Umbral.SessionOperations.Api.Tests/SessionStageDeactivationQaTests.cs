@@ -147,7 +147,7 @@ public sealed class SessionStageDeactivationQaTests
 
     [Theory]
     [InlineData(LiveSessionStates.Finalized)]
-    [InlineData(LiveSessionStates.Cancelled)]
+    [InlineData(LiveSessionStates.Canceled)]
     public void DeactivateStage_Throws_WhenLiveSessionStateDoesNotAllowOperationalDeactivation(string state)
     {
         var liveSession = CreateLiveSessionWithTeams(stageCount: 2);

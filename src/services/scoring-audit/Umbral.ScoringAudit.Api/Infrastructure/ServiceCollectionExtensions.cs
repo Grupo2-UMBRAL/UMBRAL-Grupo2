@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddUmbralPostgresDbContext<ScoringAuditDbContext>(configuration, ScoringAuditPersistence.SchemaName);
+        services.AddSingleton(TimeProvider.System);
         services.AddScoped<IServiceBootstrapDetailsProvider, ScoringAuditBootstrapDetailsProvider>();
         services.AddScoped<IServicePersistenceInitializer, ScoringAuditPersistenceInitializer>();
 

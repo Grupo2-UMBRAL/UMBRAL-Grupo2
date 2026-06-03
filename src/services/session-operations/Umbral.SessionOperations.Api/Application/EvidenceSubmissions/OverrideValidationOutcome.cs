@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
 using Umbral.SessionOperations.Api.Hubs;
@@ -34,7 +35,8 @@ public sealed class OverrideValidationOutcomeHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
+    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    IScoringAuditClient scoringAuditClient)
     : IRequestHandler<OverrideValidationOutcomeCommand, OverrideValidationOutcomeResponse>
 {
     public async Task<OverrideValidationOutcomeResponse> Handle(
@@ -63,6 +65,7 @@ public sealed class OverrideValidationOutcomeHandler(
         var previousOutcome = evidenceSubmission.Outcome.ToString();
         var previousProgressState = liveSession.GetProgressStateForTeam(evidenceSubmission.SessionTeamId);
         var previousStage = liveSession.GetCurrentStageForTeam(evidenceSubmission.SessionTeamId);
+        var stageStartedAtUtc = GetCurrentStageStartedAtUtc(liveSession, evidenceSubmission.SessionTeamId);
         var previousLiveSessionState = liveSession.State;
         var overriddenAtUtc = timeProvider.GetUtcNow();
         var operatorUserId = currentOperatorIdentity.GetRequiredOperatorUserId();
@@ -76,6 +79,18 @@ public sealed class OverrideValidationOutcomeHandler(
         var progressState = liveSession.GetProgressStateForTeam(evidenceSubmission.SessionTeamId);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (!string.Equals(previousOutcome, ValidationOutcome.Accepted.ToString(), StringComparison.Ordinal)
+            && evidenceSubmission.Outcome == ValidationOutcome.Accepted)
+        {
+            await scoringAuditClient.RecordStageCreditAsync(
+                CreateStageCreditRequest(
+                    liveSession,
+                    evidenceSubmission,
+                    stageStartedAtUtc,
+                    overriddenAtUtc),
+                cancellationToken);
+        }
 
         await PublishEvidenceSubmissionOutcomeChangedAsync(
             liveSession,
@@ -200,4 +215,42 @@ public sealed class OverrideValidationOutcomeHandler(
             currentStage.Difficulty,
             currentStage.GameType);
     }
+
+    private static RecordStageCreditRequest CreateStageCreditRequest(
+        LiveSession liveSession,
+        EvidenceSubmission evidenceSubmission,
+        DateTimeOffset stageStartedAtUtc,
+        DateTimeOffset recordedAtUtc)
+    {
+        var acceptedStage = liveSession.SessionStageFlow
+            .FirstOrDefault(stage => stage.MissionStageId == evidenceSubmission.MissionStageId);
+        if (acceptedStage is null)
+        {
+            throw new UmbralDomainException(
+                "score_stage_credit_stage_required",
+                "Accepted Validation Override must reference a Session Stage to record Stage Credit.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        return new RecordStageCreditRequest(
+            liveSession.Id,
+            evidenceSubmission.SessionTeamId,
+            acceptedStage.MissionStageId,
+            acceptedStage.Difficulty,
+            CalculateResolutionTime(stageStartedAtUtc, evidenceSubmission.SubmittedAtUtc),
+            recordedAtUtc,
+            true);
+    }
+
+    private static DateTimeOffset GetCurrentStageStartedAtUtc(LiveSession liveSession, Guid sessionTeamId)
+        => liveSession.TeamProgressions
+            .FirstOrDefault(progress => progress.SessionTeamId == sessionTeamId)
+            ?.UpdatedAtUtc
+            ?? liveSession.ScheduledStartAtUtc
+            ?? liveSession.CreatedAtUtc;
+
+    private static TimeSpan CalculateResolutionTime(DateTimeOffset stageStartedAtUtc, DateTimeOffset submittedAtUtc)
+        => submittedAtUtc >= stageStartedAtUtc
+            ? submittedAtUtc - stageStartedAtUtc
+            : TimeSpan.Zero;
 }
