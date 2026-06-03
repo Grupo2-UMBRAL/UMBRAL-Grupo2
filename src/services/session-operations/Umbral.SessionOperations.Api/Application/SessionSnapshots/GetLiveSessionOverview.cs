@@ -25,6 +25,7 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             .Include(session => session.TeamParticipations)
             .Include(session => session.TeamProgressions)
             .Include(session => session.EvidenceSubmissions)
+            .Include(session => session.ReleasedHints)
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
@@ -42,7 +43,8 @@ public sealed class GetLiveSessionOverviewQueryHandler(
                 team.Name,
                 participantCounts.GetValueOrDefault(team.Id),
                 liveSession.GetProgressStateForTeam(team.Id),
-                MapCurrentStage(liveSession.GetCurrentStageForTeam(team.Id))))
+                MapCurrentStage(liveSession.GetCurrentStageForTeam(team.Id)),
+                MapVisibleHints(liveSession, team.Id)))
             .ToArray();
 
         return new LiveSessionOverview(
@@ -102,6 +104,10 @@ public sealed class GetLiveSessionOverviewQueryHandler(
                 liveSession.EvidenceSubmissions
                     .Select(submission => submission.SubmittedAtUtc)
                     .DefaultIfEmpty(liveSession.CreatedAtUtc)
+                    .Max(),
+                liveSession.ReleasedHints
+                    .Select(releasedHint => releasedHint.ReleasedAtUtc)
+                    .DefaultIfEmpty(liveSession.CreatedAtUtc)
                     .Max()
             }
             .Max();
@@ -127,5 +133,41 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType);
+    }
+
+    private static IReadOnlyList<VisibleHintSnapshot> MapVisibleHints(
+        LiveSession liveSession,
+        Guid sessionTeamId)
+    {
+        var sessionStagesById = liveSession.SessionStageFlow.ToDictionary(stage => stage.MissionStageId);
+        var visibleHints = new List<VisibleHintSnapshot>();
+
+        foreach (var releasedHint in liveSession.ReleasedHints
+            .Where(releasedHint => releasedHint.SessionTeamId == sessionTeamId)
+            .OrderBy(releasedHint => releasedHint.ReleasedAtUtc))
+        {
+            if (!sessionStagesById.TryGetValue(releasedHint.MissionStageId, out var sessionStage))
+            {
+                continue;
+            }
+
+            var hint = sessionStage.Hints.FirstOrDefault(stageHint => stageHint.Id == releasedHint.HintId);
+            if (hint is null)
+            {
+                continue;
+            }
+
+            visibleHints.Add(new VisibleHintSnapshot(
+                hint.Id,
+                sessionStage.MissionStageId,
+                hint.Content,
+                hint.IsSolution,
+                hint.Latitude,
+                hint.Longitude,
+                releasedHint.ReleasedAtUtc,
+                releasedHint.UnlockReason));
+        }
+
+        return visibleHints;
     }
 }

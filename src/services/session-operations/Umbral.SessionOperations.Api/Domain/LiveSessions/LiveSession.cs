@@ -70,6 +70,8 @@ public sealed class LiveSession
 
     public ICollection<ValidationOverrideLog> ValidationOverrideLogs { get; private set; } = new List<ValidationOverrideLog>();
 
+    public ICollection<ReleasedHint> ReleasedHints { get; private set; } = new List<ReleasedHint>();
+
     [JsonIgnore]
     [NotMapped]
     public IReadOnlyList<LiveSessionStage> SessionStageFlow => DeserializeSessionStageFlow(SessionStageFlowJson);
@@ -375,6 +377,93 @@ public sealed class LiveSession
         return validationOverrideLog;
     }
 
+    public ReleasedHint ReleaseHint(
+        Guid sessionTeamId,
+        Guid hintId,
+        DateTimeOffset releasedAtUtc,
+        string unlockReason = "Manual")
+    {
+        EnsureHintReleaseAllowed();
+        EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
+
+        var currentStage = GetCurrentStageForTeam(sessionTeamId);
+        if (currentStage is null)
+        {
+            throw new UmbralDomainException(
+                "released_hint_current_stage_required",
+                "Session Team does not have a current Session Stage for Hint Release.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var currentStageHint = currentStage.Hints.FirstOrDefault(hint => hint.Id == hintId);
+        if (currentStageHint is null)
+        {
+            throw new UmbralDomainException(
+                "released_hint_not_in_current_stage",
+                "Hint must belong to the Session Team current Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        if (ReleasedHints.Any(releasedHint =>
+            releasedHint.SessionTeamId == sessionTeamId
+            && releasedHint.MissionStageId == currentStage.MissionStageId
+            && releasedHint.HintId == hintId))
+        {
+            throw new UmbralDomainException(
+                "released_hint_duplicate",
+                "Hint has already been released to this Session Team for this Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var releasedHint = ReleasedHint.Create(
+            Id,
+            sessionTeamId,
+            currentStage.MissionStageId,
+            currentStageHint.Id,
+            releasedAtUtc,
+            unlockReason);
+        ReleasedHints.Add(releasedHint);
+        SequenceNumber++;
+
+        return releasedHint;
+    }
+
+    public LiveSessionStageHint AddOperationalHint(
+        Guid missionStageId,
+        string content,
+        double? latitude,
+        double? longitude,
+        DateTimeOffset createdAtUtc)
+    {
+        EnsureHintReleaseAllowed();
+
+        var orderedStages = GetOrderedStages();
+        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (stageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "operational_hint_stage_not_in_flow",
+                "Operational Hint must target a Session Stage in this LiveSession flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        var operationalHint = LiveSessionStageHint.Create(
+            Guid.NewGuid(),
+            content,
+            isSolution: false,
+            ConvertCoordinate(latitude, "operational_hint_latitude_invalid"),
+            ConvertCoordinate(longitude, "operational_hint_longitude_invalid"));
+        orderedStages[stageIndex] = orderedStages[stageIndex] with
+        {
+            Hints = orderedStages[stageIndex].Hints.Concat(new[] { operationalHint }).ToArray()
+        };
+
+        ReplaceSessionStageFlow(orderedStages);
+        SequenceNumber++;
+
+        return operationalHint;
+    }
+
     public LiveSessionStage? GetCurrentStageForTeam(Guid sessionTeamId)
     {
         EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
@@ -522,6 +611,20 @@ public sealed class LiveSession
                 "LiveSession is not accepting Evidence Submissions.",
                 UmbralFailureCategory.Conflict);
         }
+    }
+
+    private void EnsureHintReleaseAllowed()
+    {
+        if (string.Equals(State, LiveSessionStates.Running, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "live_session_not_accepting_hint_release",
+            "LiveSession must be Running or Paused to release or create Hints.",
+            UmbralFailureCategory.Conflict);
     }
 
     private void EnsureSessionTeamBelongsToLiveSession(Guid sessionTeamId)
@@ -685,6 +788,24 @@ public sealed class LiveSession
         }
 
         return normalized;
+    }
+
+    private static decimal? ConvertCoordinate(double? value, string errorCode)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        if (double.IsNaN(value.Value) || double.IsInfinity(value.Value))
+        {
+            throw new UmbralDomainException(
+                errorCode,
+                "Operational Hint coordinates must be finite numbers.",
+                UmbralFailureCategory.Validation);
+        }
+
+        return (decimal)value.Value;
     }
 
     private static IReadOnlyList<LiveSessionStage> NormalizeSessionStageFlow(IReadOnlyList<LiveSessionStage> sessionStageFlow)

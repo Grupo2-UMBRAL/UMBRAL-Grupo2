@@ -17,6 +17,8 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
 
     public DbSet<ValidationOverrideLog> ValidationOverrideLogs => Set<ValidationOverrideLog>();
 
+    public DbSet<ReleasedHint> ReleasedHints => Set<ReleasedHint>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -80,6 +82,10 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
             liveSession.HasMany(entity => entity.ValidationOverrideLogs)
+                .WithOne()
+                .HasForeignKey(entity => entity.LiveSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            liveSession.HasMany(entity => entity.ReleasedHints)
                 .WithOne()
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -238,6 +244,8 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
             validationOverrideLog.Property(entity => entity.OverriddenAtUtc)
                 .IsRequired();
 
+            validationOverrideLog.HasIndex(entity => entity.LiveSessionId)
+                .HasDatabaseName("IX_validation_override_logs_LiveSessionId");
             validationOverrideLog.HasIndex(entity => entity.EvidenceSubmissionId)
                 .HasDatabaseName("ix_validation_override_logs_evidence_submission_id");
             validationOverrideLog.HasIndex(entity => new
@@ -252,6 +260,44 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .HasForeignKey(entity => entity.EvidenceSubmissionId)
                 .OnDelete(DeleteBehavior.Restrict);
             validationOverrideLog.HasOne<SessionTeam>()
+                .WithMany()
+                .HasForeignKey(entity => entity.SessionTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReleasedHint>(releasedHint =>
+        {
+            releasedHint.ToTable("released_hints");
+            releasedHint.HasKey(entity => entity.Id);
+
+            releasedHint.Property(entity => entity.Id)
+                .ValueGeneratedNever();
+            releasedHint.Property(entity => entity.LiveSessionId)
+                .IsRequired();
+            releasedHint.Property(entity => entity.SessionTeamId)
+                .IsRequired();
+            releasedHint.Property(entity => entity.MissionStageId)
+                .IsRequired();
+            releasedHint.Property(entity => entity.HintId)
+                .IsRequired();
+            releasedHint.Property(entity => entity.ReleasedAtUtc)
+                .IsRequired();
+            releasedHint.Property(entity => entity.UnlockReason)
+                .HasMaxLength(ReleasedHint.UnlockReasonMaximumLength)
+                .IsRequired();
+
+            releasedHint.HasIndex(entity => new
+                {
+                    entity.LiveSessionId,
+                    entity.SessionTeamId,
+                    entity.MissionStageId,
+                    entity.HintId
+                })
+                .IsUnique()
+                .HasDatabaseName("ix_released_hints_session_team_hint");
+            releasedHint.HasIndex(entity => new { entity.LiveSessionId, entity.SessionTeamId })
+                .HasDatabaseName("ix_released_hints_live_session_team");
+            releasedHint.HasOne<SessionTeam>()
                 .WithMany()
                 .HasForeignKey(entity => entity.SessionTeamId)
                 .OnDelete(DeleteBehavior.Restrict);

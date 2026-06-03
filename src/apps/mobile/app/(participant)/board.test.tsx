@@ -231,6 +231,46 @@ test("applies incremental SignalR hint unlocks to the visible hints list", async
   expect(screen.getByText("The second symbol points north.")).toBeTruthy();
 });
 
+test("does not duplicate a hint when ReceiveHintUnlocked repeats an existing snapshot hint", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(signalRHandlers.ReceiveHintUnlocked).toBeDefined();
+  });
+  await waitFor(() => {
+    expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
+  });
+
+  const duplicatePayload: HintUnlockedPayload = {
+    metadata: {
+      liveSessionId: "live-session-1",
+      sequenceNumber: 2,
+      occurredAtUtc: "2026-06-03T08:01:00Z",
+      refreshPolicy: SnapshotRefreshPolicies.applyIncremental,
+      reason: "Hint release event delivered twice"
+    },
+    sessionTeamId: "team-1",
+    hint: {
+      hintId: "hint-1",
+      missionStageId: "stage-1",
+      content: "Duplicate delivery should not render.",
+      isSolution: false,
+      unlockedAtUtc: "2026-06-03T08:01:00Z",
+      unlockReason: "Manual"
+    }
+  };
+
+  await act(async () => {
+    signalRHandlers.ReceiveHintUnlocked(duplicatePayload);
+  });
+
+  expect(screen.getAllByText("Look for the blue sigil.")).toHaveLength(1);
+  expect(screen.queryByText("Duplicate delivery should not render.")).toBeNull();
+});
+
 test("renders timer and session state after realtime session state update", async () => {
   const apiClient = createMockApiClient();
   apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());

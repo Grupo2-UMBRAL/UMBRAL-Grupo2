@@ -75,9 +75,53 @@ type LiveSession = {
   sessionStageFlow: LiveSessionStage[];
 };
 
+type CurrentSessionStage = {
+  missionStageId: string;
+  name: string;
+  sessionStageOrder: number;
+  sourceOrder: number;
+  resolvedTimeBudgetMinutes: number;
+  difficulty: string;
+  gameType: string;
+};
+
+type ReleasedHint = {
+  hintId: string;
+  missionStageId: string;
+  content: string;
+  isSolution: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  unlockedAtUtc: string;
+  unlockReason: string;
+};
+
+type LiveSessionOverviewTeam = {
+  sessionTeamId: string;
+  teamName: string;
+  participantCount: number;
+  progressState: string;
+  currentStage: CurrentSessionStage | null;
+  releasedHints?: ReleasedHint[];
+};
+
+type LiveSessionOverview = {
+  liveSessionId: string;
+  name: string;
+  sessionState: string;
+  sessionTeams: LiveSessionOverviewTeam[];
+};
+
 type LiveSessionDraft = {
   name: string;
   scheduledStartAtLocal: string;
+};
+
+type OperationalHintDraft = {
+  missionStageId: string;
+  content: string;
+  latitude: string;
+  longitude: string;
 };
 
 type LiveSessionsWorkspaceProps = {
@@ -94,6 +138,15 @@ function createEmptyDraft(): LiveSessionDraft {
   return {
     name: "",
     scheduledStartAtLocal: ""
+  };
+}
+
+function createEmptyOperationalHintDraft(): OperationalHintDraft {
+  return {
+    missionStageId: "",
+    content: "",
+    latitude: "",
+    longitude: ""
   };
 }
 
@@ -143,6 +196,23 @@ function formatTimestamp(value: string | null) {
   return timestamp.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 }
 
+function parseOptionalCoordinate(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("Coordinates must be numeric values.");
+  }
+
+  return parsed;
+}
+
+function getReleasedHintsForTeam(team: LiveSessionOverviewTeam) {
+  return team.releasedHints ?? [];
+}
+
 export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProps) {
   const [missions, setMissions] = useState<EligibleMissionSummary[]>([]);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
@@ -150,11 +220,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [selectedMissionStageIds, setSelectedMissionStageIds] = useState<string[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [selectedLiveSessionId, setSelectedLiveSessionId] = useState<string | null>(null);
+  const [selectedLiveSessionOverview, setSelectedLiveSessionOverview] = useState<LiveSessionOverview | null>(null);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
+  const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
+    createEmptyOperationalHintDraft
+  );
   const [isLoadingMissions, setIsLoadingMissions] = useState(true);
   const [isLoadingMissionDetail, setIsLoadingMissionDetail] = useState(false);
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
+  const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingHint, setIsSubmittingHint] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -169,6 +245,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
   const selectedLiveSession =
     liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? liveSessions[0] ?? null;
+  const isSelectedLiveSessionActive =
+    selectedLiveSession !== null && ["Running", "Paused"].includes(selectedLiveSession.state);
 
   const missionSummary = useMemo(() => {
     const totalActiveStages = missions.reduce((total, mission) => total + mission.activeMissionStageCount, 0);
@@ -193,6 +271,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         draftSessionStageOrder: index + 1
       }));
   }, [selectedMission, selectedMissionStageIds]);
+
+  const selectedLiveSessionStages = selectedLiveSession?.sessionStageFlow ?? [];
+  const operationalHintStageId =
+    operationalHintDraft.missionStageId || selectedLiveSessionStages[0]?.missionStageId || "";
 
   const loadMissions = useCallback(
     async (preferredMissionId?: string) => {
@@ -256,6 +338,32 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [accessToken, liveSessionsUrl]
   );
 
+  const loadLiveSessionOverview = useCallback(
+    async (liveSessionId: string) => {
+      setIsLoadingLiveSessionOverview(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await fetch(`${liveSessionsUrl}/${liveSessionId}/overview`, {
+          headers: createAuthorizedHeaders(accessToken)
+        });
+
+        if (!response.ok) {
+          throw new Error(await readFailureDetail(response));
+        }
+
+        const payload = (await response.json()) as LiveSessionOverview;
+        setSelectedLiveSessionOverview(payload);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Could not load LiveSession overview.");
+        setSelectedLiveSessionOverview(null);
+      } finally {
+        setIsLoadingLiveSessionOverview(false);
+      }
+    },
+    [accessToken, liveSessionsUrl]
+  );
+
   const loadMissionDetail = useCallback(
     async (missionId: string) => {
       setIsLoadingMissionDetail(true);
@@ -306,6 +414,30 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       void loadMissionDetail(selectedMissionId);
     });
   }, [loadMissionDetail, selectedMissionId]);
+
+  useEffect(() => {
+    if (!selectedLiveSessionId) {
+      queueMicrotask(() => {
+        setSelectedLiveSessionOverview(null);
+      });
+      return;
+    }
+
+    queueMicrotask(() => {
+      void loadLiveSessionOverview(selectedLiveSessionId);
+    });
+  }, [loadLiveSessionOverview, selectedLiveSessionId]);
+
+  useEffect(() => {
+    if (!selectedLiveSession || operationalHintDraft.missionStageId) {
+      return;
+    }
+
+    setOperationalHintDraft((current) => ({
+      ...current,
+      missionStageId: selectedLiveSession.sessionStageFlow[0]?.missionStageId ?? ""
+    }));
+  }, [operationalHintDraft.missionStageId, selectedLiveSession]);
 
   function toggleMissionStageSelection(missionStageId: string) {
     setSelectedMissionStageIds((current) =>
@@ -388,6 +520,95 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setErrorMessage(error instanceof Error ? error.message : "Could not create LiveSession.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleReleaseHint(hintId: string, sessionTeamId: string | null) {
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    setIsSubmittingHint(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/hints/${hintId}/release`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          sessionTeamId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setFeedback(sessionTeamId ? "Hint released to Session Team." : "Hint released to eligible Session Teams.");
+      await loadLiveSessionOverview(selectedLiveSession.id);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not release Hint.");
+    } finally {
+      setIsSubmittingHint(false);
+    }
+  }
+
+  async function handleCreateOperationalHint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    if (!operationalHintStageId) {
+      setErrorMessage("Select a Session Stage before adding a live Hint.");
+      return;
+    }
+
+    if (!operationalHintDraft.content.trim()) {
+      setErrorMessage("Hint content is required.");
+      return;
+    }
+
+    setIsSubmittingHint(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const latitude = parseOptionalCoordinate(operationalHintDraft.latitude);
+      const longitude = parseOptionalCoordinate(operationalHintDraft.longitude);
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${operationalHintStageId}/hints`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: operationalHintDraft.content.trim(),
+          latitude,
+          longitude
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setOperationalHintDraft((current) => ({
+        ...createEmptyOperationalHintDraft(),
+        missionStageId: current.missionStageId
+      }));
+      setFeedback("Operational Hint added to this LiveSession flow.");
+      await loadLiveSessions(selectedLiveSession.id);
+      await loadLiveSessionOverview(selectedLiveSession.id);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not create operational Hint.");
+    } finally {
+      setIsSubmittingHint(false);
     }
   }
 
@@ -741,6 +962,226 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     </article>
                   ))}
                 </div>
+
+                {isSelectedLiveSessionActive ? (
+                  <section className="operator-detail-card">
+                    <div className="mission-list-header">
+                      <div>
+                        <p className="eyebrow">Live operation</p>
+                        <h3>Gestión de Pistas (Hints)</h3>
+                      </div>
+                      {isLoadingLiveSessionOverview ? <span className="status-pill status-ok">Syncing</span> : null}
+                    </div>
+
+                    <section className="node-subsection">
+                      <div>
+                        <p className="eyebrow">Equipos</p>
+                        <h4>Pistas liberadas</h4>
+                      </div>
+
+                      {selectedLiveSessionOverview?.sessionTeams.length ? (
+                        <div className="hint-editor-list">
+                          {selectedLiveSessionOverview.sessionTeams.map((team) => {
+                            const releasedHints = getReleasedHintsForTeam(team);
+
+                            return (
+                              <article className="hint-card" key={team.sessionTeamId}>
+                                <div className="mission-list-item-top">
+                                  <div>
+                                    <strong>{team.teamName}</strong>
+                                    <p className="muted-copy">
+                                      {team.currentStage?.name ?? "Sin etapa actual"} · {team.progressState}
+                                    </p>
+                                  </div>
+                                  <span className="status-pill status-ok">{releasedHints.length} hints</span>
+                                </div>
+
+                                {releasedHints.length === 0 ? (
+                                  <p className="field-hint">Sin pistas liberadas para este equipo.</p>
+                                ) : (
+                                  <dl className="definition-grid">
+                                    {releasedHints.map((hint) => (
+                                      <div key={`${team.sessionTeamId}-${hint.hintId}`}>
+                                        <dt>{hint.unlockReason}</dt>
+                                        <dd>
+                                          {hint.content} · {formatTimestamp(hint.unlockedAtUtc)}
+                                        </dd>
+                                      </div>
+                                    ))}
+                                  </dl>
+                                )}
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="empty-state">
+                          <strong>No hay equipos cargados.</strong>
+                          <p>Refresca el overview de la LiveSession para ver estados de pistas por equipo.</p>
+                        </div>
+                      )}
+                    </section>
+
+                    <section className="node-subsection">
+                      <div>
+                        <p className="eyebrow">Liberación</p>
+                        <h4>Pistas disponibles por etapa actual</h4>
+                      </div>
+
+                      <div className="live-session-flow-list">
+                        {selectedLiveSession.sessionStageFlow.map((missionStage) => {
+                          const eligibleTeams =
+                            selectedLiveSessionOverview?.sessionTeams.filter(
+                              (team) => team.currentStage?.missionStageId === missionStage.missionStageId
+                            ) ?? [];
+
+                          return (
+                            <article className="live-session-flow-item" key={`hint-release-${missionStage.missionStageId}`}>
+                              <div className="mission-list-item-top">
+                                <div>
+                                  <strong>{missionStage.name}</strong>
+                                  <p className="muted-copy">
+                                    {eligibleTeams.length} equipos elegibles · {missionStage.hints.length} pistas
+                                  </p>
+                                </div>
+                                <span className="status-pill status-ok">{missionStage.gameType}</span>
+                              </div>
+
+                              {missionStage.hints.length === 0 ? (
+                                <p className="field-hint">Esta etapa aún no tiene pistas disponibles.</p>
+                              ) : (
+                                <div className="hint-editor-list">
+                                  {missionStage.hints.map((hint) => (
+                                    <article className="hint-card" key={hint.id}>
+                                      <div>
+                                        <strong>{hint.content}</strong>
+                                        <p className="field-hint">
+                                          {hint.latitude !== null && hint.longitude !== null
+                                            ? `${hint.latitude}, ${hint.longitude}`
+                                            : "Sin coordenadas"}
+                                        </p>
+                                      </div>
+
+                                      <div className="mission-action-row">
+                                        <button
+                                          className="ghost-button"
+                                          disabled={isSubmittingHint || eligibleTeams.length === 0}
+                                          onClick={() => void handleReleaseHint(hint.id, null)}
+                                          type="button"
+                                        >
+                                          Liberar a todos los elegibles
+                                        </button>
+
+                                        {eligibleTeams.map((team) => {
+                                          const alreadyReleased = getReleasedHintsForTeam(team).some(
+                                            (releasedHint) => releasedHint.hintId === hint.id
+                                          );
+
+                                          return (
+                                            <button
+                                              className="ghost-button"
+                                              disabled={isSubmittingHint || alreadyReleased}
+                                              key={`${hint.id}-${team.sessionTeamId}`}
+                                              onClick={() => void handleReleaseHint(hint.id, team.sessionTeamId)}
+                                              type="button"
+                                            >
+                                              Liberar a Equipo {team.teamName}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </article>
+                                  ))}
+                                </div>
+                              )}
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <form className="auth-form" onSubmit={handleCreateOperationalHint}>
+                      <div>
+                        <p className="eyebrow">Pista en vivo</p>
+                        <h4>Añadir Pista Operativa</h4>
+                      </div>
+
+                      <label className="field">
+                        <span>Etapa de sesión</span>
+                        <select
+                          className="input"
+                          onChange={(event) =>
+                            setOperationalHintDraft((current) => ({
+                              ...current,
+                              missionStageId: event.target.value
+                            }))
+                          }
+                          value={operationalHintStageId}
+                        >
+                          {selectedLiveSession.sessionStageFlow.map((missionStage) => (
+                            <option key={missionStage.missionStageId} value={missionStage.missionStageId}>
+                              #{missionStage.sessionStageOrder} {missionStage.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="field">
+                        <span>Texto de la pista</span>
+                        <textarea
+                          className="input"
+                          maxLength={500}
+                          onChange={(event) =>
+                            setOperationalHintDraft((current) => ({
+                              ...current,
+                              content: event.target.value
+                            }))
+                          }
+                          required
+                          value={operationalHintDraft.content}
+                        />
+                      </label>
+
+                      <div className="form-grid-two">
+                        <label className="field">
+                          <span>Latitud</span>
+                          <input
+                            className="input"
+                            inputMode="decimal"
+                            onChange={(event) =>
+                              setOperationalHintDraft((current) => ({
+                                ...current,
+                                latitude: event.target.value
+                              }))
+                            }
+                            value={operationalHintDraft.latitude}
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Longitud</span>
+                          <input
+                            className="input"
+                            inputMode="decimal"
+                            onChange={(event) =>
+                              setOperationalHintDraft((current) => ({
+                                ...current,
+                                longitude: event.target.value
+                              }))
+                            }
+                            value={operationalHintDraft.longitude}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="mission-action-row">
+                        <button className="primary-button" disabled={isSubmittingHint} type="submit">
+                          {isSubmittingHint ? "Guardando..." : "Guardar pista operativa"}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                ) : null}
               </>
             ) : (
               <div className="empty-state">

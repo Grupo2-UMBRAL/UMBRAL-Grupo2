@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
+using Umbral.SessionOperations.Api.Application.Hints;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
@@ -49,6 +50,35 @@ public static class LiveSessionEndpointRouteBuilderExtensions
 
                 return Results.Created($"/api/session-operations/live-sessions/{liveSession.Id}", liveSession);
             });
+
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/hints/{hintId:guid}/release",
+            async (
+                Guid liveSessionId,
+                Guid hintId,
+                [FromBody] ReleaseHintRequest? request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new ReleaseHintCommand(liveSessionId, request?.SessionTeamId, hintId),
+                    cancellationToken)));
+
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/stages/{missionStageId:guid}/hints",
+            async (
+                Guid liveSessionId,
+                Guid missionStageId,
+                [FromBody] CreateOperationalHintRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new CreateOperationalHintCommand(
+                        liveSessionId,
+                        missionStageId,
+                        request.Content,
+                        request.Latitude,
+                        request.Longitude),
+                    cancellationToken)));
 
         var participantSnapshotRoutes = authorizedApi
             .MapGroup("/session-teams")

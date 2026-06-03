@@ -19,7 +19,8 @@ public sealed record LiveSessionOverviewTeam(
     string TeamName,
     int ParticipantCount,
     string ProgressState,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? CurrentStage);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? CurrentStage,
+    IReadOnlyList<VisibleHintSnapshot> ReleasedHints);
 
 public sealed record SessionTeamSnapshot(
     Guid LiveSessionId,

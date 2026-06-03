@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Umbral.SessionOperations.Api.Infrastructure;
@@ -11,9 +12,11 @@ using Umbral.SessionOperations.Api.Infrastructure;
 namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
 {
     [DbContext(typeof(SessionOperationsDbContext))]
-    partial class SessionOperationsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260603180047_AddReleasedHintsTable")]
+    partial class AddReleasedHintsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
