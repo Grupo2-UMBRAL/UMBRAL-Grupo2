@@ -112,6 +112,69 @@ public sealed class LiveSession
         SessionStageFlowJson = JsonSerializer.Serialize(normalizedSessionStageFlow, SessionStageFlowSerializerOptions);
     }
 
+    public bool IsStagePending(Guid missionStageId)
+    {
+        var orderedStages = GetOrderedStages();
+        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (stageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_in_flow",
+                "Mission Stage must belong to this LiveSession Session Stage Flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        return SessionTeams.All(sessionTeam =>
+        {
+            var progress = TeamProgressions.FirstOrDefault(existingProgress =>
+                existingProgress.SessionTeamId == sessionTeam.Id);
+
+            return progress is null
+                || (!string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal)
+                    && progress.CurrentStageIndex <= stageIndex);
+        });
+    }
+
+    public void DeactivateStage(Guid missionStageId, DateTimeOffset updatedAtUtc)
+    {
+        EnsureStageDeactivationAllowed();
+
+        var orderedStages = GetOrderedStages();
+        var removedStageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (removedStageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_in_flow",
+                "Mission Stage must belong to this LiveSession Session Stage Flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        if (!IsStagePending(missionStageId))
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_pending",
+                "Only pending Session Stages can be deactivated.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        if (!orderedStages.Where((_, index) => index != removedStageIndex).Any(stage => IsStagePending(stage.MissionStageId)))
+        {
+            throw new UmbralDomainException(
+                "session_stage_flow_last_pending_stage",
+                "Session Stage Flow must keep at least one pending active Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var remainingStages = orderedStages
+            .Where((_, index) => index != removedStageIndex)
+            .Select((stage, index) => stage with { SessionStageOrder = index + 1 })
+            .ToArray();
+
+        ReplaceSessionStageFlow(remainingStages);
+        RecalculateTeamProgressionsAfterStageDeactivation(removedStageIndex, remainingStages.Length, updatedAtUtc);
+        SequenceNumber++;
+    }
+
     public void AssignJoinCode(JoinCode joinCode)
     {
         ArgumentNullException.ThrowIfNull(joinCode);
@@ -512,6 +575,39 @@ public sealed class LiveSession
         return orderedStages;
     }
 
+    private void RecalculateTeamProgressionsAfterStageDeactivation(
+        int removedStageIndex,
+        int remainingStageCount,
+        DateTimeOffset updatedAtUtc)
+    {
+        foreach (var progress in TeamProgressions)
+        {
+            if (string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (progress.CurrentStageIndex > removedStageIndex)
+            {
+                progress.AdvanceTo(progress.CurrentStageIndex - 1, updatedAtUtc);
+                continue;
+            }
+
+            if (progress.CurrentStageIndex != removedStageIndex)
+            {
+                continue;
+            }
+
+            if (removedStageIndex < remainingStageCount)
+            {
+                progress.AdvanceTo(removedStageIndex, updatedAtUtc);
+                continue;
+            }
+
+            progress.Complete(updatedAtUtc);
+        }
+    }
+
     private static void EnsureTeamProgressAcceptsSubmission(SessionTeamProgress progress)
     {
         if (!string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal))
@@ -624,6 +720,21 @@ public sealed class LiveSession
         throw new UmbralDomainException(
             "live_session_not_accepting_hint_release",
             "LiveSession must be Running or Paused to release or create Hints.",
+            UmbralFailureCategory.Conflict);
+    }
+
+    private void EnsureStageDeactivationAllowed()
+    {
+        if (string.Equals(State, LiveSessionStates.Scheduled, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Running, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "live_session_stage_deactivation_not_allowed_for_state",
+            "LiveSession must be Scheduled, Running or Paused to deactivate a pending Session Stage.",
             UmbralFailureCategory.Conflict);
     }
 

@@ -80,6 +80,17 @@ public static class LiveSessionEndpointRouteBuilderExtensions
                         request.Longitude),
                     cancellationToken)));
 
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/stages/{missionStageId:guid}/deactivate",
+            async (
+                Guid liveSessionId,
+                Guid missionStageId,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new DeactivateStageCommand(liveSessionId, missionStageId),
+                    cancellationToken)));
+
         var participantSnapshotRoutes = authorizedApi
             .MapGroup("/session-teams")
             .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));

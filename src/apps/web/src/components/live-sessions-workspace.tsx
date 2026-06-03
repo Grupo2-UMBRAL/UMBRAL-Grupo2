@@ -124,6 +124,8 @@ type OperationalHintDraft = {
   longitude: string;
 };
 
+type SessionStageOperationalStatus = "Completed" | "Pending";
+
 type LiveSessionsWorkspaceProps = {
   accessToken: string;
 };
@@ -213,6 +215,27 @@ function getReleasedHintsForTeam(team: LiveSessionOverviewTeam) {
   return team.releasedHints ?? [];
 }
 
+function getSessionStageOperationalStatus(
+  sessionStage: LiveSessionStage,
+  sessionTeams: LiveSessionOverviewTeam[]
+): SessionStageOperationalStatus {
+  const completedByAnyTeam = sessionTeams.some(
+    (team) =>
+      team.progressState === "Completed" ||
+      (team.currentStage !== null && team.currentStage.sessionStageOrder > sessionStage.sessionStageOrder)
+  );
+
+  return completedByAnyTeam ? "Completed" : "Pending";
+}
+
+function countTeamsAtOrBeyondSessionStage(sessionStage: LiveSessionStage, sessionTeams: LiveSessionOverviewTeam[]) {
+  return sessionTeams.filter(
+    (team) =>
+      team.progressState === "Completed" ||
+      (team.currentStage !== null && team.currentStage.sessionStageOrder >= sessionStage.sessionStageOrder)
+  ).length;
+}
+
 export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProps) {
   const [missions, setMissions] = useState<EligibleMissionSummary[]>([]);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
@@ -231,6 +254,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
+  const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -247,6 +271,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? liveSessions[0] ?? null;
   const isSelectedLiveSessionActive =
     selectedLiveSession !== null && ["Running", "Paused"].includes(selectedLiveSession.state);
+  const isSelectedLiveSessionStageDeactivationAllowed =
+    selectedLiveSession !== null && ["Scheduled", "Running", "Paused"].includes(selectedLiveSession.state);
 
   const missionSummary = useMemo(() => {
     const totalActiveStages = missions.reduce((total, mission) => total + mission.activeMissionStageCount, 0);
@@ -273,6 +299,15 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   }, [selectedMission, selectedMissionStageIds]);
 
   const selectedLiveSessionStages = selectedLiveSession?.sessionStageFlow ?? [];
+  const hasSingleSelectedLiveSessionStage = selectedLiveSessionStages.length <= 1;
+  const isSelectedLiveSessionOverviewCurrent =
+    selectedLiveSession !== null && selectedLiveSessionOverview?.liveSessionId === selectedLiveSession.id;
+  const selectedLiveSessionOverviewTeams = isSelectedLiveSessionOverviewCurrent
+    ? selectedLiveSessionOverview.sessionTeams
+    : [];
+  const pendingLiveSessionStageCount = selectedLiveSessionStages.filter(
+    (sessionStage) => getSessionStageOperationalStatus(sessionStage, selectedLiveSessionOverviewTeams) === "Pending"
+  ).length;
   const operationalHintStageId =
     operationalHintDraft.missionStageId || selectedLiveSessionStages[0]?.missionStageId || "";
 
@@ -433,10 +468,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       return;
     }
 
-    setOperationalHintDraft((current) => ({
-      ...current,
-      missionStageId: selectedLiveSession.sessionStageFlow[0]?.missionStageId ?? ""
-    }));
+    queueMicrotask(() => {
+      setOperationalHintDraft((current) => ({
+        ...current,
+        missionStageId: selectedLiveSession.sessionStageFlow[0]?.missionStageId ?? ""
+      }));
+    });
   }, [operationalHintDraft.missionStageId, selectedLiveSession]);
 
   function toggleMissionStageSelection(missionStageId: string) {
@@ -554,6 +591,47 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setErrorMessage(error instanceof Error ? error.message : "Could not release Hint.");
     } finally {
       setIsSubmittingHint(false);
+    }
+  }
+
+  async function handleDeactivateStage(missionStageId: string) {
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    setDeactivatingStageId(missionStageId);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${missionStageId}/deactivate`, {
+        method: "POST",
+        headers: createAuthorizedHeaders(accessToken)
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      const updatedLiveSession = (await response.json()) as LiveSession;
+      setLiveSessions((current) =>
+        current.map((liveSession) => (liveSession.id === updatedLiveSession.id ? updatedLiveSession : liveSession))
+      );
+      setOperationalHintDraft((current) =>
+        current.missionStageId === missionStageId
+          ? {
+              ...current,
+              missionStageId: ""
+            }
+          : current
+      );
+      setFeedback("Etapa desactivada del Session Stage Flow.");
+      await loadLiveSessions(updatedLiveSession.id);
+      await loadLiveSessionOverview(updatedLiveSession.id);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not deactivate Session Stage.");
+    } finally {
+      setDeactivatingStageId(null);
     }
   }
 
@@ -947,20 +1025,56 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                 </dl>
 
                 <div className="live-session-flow-list">
-                  {selectedLiveSession.sessionStageFlow.map((missionStage) => (
-                    <article className="live-session-flow-item" key={missionStage.missionStageId}>
-                      <div className="mission-list-item-top">
-                        <strong>
-                          #{missionStage.sessionStageOrder} {missionStage.name}
-                        </strong>
-                        <span className="status-pill status-ok">{missionStage.gameType}</span>
-                      </div>
-                      <p className="muted-copy">
-                        Source order {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                        {missionStage.hints.length} hints in snapshot.
-                      </p>
-                    </article>
-                  ))}
+                  {selectedLiveSession.sessionStageFlow.map((missionStage) => {
+                    const stageStatus = getSessionStageOperationalStatus(
+                      missionStage,
+                      selectedLiveSessionOverviewTeams
+                    );
+                    const isStageCompleted = stageStatus === "Completed";
+                    const teamsAtOrBeyondStage = countTeamsAtOrBeyondSessionStage(
+                      missionStage,
+                      selectedLiveSessionOverviewTeams
+                    );
+                    const disableDeactivation =
+                      !isSelectedLiveSessionStageDeactivationAllowed ||
+                      !isSelectedLiveSessionOverviewCurrent ||
+                      isLoadingLiveSessionOverview ||
+                      isStageCompleted ||
+                      hasSingleSelectedLiveSessionStage ||
+                      pendingLiveSessionStageCount <= 1 ||
+                      deactivatingStageId !== null;
+
+                    return (
+                      <article className="live-session-flow-item" key={missionStage.missionStageId}>
+                        <div className="mission-list-item-top">
+                          <strong>
+                            #{missionStage.sessionStageOrder} {missionStage.name}
+                          </strong>
+                          <div className="mission-action-row">
+                            <span className="status-pill status-ok">{missionStage.gameType}</span>
+                            <span className={isStageCompleted ? "status-pill status-error" : "status-pill status-loading"}>
+                              {isStageCompleted ? "Completada" : "Pendiente"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="muted-copy">
+                          Source order {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
+                          {missionStage.hints.length} hints in snapshot. {teamsAtOrBeyondStage} equipos en esta etapa o
+                          mas adelante.
+                        </p>
+                        <div className="mission-action-row">
+                          <button
+                            className="ghost-button danger-button"
+                            disabled={disableDeactivation}
+                            onClick={() => void handleDeactivateStage(missionStage.missionStageId)}
+                            type="button"
+                          >
+                            {deactivatingStageId === missionStage.missionStageId ? "Desactivando..." : "Desactivar Etapa"}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
 
                 {isSelectedLiveSessionActive ? (
