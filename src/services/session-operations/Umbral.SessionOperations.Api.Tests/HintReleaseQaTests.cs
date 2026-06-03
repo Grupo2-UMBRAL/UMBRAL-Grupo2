@@ -201,7 +201,7 @@ public sealed class HintReleaseQaTests
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-20));
         liveSession.RegisterTeam(AlphaTeamId, "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
         liveSession.RegisterTeam(BetaTeamId, "Beta Team", "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
-        ForceState(liveSession, LiveSessionStates.Running);
+        ForceState(liveSession, LiveSessionStates.Active);
 
         return liveSession;
     }

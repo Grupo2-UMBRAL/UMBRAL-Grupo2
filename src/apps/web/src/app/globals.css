@@ -685,6 +685,35 @@ textarea {
     gap: 1rem;
 }
 
+.ranking-table-wrap {
+  overflow-x: auto;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 34rem;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 0.8rem;
+  border-bottom: 1px solid rgba(75, 64, 51, 0.12);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ranking-table th {
+  color: var(--text-soft);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.ranking-table td {
+  color: var(--text);
+}
+
 .tree-empty-state {
     padding: 1rem;
     border-radius: var(--radius-control);

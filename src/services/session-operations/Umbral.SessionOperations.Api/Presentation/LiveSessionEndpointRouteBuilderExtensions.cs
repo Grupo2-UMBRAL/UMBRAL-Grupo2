@@ -1,10 +1,11 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.Hints;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionLifecycle;
+using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
 namespace Umbral.SessionOperations.Api.Presentation;
 
@@ -84,6 +85,41 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
                     new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Cancel),
+                    cancellationToken)));
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/stages/{missionStageId:guid}/deactivate",
+            async (Guid liveSessionId, Guid missionStageId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new DeactivateStageCommand(liveSessionId, missionStageId), cancellationToken)));
+
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/stages/{missionStageId:guid}/hints",
+            async (
+                Guid liveSessionId,
+                Guid missionStageId,
+                [FromBody] CreateOperationalHintRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Created(
+                    $"/api/session-operations/live-sessions/{liveSessionId}/stages/{missionStageId}/hints",
+                    await sender.Send(
+                        new CreateOperationalHintCommand(
+                            liveSessionId,
+                            missionStageId,
+                            request.Content,
+                            request.Latitude,
+                            request.Longitude),
+                        cancellationToken)));
+
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/hints/{hintId:guid}/release",
+            async (
+                Guid liveSessionId,
+                Guid hintId,
+                [FromBody] ReleaseHintRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new ReleaseHintCommand(liveSessionId, request.SessionTeamId, hintId),
                     cancellationToken)));
 
         return authorizedApi;

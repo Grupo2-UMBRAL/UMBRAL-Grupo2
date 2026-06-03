@@ -113,6 +113,7 @@ services:
       RabbitMQ__Port: 5672
       RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}
       RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      ScoringAudit__BaseUrl: http://scoring-audit-service:8080/
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-session-operations-api
@@ -135,7 +136,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_audit
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_ops
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
       RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}
@@ -201,6 +202,7 @@ services:
       NEXT_PUBLIC_EDGE_PROXY_BASE_URL: ${NEXT_PUBLIC_EDGE_PROXY_BASE_URL}
       NEXT_PUBLIC_KEYCLOAK_BASE_URL: ${NEXT_PUBLIC_KEYCLOAK_BASE_URL}
       NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH}
+      NEXT_PUBLIC_SCORING_AUDIT_HUB_PATH: ${NEXT_PUBLIC_SCORING_AUDIT_HUB_PATH}
     ports:
       - "${WEB_PORT}:3000"
     volumes:
@@ -229,6 +231,7 @@ services:
       EXPO_PUBLIC_KEYCLOAK_REALM: ${MOBILE_KEYCLOAK_REALM}
       EXPO_PUBLIC_KEYCLOAK_CLIENT_ID: ${MOBILE_KEYCLOAK_CLIENT_ID}
       EXPO_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${MOBILE_SESSION_OPERATIONS_HUB_PATH}
+      EXPO_PUBLIC_SCORING_AUDIT_HUB_PATH: ${MOBILE_SCORING_AUDIT_HUB_PATH}
     ports:
       - "${MOBILE_WEB_PORT}:${MOBILE_WEB_PORT}"
     volumes:

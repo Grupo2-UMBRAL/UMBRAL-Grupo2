@@ -1,6 +1,7 @@
 using Umbral.ScoringAudit.Api.Domain.Penalties;
 using Umbral.ScoringAudit.Api.Domain.Rankings;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
+using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ServiceDefaults;
 using Xunit;
 
@@ -115,6 +116,87 @@ public sealed class ScoreboardStageCreditTests
         Assert.Equal(300, scoreboard.GetTeamScore(sessionTeamId).VisibleScore);
         Assert.Single(scoreboard.ScoreEntries);
     }
+
+    [Fact]
+    public void RebuildState_ReconstructsTeamScoresAndCreditedStagesFromScoreEntries()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+        var sessionTeamId = Guid.NewGuid();
+        var missionStageId = Guid.NewGuid();
+
+        scoreboard.GrantStageCredit(
+            sessionTeamId,
+            missionStageId,
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromSeconds(8),
+            DateTimeOffset.UtcNow);
+
+        scoreboard.RebuildState();
+        var duplicateEntry = scoreboard.GrantStageCredit(
+            sessionTeamId,
+            missionStageId,
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromSeconds(9),
+            DateTimeOffset.UtcNow);
+
+        Assert.Null(duplicateEntry);
+        Assert.Equal(100, scoreboard.GetTeamScore(sessionTeamId).VisibleScore);
+        Assert.Single(scoreboard.ScoreEntries);
+    }
+
+    [Fact]
+    public void RebuildState_ReconstructsVisibleScoresAndSingleStageCreditMarkersAfterMaterialization()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+        var firstTeamId = Guid.NewGuid();
+        var secondTeamId = Guid.NewGuid();
+        var firstStageId = Guid.NewGuid();
+        var secondStageId = Guid.NewGuid();
+
+        scoreboard.GrantStageCredit(
+            firstTeamId,
+            firstStageId,
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromSeconds(8),
+            DateTimeOffset.UtcNow);
+        scoreboard.GrantStageCredit(
+            secondTeamId,
+            secondStageId,
+            MissionStageDifficulty.Medium,
+            TimeSpan.FromSeconds(9),
+            DateTimeOffset.UtcNow);
+
+        ClearMaterializedState(scoreboard);
+
+        scoreboard.RebuildState();
+        var duplicateEntry = scoreboard.GrantStageCredit(
+            firstTeamId,
+            firstStageId,
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromSeconds(10),
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal(100, scoreboard.GetTeamScore(firstTeamId).VisibleScore);
+        Assert.Equal(200, scoreboard.GetTeamScore(secondTeamId).VisibleScore);
+        Assert.Null(duplicateEntry);
+        Assert.Equal(2, scoreboard.ScoreEntries.Count);
+    }
+
+    private static void ClearMaterializedState(Scoreboard scoreboard)
+    {
+        ClearPrivateCollection(scoreboard, "teamScores");
+        ClearPrivateCollection(scoreboard, "creditedStages");
+        ClearPrivateCollection(scoreboard, "processedPenaltyCommandIds");
+    }
+
+    private static void ClearPrivateCollection(Scoreboard scoreboard, string fieldName)
+    {
+        var field = typeof(Scoreboard).GetField(
+            fieldName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var value = field?.GetValue(scoreboard);
+        value?.GetType().GetMethod("Clear", Type.EmptyTypes)?.Invoke(value, []);
+    }
 }
 
 public sealed class ScoreboardPenaltyTests
@@ -139,6 +221,7 @@ public sealed class ScoreboardPenaltyTests
         Assert.Equal(0, entry.VisibleScoreAfter);
         Assert.Equal(expectedDelta, teamScore.AccumulatedScore);
         Assert.Equal(0, teamScore.VisibleScore);
+        Assert.Equal(penalty.CommandId, entry.PenaltyCommandId);
         Assert.Equal(severity, entry.PenaltySeverity);
     }
 
@@ -183,6 +266,24 @@ public sealed class ScoreboardPenaltyTests
         Assert.Equal("scoreboard.duplicate_penalty_command", exception.Code);
     }
 
+    [Fact]
+    public void RebuildState_ReconstructsProcessedPenaltyCommandMarkers()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+        var sessionTeamId = Guid.NewGuid();
+        var commandId = Guid.NewGuid();
+        var firstPenalty = CreatePenalty(commandId, sessionTeamId, PenaltySeverity.Minor);
+        var replayedPenalty = CreatePenalty(commandId, sessionTeamId, PenaltySeverity.Minor);
+
+        scoreboard.ApplyPenalty(firstPenalty);
+        ClearMaterializedState(scoreboard);
+
+        scoreboard.RebuildState();
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.ApplyPenalty(replayedPenalty));
+        Assert.Equal("scoreboard.duplicate_penalty_command", exception.Code);
+    }
+
     private static Penalty CreatePenalty(Guid commandId, Guid sessionTeamId, PenaltySeverity severity) =>
         new(
             Guid.NewGuid(),
@@ -191,6 +292,22 @@ public sealed class ScoreboardPenaltyTests
             severity,
             "Motivo operativo",
             DateTimeOffset.UtcNow);
+
+    private static void ClearMaterializedState(Scoreboard scoreboard)
+    {
+        ClearPrivateCollection(scoreboard, "teamScores");
+        ClearPrivateCollection(scoreboard, "creditedStages");
+        ClearPrivateCollection(scoreboard, "processedPenaltyCommandIds");
+    }
+
+    private static void ClearPrivateCollection(Scoreboard scoreboard, string fieldName)
+    {
+        var field = typeof(Scoreboard).GetField(
+            fieldName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var value = field?.GetValue(scoreboard);
+        value?.GetType().GetMethod("Clear", Type.EmptyTypes)?.Invoke(value, []);
+    }
 }
 
 public sealed class RankingComparerTests
@@ -225,5 +342,89 @@ public sealed class RankingComparerTests
 
         Assert.True(comparer.Compare(fasterTeam, slowerTeam) < 0);
         Assert.True(comparer.Compare(slowerTeam, fasterTeam) > 0);
+    }
+
+    [Fact]
+    public void Projection_AssignsStandardCompetitionRankingWhenTeamsShareRank()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+        var firstTeamId = Guid.NewGuid();
+        var secondTeamId = Guid.NewGuid();
+        var thirdTeamId = Guid.NewGuid();
+
+        scoreboard.GrantStageCredit(
+            firstTeamId,
+            Guid.NewGuid(),
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromMilliseconds(1000),
+            DateTimeOffset.UtcNow);
+        scoreboard.GrantStageCredit(
+            secondTeamId,
+            Guid.NewGuid(),
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromMilliseconds(1499),
+            DateTimeOffset.UtcNow);
+        scoreboard.GrantStageCredit(
+            thirdTeamId,
+            Guid.NewGuid(),
+            MissionStageDifficulty.Easy,
+            TimeSpan.FromMilliseconds(2500),
+            DateTimeOffset.UtcNow);
+
+        var ranking = RankingProjection.Create(scoreboard, DateTimeOffset.UtcNow);
+
+        Assert.Collection(
+            ranking.Items,
+            first =>
+            {
+                Assert.Equal(1, first.Rank);
+                Assert.Equal(firstTeamId, first.SessionTeamId);
+            },
+            second =>
+            {
+                Assert.Equal(1, second.Rank);
+                Assert.Equal(secondTeamId, second.SessionTeamId);
+            },
+            third =>
+            {
+                Assert.Equal(3, third.Rank);
+                Assert.Equal(thirdTeamId, third.SessionTeamId);
+            });
+    }
+
+    [Fact]
+    public void Projection_OrdersEqualScoresByResolutionTimeBucket()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+        var fasterTeamId = Guid.NewGuid();
+        var slowerTeamId = Guid.NewGuid();
+
+        scoreboard.GrantStageCredit(
+            slowerTeamId,
+            Guid.NewGuid(),
+            MissionStageDifficulty.Medium,
+            TimeSpan.FromMilliseconds(1501),
+            DateTimeOffset.UtcNow);
+        scoreboard.GrantStageCredit(
+            fasterTeamId,
+            Guid.NewGuid(),
+            MissionStageDifficulty.Medium,
+            TimeSpan.FromMilliseconds(1000),
+            DateTimeOffset.UtcNow);
+
+        var ranking = RankingProjection.Create(scoreboard, DateTimeOffset.UtcNow);
+
+        Assert.Collection(
+            ranking.Items,
+            first =>
+            {
+                Assert.Equal(1, first.Rank);
+                Assert.Equal(fasterTeamId, first.SessionTeamId);
+            },
+            second =>
+            {
+                Assert.Equal(2, second.Rank);
+                Assert.Equal(slowerTeamId, second.SessionTeamId);
+            });
     }
 }

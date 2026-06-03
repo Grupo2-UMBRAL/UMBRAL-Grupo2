@@ -1,6 +1,8 @@
-﻿using Umbral.ServiceDefaults;
+using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionLifecycle;
+using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 
 namespace Umbral.SessionOperations.Api.Infrastructure;
@@ -19,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
+        services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ILiveSessionStateNotifier, SignalRLiveSessionStateNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
@@ -26,6 +29,13 @@ public static class ServiceCollectionExtensions
             {
                 client.BaseAddress = new Uri(
                     configuration["MissionDesign:BaseUrl"] ?? "http://mission-design-service:8080/");
+            })
+            .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
+        services
+            .AddHttpClient<IScoringAuditClient, ScoringAuditHttpClient>(client =>
+            {
+                client.BaseAddress = new Uri(
+                    configuration["ScoringAudit:BaseUrl"] ?? "http://scoring-audit-service:8080/");
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
         services.AddScoped<IServiceBootstrapDetailsProvider, SessionOperationsBootstrapDetailsProvider>();
