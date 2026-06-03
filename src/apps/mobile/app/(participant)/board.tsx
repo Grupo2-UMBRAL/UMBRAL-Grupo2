@@ -1,6 +1,7 @@
-﻿import { Redirect } from "expo-router";
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { Redirect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { LoadingScreen } from "../../src/components/loading-screen";
 import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
 import { StatusChip } from "../../src/components/status-chip";
@@ -23,6 +24,15 @@ import {
 import { useSession } from "../../src/providers/session-provider";
 
 type SnapshotStatus = "idle" | "loading" | "fresh" | "resyncing" | "stale" | "error";
+
+type QRSubmissionStatus =
+  | "idle"
+  | "requestingPermission"
+  | "scanning"
+  | "submitting"
+  | "accepted"
+  | "rejected"
+  | "error";
 
 type ApiClient = ReturnType<typeof createAuthorizedApiClient>;
 
@@ -113,6 +123,7 @@ export default function BoardPage() {
     () => (session ? createAuthorizedApiClient(session.accessToken) : null),
     [session]
   );
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [loadingEnrollment, setLoadingEnrollment] = useState(true);
   const [storedEnrollment, setStoredEnrollment] = useState<StoredEnrollment | null>(null);
   const [snapshot, setSnapshot] = useState<SessionTeamSnapshot | null>(null);
@@ -120,10 +131,15 @@ export default function BoardPage() {
   const [snapshotStatus, setSnapshotStatus] = useState<SnapshotStatus>("idle");
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [scannerLocked, setScannerLocked] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<QRSubmissionStatus>("idle");
+  const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
   const apiClientRef = useRef<ApiClient | null>(null);
   const enrollmentRef = useRef<StoredEnrollment | null>(null);
   const snapshotRef = useRef<SessionTeamSnapshot | null>(null);
   const sequenceRef = useRef(0);
+  const scannerLockedRef = useRef(false);
 
   useEffect(() => {
     apiClientRef.current = apiClient;
@@ -173,6 +189,92 @@ export default function BoardPage() {
     }
   });
 
+  const submitEvidenceHash = useCallback(async (qrHash: string) => {
+    const client = apiClientRef.current;
+    const enrollment = enrollmentRef.current;
+
+    if (!client || !enrollment) {
+      setSubmissionStatus("error");
+      setSubmissionMessage("No hay sesión participante lista para enviar evidencia.");
+      scannerLockedRef.current = false;
+      setScannerLocked(false);
+      return;
+    }
+
+    setSubmissionStatus("submitting");
+    setSubmissionMessage("Enviando evidencia...");
+
+    try {
+      const result = await client.submitEvidence({
+        sessionTeamId: enrollment.teamId,
+        qrHash
+      });
+
+      if (result.validationOutcome.toLowerCase() === "accepted") {
+        setSubmissionStatus("accepted");
+        setSubmissionMessage("Evidencia Aceptada. El tablero avanzará con el evento realtime.");
+        return;
+      }
+
+      setSubmissionStatus("rejected");
+      setSubmissionMessage("Código incorrecto, inténtalo de nuevo.");
+    } catch (error) {
+      setSubmissionStatus("error");
+      setSubmissionMessage(readErrorMessage(error));
+    } finally {
+      scannerLockedRef.current = false;
+      setScannerLocked(false);
+    }
+  }, []);
+
+  const openQrScanner = useCallback(async () => {
+    if (!snapshotRef.current?.currentStage) {
+      setSubmissionStatus("error");
+      setSubmissionMessage("No hay etapa activa para enviar evidencia.");
+      return;
+    }
+
+    if (submissionStatus === "submitting") {
+      return;
+    }
+
+    if (!cameraPermission?.granted) {
+      setSubmissionStatus("requestingPermission");
+      setSubmissionMessage("Solicitando permiso de cámara...");
+      const nextPermission = await requestCameraPermission();
+
+      if (!nextPermission.granted) {
+        setSubmissionStatus("error");
+        setSubmissionMessage("Permiso de cámara requerido para escanear el QR.");
+        return;
+      }
+    }
+
+    scannerLockedRef.current = false;
+    setScannerLocked(false);
+    setScannerVisible(true);
+    setSubmissionStatus("scanning");
+    setSubmissionMessage("Apunta la cámara al QR de la etapa actual.");
+  }, [cameraPermission?.granted, requestCameraPermission, submissionStatus]);
+
+  const closeQrScanner = useCallback(() => {
+    setScannerVisible(false);
+    scannerLockedRef.current = false;
+    setScannerLocked(false);
+    setSubmissionStatus((current) => (current === "scanning" ? "idle" : current));
+  }, []);
+
+  const handleBarcodeScanned = useCallback((result: BarcodeScanningResult) => {
+    const qrHash = result.data?.trim();
+    if (scannerLockedRef.current || !qrHash) {
+      return;
+    }
+
+    scannerLockedRef.current = true;
+    setScannerLocked(true);
+    setScannerVisible(false);
+    void submitEvidenceHash(qrHash);
+  }, [submitEvidenceHash]);
   useEffect(() => {
     let active = true;
 
@@ -369,6 +471,8 @@ export default function BoardPage() {
   const currentStageHints = currentStage
     ? visibleHints.filter((hint) => hint.missionStageId === currentStage.missionStageId)
     : [];
+  const evidenceIsBusy = submissionStatus === "requestingPermission" || submissionStatus === "submitting";
+  const canScanEvidence = Boolean(currentStage) && !evidenceIsBusy;
 
   return (
     <ScreenShell
@@ -440,6 +544,76 @@ export default function BoardPage() {
       </View>
 
       <View style={shellStyles.card}>
+        <Text style={shellStyles.cardTitle}>Evidence submission</Text>
+        <Text style={shellStyles.cardText}>
+          Escanea el QR físico de Treasure Hunt para enviar el hash de evidencia al backend de Session Operations.
+        </Text>
+        <Pressable
+          disabled={!canScanEvidence}
+          onPress={() => {
+            void openQrScanner();
+          }}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            !canScanEvidence && styles.disabledButton,
+            pressed && canScanEvidence && styles.buttonPressed
+          ]}
+        >
+          <Text style={styles.primaryButtonLabel}>Escanear QR</Text>
+        </Pressable>
+        {submissionStatus === "submitting" ? (
+          <View style={styles.inlineStatus}>
+            <ActivityIndicator color="#17313b" />
+            <Text style={styles.inlineStatusText}>Enviando evidencia...</Text>
+          </View>
+        ) : null}
+        {submissionStatus === "accepted" ? (
+          <View style={styles.feedbackSuccess}>
+            <Text style={styles.feedbackText}>✓ {submissionMessage ?? "Evidencia Aceptada"}</Text>
+          </View>
+        ) : null}
+        {submissionStatus === "rejected" || submissionStatus === "error" ? (
+          <View style={styles.feedbackError}>
+            <Text style={styles.feedbackText}>⚠ {submissionMessage ?? "Código incorrecto, inténtalo de nuevo"}</Text>
+          </View>
+        ) : null}
+        {submissionStatus === "scanning" || submissionStatus === "requestingPermission" ? (
+          <Text style={shellStyles.cardText}>{submissionMessage}</Text>
+        ) : null}
+        {!currentStage ? (
+          <Text style={styles.warning}>Sin etapa activa: el envío de evidencia permanece bloqueado.</Text>
+        ) : null}
+      </View>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={closeQrScanner}
+        presentationStyle="fullScreen"
+        visible={scannerVisible}
+      >
+        <View style={styles.scannerModal}>
+          <CameraView
+            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            facing="back"
+            onBarcodeScanned={scannerLocked ? undefined : handleBarcodeScanned}
+            style={styles.cameraPreview}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <View style={styles.scannerInstructions}>
+              <Text style={styles.scannerTitle}>Escanea el QR</Text>
+              <Text style={styles.scannerText}>Mantén el código dentro del marco. Se enviará automáticamente.</Text>
+              <Pressable
+                onPress={closeQrScanner}
+                style={({ pressed }) => [styles.scannerCancelButton, pressed && styles.buttonPressed]}
+              >
+                <Text style={styles.scannerCancelLabel}>Cancelar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <View style={shellStyles.card}>
         <Text style={shellStyles.cardTitle}>Visible hints</Text>
         {currentStageHints.length > 0 ? (
           <View style={shellStyles.list}>
@@ -478,6 +652,104 @@ export default function BoardPage() {
 }
 
 const styles = StyleSheet.create({
+  primaryButton: {
+    backgroundColor: "#2d6a4f",
+    borderRadius: 18,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14
+  },
+  primaryButtonLabel: {
+    color: "#f7fbfc",
+    fontSize: 15,
+    fontWeight: "800"
+  },
+  disabledButton: {
+    backgroundColor: "#9aa6a1"
+  },
+  inlineStatus: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10
+  },
+  inlineStatusText: {
+    color: "#17313b",
+    fontSize: 14,
+    fontWeight: "700"
+  },
+  feedbackSuccess: {
+    backgroundColor: "#d8f3dc",
+    borderColor: "#74c69d",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12
+  },
+  feedbackError: {
+    backgroundColor: "#ffe5e5",
+    borderColor: "#ef9a9a",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12
+  },
+  feedbackText: {
+    color: "#17313b",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20
+  },
+  warning: {
+    color: "#9e6f00",
+    fontSize: 14,
+    lineHeight: 20
+  },
+  scannerModal: {
+    backgroundColor: "#000",
+    flex: 1
+  },
+  cameraPreview: {
+    flex: 1
+  },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+    padding: 24
+  },
+  scannerFrame: {
+    alignSelf: "center",
+    borderColor: "#f7fbfc",
+    borderRadius: 24,
+    borderWidth: 3,
+    height: 260,
+    marginTop: 110,
+    width: 260
+  },
+  scannerInstructions: {
+    backgroundColor: "rgba(23, 49, 59, 0.9)",
+    borderRadius: 24,
+    gap: 10,
+    padding: 18
+  },
+  scannerTitle: {
+    color: "#f7fbfc",
+    fontSize: 22,
+    fontWeight: "800"
+  },
+  scannerText: {
+    color: "#dce8ea",
+    fontSize: 14,
+    lineHeight: 20
+  },
+  scannerCancelButton: {
+    alignItems: "center",
+    backgroundColor: "#f7fbfc",
+    borderRadius: 16,
+    paddingVertical: 12
+  },
+  scannerCancelLabel: {
+    color: "#17313b",
+    fontSize: 15,
+    fontWeight: "800"
+  },
   secondaryButton: {
     backgroundColor: "#17313b",
     borderRadius: 18,

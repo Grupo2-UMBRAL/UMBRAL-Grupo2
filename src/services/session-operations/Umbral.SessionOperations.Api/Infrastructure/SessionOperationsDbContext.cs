@@ -11,6 +11,10 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
 
     public DbSet<TeamParticipation> TeamParticipations => Set<TeamParticipation>();
 
+    public DbSet<SessionTeamProgress> TeamProgressions => Set<SessionTeamProgress>();
+
+    public DbSet<EvidenceSubmission> EvidenceSubmissions => Set<EvidenceSubmission>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
@@ -37,6 +41,9 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
             liveSession.Property(entity => entity.ScheduledStartAtUtc);
             liveSession.Property(entity => entity.CreatedAtUtc)
                 .IsRequired();
+            liveSession.Property(entity => entity.SequenceNumber)
+                .HasColumnName("sequence_number")
+                .IsRequired();
             liveSession.Property(entity => entity.SessionStageFlowJson)
                 .HasColumnType("text")
                 .IsRequired();
@@ -59,6 +66,14 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
             liveSession.HasMany(entity => entity.TeamParticipations)
+                .WithOne()
+                .HasForeignKey(entity => entity.LiveSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            liveSession.HasMany(entity => entity.TeamProgressions)
+                .WithOne()
+                .HasForeignKey(entity => entity.LiveSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            liveSession.HasMany(entity => entity.EvidenceSubmissions)
                 .WithOne()
                 .HasForeignKey(entity => entity.LiveSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -108,6 +123,75 @@ public sealed class SessionOperationsDbContext(DbContextOptions<SessionOperation
                 .IsUnique()
                 .HasDatabaseName("ix_team_participations_live_session_id_participant_user_id");
             teamParticipation.HasOne<SessionTeam>()
+                .WithMany()
+                .HasForeignKey(entity => entity.SessionTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SessionTeamProgress>(teamProgress =>
+        {
+            teamProgress.ToTable("session_team_progressions");
+            teamProgress.HasKey(entity => entity.Id);
+
+            teamProgress.Property(entity => entity.Id)
+                .ValueGeneratedNever();
+            teamProgress.Property(entity => entity.LiveSessionId)
+                .IsRequired();
+            teamProgress.Property(entity => entity.SessionTeamId)
+                .IsRequired();
+            teamProgress.Property(entity => entity.CurrentStageIndex)
+                .IsRequired();
+            teamProgress.Property(entity => entity.State)
+                .HasMaxLength(40)
+                .IsRequired();
+            teamProgress.Property(entity => entity.UpdatedAtUtc)
+                .IsRequired();
+
+            teamProgress.HasIndex(entity => new { entity.LiveSessionId, entity.SessionTeamId })
+                .IsUnique()
+                .HasDatabaseName("ix_session_team_progressions_live_session_id_session_team_id");
+            teamProgress.HasOne<SessionTeam>()
+                .WithMany()
+                .HasForeignKey(entity => entity.SessionTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EvidenceSubmission>(evidenceSubmission =>
+        {
+            evidenceSubmission.ToTable("evidence_submissions");
+            evidenceSubmission.HasKey(entity => entity.Id);
+
+            evidenceSubmission.Property(entity => entity.Id)
+                .ValueGeneratedNever();
+            evidenceSubmission.Property(entity => entity.LiveSessionId)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.SessionTeamId)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.MissionStageId)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.GameType)
+                .HasMaxLength(40)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.SubmittedHash)
+                .HasMaxLength(EvidenceSubmission.SubmittedHashMaximumLength)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.Outcome)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+            evidenceSubmission.Property(entity => entity.FailureReason)
+                .HasMaxLength(EvidenceSubmission.FailureReasonMaximumLength);
+            evidenceSubmission.Property(entity => entity.SubmittedAtUtc)
+                .IsRequired();
+
+            evidenceSubmission.HasIndex(entity => new
+                {
+                    entity.LiveSessionId,
+                    entity.SessionTeamId,
+                    entity.MissionStageId
+                })
+                .HasDatabaseName("ix_evidence_submissions_live_session_team_stage");
+            evidenceSubmission.HasOne<SessionTeam>()
                 .WithMany()
                 .HasForeignKey(entity => entity.SessionTeamId)
                 .OnDelete(DeleteBehavior.Restrict);

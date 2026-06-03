@@ -1,4 +1,4 @@
-﻿import { act, render, screen, waitFor } from "@testing-library/react-native";
+﻿import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import BoardPage from "./board";
 import {
   createAuthorizedApiClient,
@@ -48,6 +48,7 @@ jest.mock("../../src/lib/api-client", () => {
 
 type MockBoardApiClient = {
   getSessionTeamSnapshot: jest.Mock<Promise<SessionTeamSnapshot>, [string]>;
+  submitEvidence: jest.Mock<Promise<{ validationOutcome: string }>, [{ sessionTeamId: string; qrHash: string }]>;
 };
 
 type ConnectionOptions = {
@@ -80,7 +81,8 @@ const mockConnection = {
 
 function createMockApiClient(): MockBoardApiClient {
   return {
-    getSessionTeamSnapshot: jest.fn()
+    getSessionTeamSnapshot: jest.fn(),
+    submitEvidence: jest.fn().mockResolvedValue({ validationOutcome: "Accepted" })
   };
 }
 
@@ -163,10 +165,10 @@ test("loads the Session Team snapshot on mount and renders current board data", 
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(apiClient.getSessionTeamSnapshot).toHaveBeenCalledWith("team-1");
+    expect(screen.getByText("Decode the seal")).toBeTruthy();
   });
+  expect(apiClient.getSessionTeamSnapshot).toHaveBeenCalledWith("team-1");
   expect(screen.getByText("Alpha Team board")).toBeTruthy();
-  expect(screen.getByText("Decode the seal")).toBeTruthy();
   expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
   expect(screen.getByText("Running")).toBeTruthy();
 });
@@ -300,3 +302,62 @@ test("resync callback fetches a fresh snapshot after SignalR reconnect", async (
   expect(screen.getByText("Open the archive gate")).toBeTruthy();
 });
 
+test("submits scanned QR evidence and renders accepted feedback", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.submitEvidence.mockResolvedValue({ validationOutcome: "Accepted" });
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Escanear QR")).toBeTruthy();
+  });
+
+  fireEvent.press(screen.getByText("Escanear QR"));
+
+  await waitFor(() => {
+    expect(screen.getByTestId("camera-view")).toBeTruthy();
+  });
+
+  await act(async () => {
+    screen.getByTestId("camera-view").props.onBarcodeScanned({ data: " qr-hash-accepted " });
+  });
+
+  await waitFor(() => {
+    expect(apiClient.submitEvidence).toHaveBeenCalledWith({
+      sessionTeamId: "team-1",
+      qrHash: "qr-hash-accepted"
+    });
+  });
+  expect(screen.getByText(/Evidencia Aceptada/)).toBeTruthy();
+});
+
+test("submits scanned QR evidence and renders rejected feedback", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+  apiClient.submitEvidence.mockResolvedValue({ validationOutcome: "Rejected" });
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Escanear QR")).toBeTruthy();
+  });
+
+  fireEvent.press(screen.getByText("Escanear QR"));
+
+  await waitFor(() => {
+    expect(screen.getByTestId("camera-view")).toBeTruthy();
+  });
+
+  await act(async () => {
+    screen.getByTestId("camera-view").props.onBarcodeScanned({ data: "wrong-hash" });
+  });
+
+  await waitFor(() => {
+    expect(apiClient.submitEvidence).toHaveBeenCalledWith({
+      sessionTeamId: "team-1",
+      qrHash: "wrong-hash"
+    });
+  });
+  expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
+});

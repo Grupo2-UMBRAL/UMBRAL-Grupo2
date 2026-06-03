@@ -84,3 +84,25 @@ test("calls session team snapshot endpoint with participant token", async () => 
   const [, init] = (fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
   expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
 });
+
+test("calls evidence submission endpoint with QR hash payload", async () => {
+  const apiClient = createAuthorizedApiClient("participant-token");
+
+  await apiClient.submitEvidence({
+    sessionTeamId: "team-1",
+    qrHash: "qr-hash-123"
+  });
+
+  expect(fetch).toHaveBeenCalledWith(
+    "https://edge.test/api/session-operations/session-teams/team-1/submissions",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        qrHash: "qr-hash-123"
+      })
+    })
+  );
+  const [, init] = (fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+  expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
+  expect((init.headers as Headers).get("content-type")).toBe("application/json");
+});

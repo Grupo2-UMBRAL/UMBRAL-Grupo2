@@ -1,4 +1,4 @@
-﻿import { getClientConfig } from "./config";
+import { getClientConfig } from "./config";
 
 function normalizePath(path: string) {
   return path.startsWith("/") ? path : `/${path}`;
@@ -108,6 +108,22 @@ export type EnrollmentResult = {
   participantUserId: string;
   registeredAtUtc?: string;
   enrolledAtUtc?: string;
+};
+
+export type SubmitEvidenceInput = {
+  sessionTeamId: string;
+  qrHash: string;
+};
+
+export type SubmitEvidenceResult = {
+  liveSessionId: string;
+  sessionTeamId: string;
+  evidenceSubmissionId: string;
+  validationOutcome: string;
+  progressState: string;
+  currentStage?: CurrentSessionStageSnapshot;
+  sequenceNumber: number;
+  submittedAtUtc: string;
 };
 
 export type SnapshotSyncMetadata = {
@@ -268,6 +284,17 @@ export function createAuthorizedApiClient(accessToken: string) {
     getSessionTeamSnapshot(sessionTeamId: string) {
       return requestJson<SessionTeamSnapshot>(
         `/api/session-operations/session-teams/${encodeURIComponent(sessionTeamId)}/snapshot`
+      );
+    },
+    submitEvidence(input: SubmitEvidenceInput) {
+      return requestJson<SubmitEvidenceResult>(
+        `/api/session-operations/session-teams/${encodeURIComponent(input.sessionTeamId)}/submissions`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            qrHash: input.qrHash
+          })
+        }
       );
     }
   };

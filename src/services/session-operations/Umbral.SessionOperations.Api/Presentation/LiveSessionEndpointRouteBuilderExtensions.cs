@@ -1,6 +1,7 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
@@ -57,6 +58,17 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             "/{sessionTeamId:guid}/snapshot",
             async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
+
+        participantSnapshotRoutes.MapPost(
+            "/{sessionTeamId:guid}/submissions",
+            async (
+                Guid sessionTeamId,
+                [FromBody] SubmitEvidenceRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new SubmitEvidenceCommand(sessionTeamId, request.QrHash),
+                    cancellationToken)));
 
         return authorizedApi;
     }

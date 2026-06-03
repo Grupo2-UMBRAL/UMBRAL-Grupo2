@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Umbral.ServiceDefaults;
@@ -50,6 +50,8 @@ public sealed class LiveSession
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
+    public long SequenceNumber { get; private set; }
+
     public string SessionStageFlowJson { get; private set; } = "[]";
 
     public string? JoinCodeValue { get; private set; }
@@ -61,6 +63,10 @@ public sealed class LiveSession
     public ICollection<SessionTeam> SessionTeams { get; private set; } = new List<SessionTeam>();
 
     public ICollection<TeamParticipation> TeamParticipations { get; private set; } = new List<TeamParticipation>();
+
+    public ICollection<SessionTeamProgress> TeamProgressions { get; private set; } = new List<SessionTeamProgress>();
+
+    public ICollection<EvidenceSubmission> EvidenceSubmissions { get; private set; } = new List<EvidenceSubmission>();
 
     [JsonIgnore]
     [NotMapped]
@@ -240,6 +246,190 @@ public sealed class LiveSession
 
     public bool IsEnrollmentOpenAt(DateTimeOffset nowUtc) => EnrollmentWindow.IsOpenAt(nowUtc);
 
+    public EvidenceSubmission SubmitEvidence(Guid sessionTeamId, string qrHash, DateTimeOffset submittedAtUtc)
+    {
+        EnsureEvidenceSubmissionAllowed();
+        EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
+
+        var orderedStages = SessionStageFlow.OrderBy(stage => stage.SessionStageOrder).ToArray();
+        if (orderedStages.Length == 0)
+        {
+            throw new UmbralDomainException(
+                "live_session_stage_flow_required",
+                "LiveSession must include at least one active Session Stage.",
+                UmbralFailureCategory.Validation);
+        }
+
+        var progress = GetOrCreateProgress(sessionTeamId, submittedAtUtc);
+        if (string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal))
+        {
+            throw new UmbralDomainException(
+                "session_team_progress_already_completed",
+                "Session Team already completed the Session Stage Flow.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var currentStage = SelectCurrentStage(progress, orderedStages);
+        EnsureTreasureHuntStage(currentStage);
+
+        var normalizedQrHash = NormalizeRequiredText(
+            qrHash,
+            "evidence_submission_hash_required",
+            "Evidence Submission QR hash is required.",
+            EvidenceSubmission.SubmittedHashMaximumLength);
+
+        if (EvidenceSubmissions.Any(submission =>
+            submission.SessionTeamId == sessionTeamId
+            && submission.MissionStageId == currentStage.MissionStageId
+            && submission.Outcome == ValidationOutcome.Accepted))
+        {
+            throw new UmbralDomainException(
+                "session_stage_already_resolved_by_team",
+                "Session Team already resolved this Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var accepted = string.Equals(
+            currentStage.ExpectedQrHash?.Trim(),
+            normalizedQrHash,
+            StringComparison.OrdinalIgnoreCase);
+        var submissionOutcome = accepted ? ValidationOutcome.Accepted : ValidationOutcome.Rejected;
+        var evidenceSubmission = EvidenceSubmission.Create(
+            Id,
+            sessionTeamId,
+            currentStage,
+            normalizedQrHash,
+            submissionOutcome,
+            accepted ? null : "qr_hash_mismatch",
+            submittedAtUtc);
+
+        EvidenceSubmissions.Add(evidenceSubmission);
+        SequenceNumber++;
+
+        if (!accepted)
+        {
+            return evidenceSubmission;
+        }
+
+        if (progress.CurrentStageIndex >= orderedStages.Length - 1)
+        {
+            progress.Complete(submittedAtUtc);
+            State = LiveSessionStates.Finalized;
+            return evidenceSubmission;
+        }
+
+        progress.AdvanceTo(progress.CurrentStageIndex + 1, submittedAtUtc);
+        return evidenceSubmission;
+    }
+
+    public LiveSessionStage? GetCurrentStageForTeam(Guid sessionTeamId)
+    {
+        EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
+
+        var orderedStages = SessionStageFlow.OrderBy(stage => stage.SessionStageOrder).ToArray();
+        if (orderedStages.Length == 0)
+        {
+            return null;
+        }
+
+        var progress = TeamProgressions.FirstOrDefault(existingProgress => existingProgress.SessionTeamId == sessionTeamId);
+        if (progress is null)
+        {
+            return orderedStages[0];
+        }
+
+        if (string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return progress.CurrentStageIndex >= orderedStages.Length
+            ? null
+            : orderedStages[progress.CurrentStageIndex];
+    }
+
+    public string GetProgressStateForTeam(Guid sessionTeamId)
+    {
+        EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
+
+        var progress = TeamProgressions.FirstOrDefault(existingProgress => existingProgress.SessionTeamId == sessionTeamId);
+        return progress?.State ?? SessionTeamProgressStates.NotStarted;
+    }
+    private void EnsureEvidenceSubmissionAllowed()
+    {
+        if (string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Finalized, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Cancelled, StringComparison.Ordinal))
+        {
+            throw new UmbralDomainException(
+                "live_session_not_accepting_evidence",
+                "LiveSession is not accepting Evidence Submissions.",
+                UmbralFailureCategory.Conflict);
+        }
+    }
+
+    private void EnsureSessionTeamBelongsToLiveSession(Guid sessionTeamId)
+    {
+        if (SessionTeams.Any(team => team.Id == sessionTeamId))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "session_team_not_found",
+            "Session Team does not belong to this LiveSession.",
+            UmbralFailureCategory.NotFound);
+    }
+
+    private SessionTeamProgress GetOrCreateProgress(Guid sessionTeamId, DateTimeOffset startedAtUtc)
+    {
+        var existingProgress = TeamProgressions.FirstOrDefault(progress => progress.SessionTeamId == sessionTeamId);
+        if (existingProgress is not null)
+        {
+            return existingProgress;
+        }
+
+        var progress = SessionTeamProgress.Create(Id, sessionTeamId, startedAtUtc);
+        TeamProgressions.Add(progress);
+        return progress;
+    }
+
+    private static LiveSessionStage SelectCurrentStage(
+        SessionTeamProgress progress,
+        IReadOnlyList<LiveSessionStage> orderedStages)
+    {
+        if (progress.CurrentStageIndex >= orderedStages.Count)
+        {
+            throw new UmbralDomainException(
+                "session_team_progress_stage_index_invalid",
+                "Session Team Progress points outside the Session Stage Flow.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        return orderedStages[progress.CurrentStageIndex];
+    }
+
+    private static void EnsureTreasureHuntStage(LiveSessionStage currentStage)
+    {
+        if (!string.Equals(currentStage.GameType, "TreasureHunt", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(currentStage.GameType, "Treasure Hunt", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UmbralDomainException(
+                "evidence_submission_stage_not_treasure_hunt",
+                "Current Session Stage does not accept Treasure Hunt QR submissions.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentStage.ExpectedQrHash))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "evidence_submission_expected_qr_hash_required",
+            "Current Session Stage does not define an expected QR hash.",
+            UmbralFailureCategory.Validation);
+    }
     private void EnsureEnrollmentAllowed(JoinCode presentedJoinCode, DateTimeOffset nowUtc)
     {
         ArgumentNullException.ThrowIfNull(presentedJoinCode);

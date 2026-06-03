@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
@@ -23,6 +23,8 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             .AsNoTracking()
             .Include(session => session.SessionTeams)
             .Include(session => session.TeamParticipations)
+            .Include(session => session.TeamProgressions)
+            .Include(session => session.EvidenceSubmissions)
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
@@ -33,15 +35,14 @@ public sealed class GetLiveSessionOverviewQueryHandler(
         var participantCounts = liveSession.TeamParticipations
             .GroupBy(participation => participation.SessionTeamId)
             .ToDictionary(group => group.Key, group => group.Count());
-        var currentStage = SelectCurrentStage(liveSession.SessionStageFlow);
         var sessionTeams = liveSession.SessionTeams
             .OrderBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
             .Select(team => new LiveSessionOverviewTeam(
                 team.Id,
                 team.Name,
                 participantCounts.GetValueOrDefault(team.Id),
-                SessionSnapshotConstants.NotStartedProgressState,
-                currentStage))
+                liveSession.GetProgressStateForTeam(team.Id),
+                MapCurrentStage(liveSession.GetCurrentStageForTeam(team.Id))))
             .ToArray();
 
         return new LiveSessionOverview(
@@ -93,21 +94,26 @@ public sealed class GetLiveSessionOverviewQueryHandler(
                 liveSession.TeamParticipations
                     .Select(participation => participation.EnrolledAtUtc)
                     .DefaultIfEmpty(liveSession.CreatedAtUtc)
+                    .Max(),
+                liveSession.TeamProgressions
+                    .Select(progress => progress.UpdatedAtUtc)
+                    .DefaultIfEmpty(liveSession.CreatedAtUtc)
+                    .Max(),
+                liveSession.EvidenceSubmissions
+                    .Select(submission => submission.SubmittedAtUtc)
+                    .DefaultIfEmpty(liveSession.CreatedAtUtc)
                     .Max()
             }
             .Max();
 
         return new SnapshotSyncMetadata(
-            SessionSnapshotConstants.InitialSequenceNumber,
+            liveSession.SequenceNumber,
             lastUpdatedUtc,
             serverTimeUtc);
     }
 
-    private static CurrentSessionStageSnapshot? SelectCurrentStage(IReadOnlyList<LiveSessionStage> sessionStageFlow)
+    private static CurrentSessionStageSnapshot? MapCurrentStage(LiveSessionStage? currentStage)
     {
-        var currentStage = sessionStageFlow
-            .OrderBy(stage => stage.SessionStageOrder)
-            .FirstOrDefault();
         if (currentStage is null)
         {
             return null;

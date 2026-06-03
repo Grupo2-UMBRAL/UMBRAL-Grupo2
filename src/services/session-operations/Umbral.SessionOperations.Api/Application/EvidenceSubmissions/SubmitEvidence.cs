@@ -1,0 +1,184 @@
+﻿using MediatR;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.SessionEnrollment;
+using Umbral.SessionOperations.Api.Application.SessionSnapshots;
+using Umbral.SessionOperations.Api.Domain.LiveSessions;
+using Umbral.SessionOperations.Api.Hubs;
+using Umbral.SessionOperations.Api.Hubs.Contracts;
+using Umbral.SessionOperations.Api.Infrastructure;
+
+namespace Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
+
+public sealed record SubmitEvidenceCommand(Guid SessionTeamId, string QrHash) : IRequest<SubmitEvidenceResponse>;
+
+public sealed record SubmitEvidenceRequest(string QrHash);
+
+public sealed record SubmitEvidenceResponse(
+    Guid LiveSessionId,
+    Guid SessionTeamId,
+    Guid EvidenceSubmissionId,
+    string ValidationOutcome,
+    string ProgressState,
+    CurrentSessionStageSnapshot? CurrentStage,
+    long SequenceNumber,
+    DateTimeOffset SubmittedAtUtc);
+
+public sealed class SubmitEvidenceHandler(
+    SessionOperationsDbContext dbContext,
+    TimeProvider timeProvider,
+    ICurrentParticipantIdentity currentParticipantIdentity,
+    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
+    : IRequestHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>
+{
+    public async Task<SubmitEvidenceResponse> Handle(
+        SubmitEvidenceCommand request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
+        var liveSession = await dbContext.LiveSessions
+            .Include(session => session.SessionTeams)
+            .Include(session => session.TeamParticipations)
+            .Include(session => session.TeamProgressions)
+            .Include(session => session.EvidenceSubmissions)
+            .SingleOrDefaultAsync(
+                session => session.SessionTeams.Any(team => team.Id == request.SessionTeamId),
+                cancellationToken);
+        if (liveSession is null)
+        {
+            throw new UmbralDomainException(
+                "session_team_not_found",
+                $"Session Team '{request.SessionTeamId}' was not found.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        EnsureParticipantBelongsToSessionTeam(liveSession, request.SessionTeamId, participantUserId.Value);
+
+        var submittedAtUtc = timeProvider.GetUtcNow();
+        var previousLiveSessionState = liveSession.State;
+        var previousStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
+        var evidenceSubmission = liveSession.SubmitEvidence(
+            request.SessionTeamId,
+            request.QrHash,
+            submittedAtUtc);
+        var currentStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
+        var progressState = liveSession.GetProgressStateForTeam(request.SessionTeamId);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (evidenceSubmission.Outcome == ValidationOutcome.Accepted)
+        {
+            await PublishTeamProgressChangedAsync(
+                liveSession,
+                request.SessionTeamId,
+                previousStage,
+                currentStage,
+                progressState,
+                submittedAtUtc,
+                cancellationToken);
+
+            if (!string.Equals(previousLiveSessionState, liveSession.State, StringComparison.Ordinal))
+            {
+                await PublishSessionStateChangedAsync(
+                    liveSession,
+                    previousLiveSessionState,
+                    submittedAtUtc,
+                    cancellationToken);
+            }
+        }
+
+        return new SubmitEvidenceResponse(
+            liveSession.Id,
+            request.SessionTeamId,
+            evidenceSubmission.Id,
+            evidenceSubmission.Outcome.ToString(),
+            progressState,
+            MapCurrentStage(currentStage),
+            liveSession.SequenceNumber,
+            submittedAtUtc);
+    }
+
+    private static void EnsureParticipantBelongsToSessionTeam(
+        LiveSession liveSession,
+        Guid sessionTeamId,
+        string participantUserId)
+    {
+        var participation = liveSession.TeamParticipations.FirstOrDefault(existingParticipation =>
+            existingParticipation.SessionTeamId == sessionTeamId
+            && string.Equals(existingParticipation.ParticipantUserId, participantUserId, StringComparison.Ordinal));
+        if (participation is not null)
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "session_team_participation_required",
+            "Participant must belong to this Session Team to submit evidence.",
+            UmbralFailureCategory.Forbidden);
+    }
+
+    private async Task PublishTeamProgressChangedAsync(
+        LiveSession liveSession,
+        Guid sessionTeamId,
+        LiveSessionStage? previousStage,
+        LiveSessionStage? currentStage,
+        string progressState,
+        DateTimeOffset occurredAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var payload = new TeamProgressChangedPayload(
+            CreateMetadata(liveSession, occurredAtUtc, "Evidence accepted; Session Team progression changed."),
+            sessionTeamId,
+            MapCurrentStage(previousStage),
+            MapCurrentStage(currentStage),
+            progressState);
+
+        await hubContext.Clients.All.ReceiveTeamProgressChanged(payload).WaitAsync(cancellationToken);
+    }
+
+    private async Task PublishSessionStateChangedAsync(
+        LiveSession liveSession,
+        string previousState,
+        DateTimeOffset occurredAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var payload = new SessionStateChangedPayload(
+            CreateMetadata(liveSession, occurredAtUtc, "LiveSession finalized after Evidence Submission."),
+            previousState,
+            liveSession.State,
+            null);
+
+        await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
+    }
+
+    private static RealtimeEventMetadata CreateMetadata(
+        LiveSession liveSession,
+        DateTimeOffset occurredAtUtc,
+        string reason)
+        => new(
+            liveSession.Id,
+            liveSession.SequenceNumber,
+            occurredAtUtc,
+            SnapshotRefreshPolicy.RefreshSnapshot,
+            reason);
+
+    private static CurrentSessionStageSnapshot? MapCurrentStage(LiveSessionStage? currentStage)
+    {
+        if (currentStage is null)
+        {
+            return null;
+        }
+
+        return new CurrentSessionStageSnapshot(
+            currentStage.MissionStageId,
+            currentStage.Name,
+            currentStage.SessionStageOrder,
+            currentStage.SourceOrder,
+            currentStage.ResolvedTimeBudgetMinutes,
+            currentStage.Difficulty,
+            currentStage.GameType);
+    }
+}
