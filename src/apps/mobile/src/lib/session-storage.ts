@@ -1,7 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { UmbralRole } from "./roles";
 
 const sessionStorageKey = "umbral.mobile.session";
+const enrollmentStorageKey = "umbral.mobile.enrollment";
 
 export type UmbralMobileSession = {
   accessToken: string;
@@ -9,6 +10,12 @@ export type UmbralMobileSession = {
   roles: UmbralRole[];
   username: string;
   displayName: string;
+};
+
+export type StoredEnrollment = {
+  joinCode: string;
+  teamId: string;
+  teamName: string;
 };
 
 export async function loadStoredSession() {
@@ -31,6 +38,28 @@ export function saveStoredSession(session: UmbralMobileSession) {
 
 export function clearStoredSession() {
   return AsyncStorage.removeItem(sessionStorageKey);
+}
+
+export async function loadStoredEnrollment() {
+  const rawValue = await AsyncStorage.getItem(enrollmentStorageKey);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as StoredEnrollment;
+  } catch {
+    await AsyncStorage.removeItem(enrollmentStorageKey);
+    return null;
+  }
+}
+
+export function saveStoredEnrollment(enrollment: StoredEnrollment) {
+  return AsyncStorage.setItem(enrollmentStorageKey, JSON.stringify(enrollment));
+}
+
+export function clearStoredEnrollment() {
+  return AsyncStorage.removeItem(enrollmentStorageKey);
 }
 
 export function isSessionExpired(session: UmbralMobileSession) {

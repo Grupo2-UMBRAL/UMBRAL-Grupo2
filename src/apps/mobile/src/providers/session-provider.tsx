@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useContext,
   useEffect,
@@ -7,6 +7,7 @@ import {
 } from "react";
 import { loginWithPassword } from "../lib/auth";
 import {
+  clearStoredEnrollment,
   clearStoredSession,
   isSessionExpired,
   loadStoredSession,
@@ -38,6 +39,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       if (storedSession && isSessionExpired(storedSession)) {
         await clearStoredSession();
+        await clearStoredEnrollment();
         setSession(null);
       } else {
         setSession(storedSession);
@@ -61,6 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     await clearStoredSession();
+    await clearStoredEnrollment();
     setSession(null);
   }
 

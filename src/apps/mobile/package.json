@@ -11,7 +11,8 @@
     "web": "expo start --web",
     "web:compose": "expo start --web --host localhost",
     "typecheck": "tsc --noEmit",
-    "build": "expo export --platform web --output-dir dist"
+    "build": "expo export --platform web --output-dir dist",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -29,8 +30,22 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.7",
+    "jest-expo": "~54.0.0",
+    "react-test-renderer": "^19.1.0",
     "typescript": "^5.9.2"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "testMatch": [
+      "**/*.test.ts",
+      "**/*.test.tsx"
+    ]
   }
 }
