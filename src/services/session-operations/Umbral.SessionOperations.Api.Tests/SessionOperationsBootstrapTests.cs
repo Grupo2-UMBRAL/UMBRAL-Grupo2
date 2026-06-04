@@ -222,12 +222,14 @@ public sealed class LiveSessionDomainTests
                     2,
                     35,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "Which code opens the archive?")
             ]);
 
         Assert.Equal(LiveSessionStates.Scheduled, liveSession.State);
         Assert.Single(liveSession.SessionStageFlow);
         Assert.Equal("Stage 1", liveSession.SessionStageFlow[0].Name);
+        Assert.Equal("Which code opens the archive?", liveSession.SessionStageFlow[0].Prompt);
     }
 
     [Fact]
@@ -316,7 +318,8 @@ public sealed class LiveSessionDomainTests
                     1,
                     30,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "Prompt for Stage 1")
             ]);
     }
 }
@@ -369,6 +372,7 @@ public sealed class LiveSessionEndpointTests
             first =>
             {
                 Assert.Equal("Stage 2", first.Name);
+                Assert.Equal("Prompt for Stage 2", first.Prompt);
                 Assert.Equal(1, first.SessionStageOrder);
                 Assert.Equal(20, first.SourceOrder);
                 Assert.Equal("Hard", first.Difficulty);
@@ -376,6 +380,7 @@ public sealed class LiveSessionEndpointTests
             second =>
             {
                 Assert.Equal("Stage 1", second.Name);
+                Assert.Equal("Prompt for Stage 1", second.Prompt);
                 Assert.Equal(2, second.SessionStageOrder);
                 Assert.Equal(10, second.SourceOrder);
                 Assert.Equal("Easy", second.Difficulty);
@@ -543,6 +548,7 @@ public sealed class LiveSessionEndpointTests
             30,
             difficulty,
             "Trivia",
+            $"Prompt for {name}",
             null,
             "answer",
             null,
@@ -585,6 +591,7 @@ public sealed class LiveSessionEndpointTests
                     30,
                     "Medium",
                     "Trivia",
+                    "Prompt for Stage 1",
                     null,
                     "answer",
                     null,
@@ -610,7 +617,8 @@ public sealed class LiveSessionEndpointTests
                     1,
                     30,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "Prompt for Stage 1")
             ]);
     }
 }

@@ -23,6 +23,12 @@ function resolveTone(state: string | null) {
   }
 }
 
+const currentStagePreview = {
+  parentBlockName: "Ancient archive",
+  name: "Decode the seal",
+  prompt: "Trivia prompt: identify the symbol that completes the archivist's sequence before sending evidence."
+};
+
 export default function BoardPage() {
   const { session } = useSession();
   const config = getClientConfig();
@@ -49,8 +55,9 @@ export default function BoardPage() {
           label={currentState ? `Session ${currentState}` : "Awaiting lifecycle event"}
           tone={resolveTone(currentState)}
         />
-        <Text style={shellStyles.cardText}>Parent block: Ancient archive</Text>
-        <Text style={shellStyles.cardText}>Current playable stage: Decode the seal</Text>
+        <Text style={shellStyles.cardText}>Parent block: {currentStagePreview.parentBlockName}</Text>
+        <Text style={shellStyles.cardText}>Current playable stage: {currentStagePreview.name}</Text>
+        <Text style={shellStyles.cardText}>Prompt: {currentStagePreview.prompt}</Text>
         <Text style={shellStyles.cardText}>
           Primary action stays blocked unless Session State is Active.
         </Text>

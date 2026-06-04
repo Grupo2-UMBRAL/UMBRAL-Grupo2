@@ -20,6 +20,8 @@ public sealed record MissionNode
 
     public string? GameType { get; init; }
 
+    public string? Prompt { get; init; }
+
     public string? ExpectedQrHash { get; init; }
 
     public string? TriviaValidAnswer { get; init; }
@@ -41,6 +43,7 @@ public sealed record MissionNode
         int? timeBudgetMinutes = null,
         string? difficulty = null,
         string? gameType = null,
+        string? prompt = null,
         string? expectedQrHash = null,
         string? triviaValidAnswer = null,
         string? triviaInitialValidationCriterion = null,
@@ -66,6 +69,7 @@ public sealed record MissionNode
         {
             if (!string.IsNullOrWhiteSpace(difficulty) ||
                 !string.IsNullOrWhiteSpace(gameType) ||
+                !string.IsNullOrWhiteSpace(prompt) ||
                 !string.IsNullOrWhiteSpace(expectedQrHash) ||
                 !string.IsNullOrWhiteSpace(triviaValidAnswer) ||
                 !string.IsNullOrWhiteSpace(triviaInitialValidationCriterion) ||
@@ -90,6 +94,11 @@ public sealed record MissionNode
 
             var normalizedDifficulty = MissionStageDifficulty.Normalize(difficulty);
             var normalizedGameType = MissionGameType.Normalize(gameType ?? string.Empty);
+            var normalizedPrompt = NormalizeRequiredText(
+                prompt ?? string.Empty,
+                "mission_node_prompt_required",
+                "Mission stage prompt is required.",
+                1_024);
             var normalizedValidation = NormalizeLeafValidationData(
                 normalizedGameType,
                 expectedQrHash,
@@ -105,6 +114,7 @@ public sealed record MissionNode
                 TimeBudgetMinutes = timeBudgetMinutes,
                 Difficulty = normalizedDifficulty,
                 GameType = normalizedGameType,
+                Prompt = normalizedPrompt,
                 ExpectedQrHash = normalizedValidation.ExpectedQrHash,
                 TriviaValidAnswer = normalizedValidation.TriviaValidAnswer,
                 TriviaInitialValidationCriterion = normalizedValidation.TriviaInitialValidationCriterion,

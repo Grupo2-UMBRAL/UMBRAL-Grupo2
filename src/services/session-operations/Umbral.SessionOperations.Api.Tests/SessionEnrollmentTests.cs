@@ -86,7 +86,8 @@ public sealed class SessionEnrollmentDomainTests
                     1,
                     30,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "What symbol completes the mural?")
             ]);
     }
 }
@@ -195,6 +196,7 @@ public sealed class SessionEnrollmentEndpointTests
                     30,
                     "Medium",
                     "Trivia",
+                    "What symbol completes the mural?",
                     null,
                     "answer",
                     null,

@@ -57,6 +57,7 @@ Existen dos superficies principales:
 - Cada `Mission Stage` define su propia `Difficulty` y esa dificultad alimenta el puntaje base cuando la etapa se resuelve.
 - Un `Mission Node` compuesto no define `Difficulty` para scoring y la `Mission` no impone una dificultad unica a todas sus hojas.
 - `Substage` es una relacion padre-hijo recursiva entre `Mission Nodes` dentro de la misma `Mission`.
+- Cada `Mission Stage` hoja define un `Prompt` visible para el `Participant`. En `Trivia` funciona como pregunta o enunciado; en `Treasure Hunt` funciona como instruccion, objetivo o contexto de busqueda.
 - `Hint` pertenece directamente a un `Mission Stage` hoja, no a nodos compuestos.
 - Una `Mission` puede mezclar varios `Game Types`, pero cada `Mission Stage` tiene exactamente uno.
 - Cada `Mission Stage` hoja define exactamente una `Difficulty`: `Easy`, `Medium` o `Hard`.
@@ -68,13 +69,20 @@ Existen dos superficies principales:
 - La copia conserva referencia de trazabilidad visible al origen y deja evento auditable de reuse, pero no mantiene sincronizacion viva con el origen.
 - El reuse puede tomar como origen cualquier nodo de una `Mission` visible para el `Administrator`; no requiere que la mision origen este activa.
 - La experiencia del `Participant` sigue siendo lineal sobre la hoja actual y puede mostrar el bloque padre como contexto, pero no expone el arbol completo de diseno.
+- El `Participant Stage View` debe mostrar el `Prompt` de la hoja actual antes de pedir evidencia, junto con el bloque padre si ese contexto ayuda.
 - En sesion, el `Operator` puede desactivar una hoja individual o un nodo compuesto; en este ultimo caso, la desactivacion afecta solo las hojas descendientes que sigan pendientes.
 
 ### Trivia
 
 - La validacion de respuestas de `Trivia` ocurre automaticamente por defecto.
+- El `Prompt` de una hoja `Trivia` es visible para el `Participant` y contiene la pregunta o enunciado que justifica la respuesta evaluada.
 - El `Operator` puede corregir el resultado cuando detecte que la respuesta enviada corresponde a una alternativa valida.
 - No debe modelarse `Trivia` como un flujo donde toda evidencia entra primero en estado `Pending` para revision humana obligatoria.
+
+### Treasure Hunt
+
+- El `Prompt` de una hoja `Treasure Hunt` es visible para el `Participant` y contiene la instruccion, objetivo o contexto que orienta la busqueda previa al escaneo del QR.
+- El `Prompt` no reemplaza la validacion por `ExpectedQrHash`; solo explica que debe resolver el equipo antes de enviar evidencia.
 
 ### Scoring and penalties
 

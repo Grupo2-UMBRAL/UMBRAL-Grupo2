@@ -38,6 +38,7 @@ type MissionNode = {
   timeBudgetMinutes: number | null;
   resolvedTimeBudgetMinutes: number | null;
   gameType: string | null;
+  prompt: string | null;
   expectedQrHash: string | null;
   triviaValidAnswer: string | null;
   triviaInitialValidationCriterion: string | null;
@@ -69,6 +70,7 @@ type MissionNodeDraft = {
   defaultTimeBudgetMinutes: string;
   timeBudgetMinutes: string;
   gameType: string;
+  prompt: string;
   expectedQrHash: string;
   triviaValidAnswer: string;
   triviaInitialValidationCriterion: string;
@@ -108,6 +110,7 @@ type MissionNodePayload = {
   defaultTimeBudgetMinutes: number | null;
   timeBudgetMinutes: number | null;
   gameType: string | null;
+  prompt: string | null;
   expectedQrHash: string | null;
   triviaValidAnswer: string | null;
   triviaInitialValidationCriterion: string | null;
@@ -176,6 +179,7 @@ function createEmptyNodeDraft(
     defaultTimeBudgetMinutes: "",
     timeBudgetMinutes: "",
     gameType: gameTypeOptions[0],
+    prompt: "",
     expectedQrHash: "",
     triviaValidAnswer: "",
     triviaInitialValidationCriterion: "",
@@ -271,6 +275,7 @@ function toNodeDraft(node: MissionNode): MissionNodeDraft {
     defaultTimeBudgetMinutes: node.defaultTimeBudgetMinutes?.toString() ?? "",
     timeBudgetMinutes: node.timeBudgetMinutes?.toString() ?? "",
     gameType: node.gameType ?? gameTypeOptions[0],
+    prompt: node.prompt ?? "",
     expectedQrHash: node.expectedQrHash ?? "",
     triviaValidAnswer: node.triviaValidAnswer ?? "",
     triviaInitialValidationCriterion:
@@ -422,6 +427,7 @@ function serializeNodeDraft(node: MissionNodeDraft): MissionNodePayload {
       ? parseOptionalInteger(node.timeBudgetMinutes)
       : null,
     gameType: isLeaf ? node.gameType : null,
+    prompt: isLeaf ? trimToNull(node.prompt) : null,
     expectedQrHash:
       isLeaf && node.gameType === "Treasure Hunt"
         ? trimToNull(node.expectedQrHash)
@@ -489,10 +495,11 @@ function findValidationIssue(
         return `${label}: leaf stage needs a game type.`;
       }
 
-      if (
-        node.gameType === "Treasure Hunt" &&
-        !trimToNull(node.expectedQrHash)
-      ) {
+      if (!trimToNull(node.prompt)) {
+        return `${label}: leaf stage needs a prompt visible to participants.`;
+      }
+
+      if (node.gameType === "Treasure Hunt" && !trimToNull(node.expectedQrHash)) {
         return `${label}: Treasure Hunt stage needs expected QR hash.`;
       }
 
@@ -711,6 +718,21 @@ function MissionNodeEditor({
               </select>
             </label>
           </div>
+
+          <label className="field">
+            <span>Prompt</span>
+            <textarea
+              className="input textarea-input"
+              maxLength={1024}
+              onChange={(event) => onUpdateNode(node.clientId, "prompt", event.target.value)}
+              required
+              rows={4}
+              value={node.prompt}
+            />
+            <span className="field-hint">
+              Shared participant-facing copy. Trivia uses this as question; Treasure Hunt uses this as instruction.
+            </span>
+          </label>
 
           <GameTypeConfig
             gameType={node.gameType}
@@ -1101,6 +1123,7 @@ export function MissionsAdminWorkspace({
             : [createEmptyNodeDraft("leaf", 1)],
         hints: [],
         timeBudgetMinutes: "",
+        prompt: "",
         expectedQrHash: "",
         triviaValidAnswer: "",
         triviaInitialValidationCriterion: "",

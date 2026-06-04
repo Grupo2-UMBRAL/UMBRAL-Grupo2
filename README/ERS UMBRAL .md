@@ -65,6 +65,8 @@ sesión.
 Búsqueda del Tesoro
 ● La evidencia se valida mediante el escaneo de un código QR desde la app móvil del
 equipo.
+● Cada etapa expone un prompt visible para el equipo con la instrucción o contexto
+de búsqueda que debe resolver antes de escanear.
 ● Cada etapa tiene un QR con un hash único que el backend compara contra el
 contenido escaneado.
 ● Si el QR coincide, la evidencia es aceptada automáticamente por el sistema.
@@ -74,8 +76,8 @@ etapa actual
 ● Si no existe una etapa siguiente, la sesión finaliza automáticamente.
 ## Trivia
 ● La evidencia es una respuesta de texto enviada por el equipo desde la app móvil.
-
-
+● Cada etapa expone un prompt visible para el equipo. En Trivia este prompt actúa
+como la pregunta o enunciado que debe responderse.
 ● La respuesta se valida automáticamente al ser registrada por el sistema. El operador
 puede validar manualmente las respuestas que considere correctas desde el panel
 web(errores de escritura, sinónimos o casos ambiguos).
@@ -104,7 +106,7 @@ ranking conserva el empate.
 ## Código Requerimiento
 RF-01 El sistema debe permitir crear, editar, consultar y desactivar misiones.
 RF-02 Cada misión debe tener un tipo de juego definido: BusquedaDelTesoro o Trivia.
-RF-03 Cada misión debe permitir registrar etapas con orden lineal estricto, pistas y
+RF-03 Cada misión debe permitir registrar etapas con orden lineal estricto, prompt, pistas y
 tiempo máximo de ejecución.
 RF-04 Las pistas deben poder tener coordenadas geográficas opcionales marcadas
 por el administrador.
@@ -122,6 +124,9 @@ siguiente etapa. Si no hay siguiente etapa, la sesión finaliza automáticamente
 RF-11 En Búsqueda del Tesoro la evidencia se valida mediante el escaneo de un
 código QR desde la app móvil. El backend compara el contenido escaneado
 contra el hash de la etapa.
+RF-12 Cada Mission Stage jugable debe definir un prompt visible para el equipo actual.
+En Trivia el prompt funciona como pregunta o enunciado. En BusquedaDelTesoro
+funciona como instrucción, objetivo o contexto de búsqueda.
 RF-13 En Trivia la evidencia es una respuesta de texto que el sistema valida
 automáticamente, en caso de errores de escritura o que requieran validación
 manual, el operador las puede validar manualmente.
@@ -875,12 +880,13 @@ sesión.
 CU-18: Consultar tablero de equipo
 ## ● Actores: Participante
 ● Descripción: El equipo visualiza su tablero de juego en la app móvil. El tablero
-muestra la etapa actual de la sesión, las pistas habilitadas para esa etapa, el
+muestra la etapa actual de la sesión, el prompt visible de esa etapa, las pistas habilitadas para esa etapa, el
 temporizador de la sesión y el puntaje acumulado del equipo. El tablero se actualiza
 en tiempo real cada vez que hay un evento relevante en la sesión.
 ● Flujo principal:
 - El participante accede al tablero de juego en la app móvil.
 - El sistema muestra la etapa actual del flujo de la sesión.
+- El sistema muestra el prompt de la etapa actual.
 - El sistema muestra las pistas habilitadas para esa etapa.
 - El sistema muestra el temporizador de la sesión.
 - El sistema muestra el puntaje acumulado del equipo.
@@ -904,6 +910,7 @@ automáticamente, se calcula el puntaje y el equipo avanza a la siguiente etapa.
 ● Flujo principal:
 - El participante accede al tablero en la app móvil durante una sesión de tipo
 BusquedaDelTesoro.
+- El participante revisa el prompt visible de la etapa actual.
 - El participante selecciona la opción de enviar evidencia.
 - El participante abre la cámara del dispositivo desde la app.
 - El participante escanea el código QR físico asociado a la etapa actual.
@@ -956,6 +963,7 @@ ambiguos o alternativas válidas rechazadas.
 ● Flujo principal:
 - El participante accede al tablero en la app móvil durante una sesión de tipo
 ## Trivia.
+- El participante revisa el prompt o pregunta visible de la etapa actual.
 - El participante selecciona la opción de enviar evidencia.
 - El participante escribe su respuesta en el campo de texto.
 - El participante envía la respuesta.

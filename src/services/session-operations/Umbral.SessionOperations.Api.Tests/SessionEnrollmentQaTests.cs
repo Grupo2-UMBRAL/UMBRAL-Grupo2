@@ -128,7 +128,8 @@ public sealed class SessionEnrollmentQaTests
                     1,
                     30,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "What symbol completes the mural?")
             ]);
     }
 
