@@ -32,6 +32,7 @@ type EligibleMissionStage = {
   sourceOrder: number;
   resolvedTimeBudgetMinutes: number;
   gameType: string;
+  prompt: string;
   expectedQrHash: string | null;
   triviaValidAnswer: string | null;
   triviaInitialValidationCriterion: string | null;
@@ -63,6 +64,7 @@ type LiveSessionStage = {
   sourceOrder: number;
   resolvedTimeBudgetMinutes: number;
   gameType: string;
+  prompt: string;
   expectedQrHash: string | null;
   triviaValidAnswer: string | null;
   triviaInitialValidationCriterion: string | null;
@@ -1624,6 +1626,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                               Source order {missionStage.sourceOrder}. {missionStage.gameType}.{" "}
                               {missionStage.resolvedTimeBudgetMinutes} min.
                             </p>
+                            <p>{missionStage.prompt}</p>
                           </div>
                           <span className={isSelected ? "status-pill status-ok" : "status-pill status-error"}>
                             {isSelected ? `selected #${selectedIndex + 1}` : "excluded"}
@@ -1688,6 +1691,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           Source order {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
                           {missionStage.hints.length} hints copied to session snapshot.
                         </p>
+                        <p>{missionStage.prompt}</p>
                       </article>
                     ))}
                   </div>
@@ -1889,6 +1893,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                               {missionStage.hints.length} hints in snapshot. {teamsAtOrBeyondStage} equipos en esta etapa o
                               mas adelante.
                             </p>
+                            <p>{missionStage.prompt}</p>
                             <div className="mission-action-row">
                               <button
                                 className="ghost-button danger-button"

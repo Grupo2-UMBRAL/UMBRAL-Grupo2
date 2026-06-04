@@ -67,6 +67,7 @@ public sealed class MissionDomainTests
             timeBudgetMinutes: 20,
             difficulty: MissionStageDifficulty.Easy,
             gameType: MissionGameType.TreasureHunt,
+            prompt: "Scan the museum entrance marker.",
             expectedQrHash: "hash-a");
         var duplicateOrderLeafB = MissionNode.Create(
             Guid.NewGuid(),
@@ -76,6 +77,7 @@ public sealed class MissionDomainTests
             timeBudgetMinutes: 25,
             difficulty: MissionStageDifficulty.Hard,
             gameType: MissionGameType.Trivia,
+            prompt: "Who founded the archive?",
             triviaValidAnswer: "answer");
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
@@ -120,6 +122,7 @@ public sealed class MissionDomainTests
             timeBudgetMinutes: null,
             difficulty: MissionStageDifficulty.Medium,
             gameType: MissionGameType.TreasureHunt,
+            prompt: "Find the hidden crest.",
             expectedQrHash: "expected-qr-hash",
             hints:
             [
@@ -177,10 +180,58 @@ public sealed class MissionDomainTests
                         timeBudgetMinutes: 20,
                         difficulty: MissionStageDifficulty.Medium,
                         gameType: MissionGameType.Trivia,
+                        prompt: "Which vault opens first?",
                         triviaValidAnswer: "answer")
                 ]));
 
         Assert.Equal("mission_node_composite_invalid_payload", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public void Create_RejectsPromptOnCompositeMissionNode()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            MissionNode.Create(
+                Guid.NewGuid(),
+                "Composite",
+                1,
+                true,
+                defaultTimeBudgetMinutes: 45,
+                prompt: "Do not allow prompt here.",
+                children:
+                [
+                    MissionNode.Create(
+                        Guid.NewGuid(),
+                        "Leaf Stage",
+                        1,
+                        true,
+                        timeBudgetMinutes: 20,
+                        difficulty: MissionStageDifficulty.Medium,
+                        gameType: MissionGameType.Trivia,
+                        prompt: "What symbol repeats?",
+                        triviaValidAnswer: "answer")
+                ]));
+
+        Assert.Equal("mission_node_composite_invalid_payload", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+    }
+
+    [Fact]
+    public void Create_RejectsLeafWithoutPrompt()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            MissionNode.Create(
+                Guid.NewGuid(),
+                "Leaf Stage",
+                1,
+                true,
+                timeBudgetMinutes: 20,
+                difficulty: MissionStageDifficulty.Easy,
+                gameType: MissionGameType.TreasureHunt,
+                expectedQrHash: "qr-hash-1"));
+
+        Assert.Equal("mission_node_prompt_required", exception.Code);
         Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
     }
 
@@ -228,6 +279,7 @@ public sealed class MissionDomainTests
                             timeBudgetMinutes: null,
                             difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.TreasureHunt,
+                            prompt: "Scan the first checkpoint marker.",
                             expectedQrHash: "qr-hash-1")
                     ])
             ]);
@@ -312,6 +364,7 @@ public sealed class MissionEndpointTests
                                 TimeBudgetMinutes: null,
                                 Difficulty: MissionStageDifficulty.Medium,
                                 GameType: MissionGameType.TreasureHunt,
+                                Prompt: "Scan the visible archive marker.",
                                 ExpectedQrHash: "expected-qr-hash",
                                 Hints:
                                 [
@@ -436,6 +489,7 @@ public sealed class MissionEndpointTests
                                 IsActive: true,
                                 Difficulty: MissionStageDifficulty.Hard,
                                 GameType: MissionGameType.Trivia,
+                                Prompt: "What number unlocks the vault?",
                                 TriviaValidAnswer: "42")
                         ])
                 ]));
@@ -505,6 +559,7 @@ public sealed class MissionEndpointTests
                             timeBudgetMinutes: null,
                             difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.Trivia,
+                            prompt: "Name the first curator.",
                             triviaValidAnswer: "answer")
                     ])
             ]);
@@ -519,6 +574,7 @@ public sealed class MissionEndpointTests
         var leafNode = Assert.Single(rootNode.Children);
         Assert.Equal(30, leafNode.ResolvedTimeBudgetMinutes);
         Assert.Equal(MissionGameType.Trivia, leafNode.GameType);
+        Assert.Equal("Name the first curator.", leafNode.Prompt);
     }
 
     [Fact]
@@ -673,6 +729,7 @@ public sealed class MissionEndpointTests
                             timeBudgetMinutes: null,
                             difficulty: MissionStageDifficulty.Easy,
                             gameType: MissionGameType.Trivia,
+                            prompt: "Inactive prompt",
                             triviaValidAnswer: "skip"),
                         MissionNode.Create(
                             Guid.NewGuid(),
@@ -682,6 +739,7 @@ public sealed class MissionEndpointTests
                             timeBudgetMinutes: null,
                             difficulty: MissionStageDifficulty.Hard,
                             gameType: MissionGameType.Trivia,
+                            prompt: "Which scroll contains the key?",
                             triviaValidAnswer: "answer",
                             hints:
                             [
@@ -702,6 +760,7 @@ public sealed class MissionEndpointTests
         Assert.NotNull(eligibleMission);
         var missionStage = Assert.Single(eligibleMission.MissionStages);
         Assert.Equal("Active Stage", missionStage.Name);
+        Assert.Equal("Which scroll contains the key?", missionStage.Prompt);
         Assert.Equal(1, missionStage.SessionStageOrder);
         Assert.Equal(2, missionStage.SourceOrder);
         Assert.Equal(40, missionStage.ResolvedTimeBudgetMinutes);
@@ -746,6 +805,7 @@ public sealed class MissionEndpointTests
                         timeBudgetMinutes: null,
                         difficulty: MissionStageDifficulty.Easy,
                         gameType: MissionGameType.TreasureHunt,
+                        prompt: "Scan the opening gate symbol.",
                         expectedQrHash: "qr-hash-1")
                     ])
             ]);

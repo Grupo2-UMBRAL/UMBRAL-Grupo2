@@ -9,7 +9,7 @@ Plantilla reusable que define una experiencia de juego. Una **Mission** contiene
 _Avoid_: LiveSession, partida, ejecucion
 
 **Mission Stage**:
-**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define exactamente una **Difficulty**, y es la unidad que luego puede participar en flujo operativo.
+**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define exactamente una **Difficulty**, define exactamente un **Prompt** visible para participantes, y es la unidad que luego puede participar en flujo operativo.
 _Avoid_: Session Stage, etapa ejecutada, paso puramente visual
 
 **Mission Node**:
@@ -31,6 +31,10 @@ _Avoid_: Event, evidence, notification
 **Game Type**:
 Clasificacion fija de un **Mission Stage** que determina su estrategia de validacion de evidencias. En UMBRAL los valores actuales son Treasure Hunt y Trivia.
 _Avoid_: session mode, mission-wide rule cuando la mision mezcla tipos
+
+**Prompt**:
+Texto principal visible de un **Mission Stage** que explica al participante que debe resolver en esa hoja. En `Trivia` suele funcionar como pregunta o enunciado. En `Treasure Hunt` suele funcionar como instruccion, objetivo o contexto de busqueda. No reemplaza las **Hints** ni la regla de validacion del tipo de juego.
+_Avoid_: respuesta valida, criterio interno de validacion, nota solo para operador, hint
 
 **Difficulty**:
 Clasificacion fija de un **Mission Stage** hoja que determina su puntaje base cuando la hoja queda validada. Los valores del primer release son Easy, Medium y Hard. La **Difficulty** no pertenece al **Mission Node** compuesto ni funciona como valor unico de una **Mission**.
@@ -62,6 +66,9 @@ Experto de dominio: "No. Solo los nodos hoja son Mission Stages jugables; los no
 
 Dev: "Entonces una Mission completa tiene un solo Game Type?"
 Experto de dominio: "No necesariamente. Cada Mission Stage define su propio Game Type y la Mission puede mezclar varios."
+
+Dev: "La pregunta de Trivia vive fuera de la etapa?"
+Experto de dominio: "No. Vive en el Prompt del Mission Stage. Trivia lo usa como pregunta; Treasure Hunt lo usa como instruccion."
 
 Dev: "Y la dificultad para scoring vive en la Mission completa o en el nodo hoja?"
 Experto de dominio: "En el Mission Stage. El nodo compuesto estructura el arbol, pero la hoja jugable define la Difficulty que alimenta el puntaje."

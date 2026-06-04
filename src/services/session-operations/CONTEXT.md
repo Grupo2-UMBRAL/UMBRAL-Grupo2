@@ -25,7 +25,7 @@ Grupo creado o elegido por participantes dentro de una **LiveSession**. Un **Ses
 _Avoid_: team global, user
 
 **Session Stage Flow**:
-Secuencia efectiva de etapas que una **LiveSession** ejecuta. Se deriva aplanando los **Mission Stages** hoja del arbol de **Mission Nodes** en recorrido depth-first de izquierda a derecha y puede cambiar por desactivaciones propias de la sesion. Conserva los datos operativos necesarios de cada hoja, incluida su **Difficulty**, para que el scoring de esa ejecucion no dependa de ediciones posteriores de la **Mission** reusable.
+Secuencia efectiva de etapas que una **LiveSession** ejecuta. Se deriva aplanando los **Mission Stages** hoja del arbol de **Mission Nodes** en recorrido depth-first de izquierda a derecha y puede cambiar por desactivaciones propias de la sesion. Conserva los datos operativos necesarios de cada hoja, incluido su **Prompt** y su **Difficulty**, para que la experiencia del participante y el scoring de esa ejecucion no dependan de ediciones posteriores de la **Mission** reusable.
 _Avoid_: Mission Stage, flujo base
 
 **Session Progression**:
@@ -89,8 +89,12 @@ Capacidad operativa de desactivar etapas pendientes dentro del **Session Stage F
 _Avoid_: editar la Mission base, borrar historial ya ejecutado, desactivar solo el nodo visual sin efecto en hojas
 
 **Participant Stage View**:
-Vista operativa que recibe un **Session Team** participante durante la **LiveSession**. Muestra la hoja jugable actual y puede incluir el nombre del bloque padre como contexto, pero no expone el arbol completo de **Mission Nodes**.
+Vista operativa que recibe un **Session Team** participante durante la **LiveSession**. Muestra la hoja jugable actual, su **Prompt** visible y puede incluir el nombre del bloque padre como contexto, pero no expone el arbol completo de **Mission Nodes**.
 _Avoid_: mostrar toda la jerarquia administrativa al jugador, convertir estructura de diseno en carga cognitiva de runtime
+
+**Prompt**:
+Texto principal visible de la hoja actual dentro de una **LiveSession**. Se copia desde el **Mission Stage** al crear el snapshot del **Session Stage Flow**. En `Trivia` se presenta como pregunta o enunciado; en `Treasure Hunt` como instruccion, objetivo o contexto previo al escaneo.
+_Avoid_: respuesta correcta, hint liberada, nota privada de operador
 
 ## Flagged Ambiguities
 
@@ -143,6 +147,9 @@ Experto de dominio: "Se puede desactivar lo pendiente. Lo ya completado queda in
 
 Dev: "El participante ve todo el arbol de la mision?"
 Experto de dominio: "No. Ve su hoja actual y, si ayuda, el nombre del bloque padre como contexto."
+
+Dev: "Entonces una respuesta Trivia puede validarse sin pregunta?"
+Experto de dominio: "No deberia. El participante necesita ver el Prompt de la hoja actual antes de enviar evidencia."
 
 Dev: "Y Evidence Submission existe aunque luego no otorgue puntos?"
 Experto de dominio: "Si. Primero es un hecho operativo de la sesion; el puntaje se decide aparte."
