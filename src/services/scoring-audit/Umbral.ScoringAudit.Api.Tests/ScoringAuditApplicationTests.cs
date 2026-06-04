@@ -118,6 +118,75 @@ public sealed class SessionEventLogApplicationTests
         Assert.Equal(persistedEvent.Id, hubClient.EventLogPayloads[0].Id);
     }
 
+    [Fact]
+    public async Task ApplyPenaltyCommand_PersistsPenaltyAppliedAuditEventAndPublishesRealtimePayload()
+    {
+        await using var dbContext = CreateDbContext();
+        var hubClient = new CapturingScoringAuditClient();
+        var handler = new ApplyPenaltyHandler(
+            dbContext,
+            TimeProvider.System,
+            new CapturingScoringAuditHubContext(hubClient));
+        var liveSessionId = Guid.NewGuid();
+        var sessionTeamId = Guid.NewGuid();
+        var commandId = Guid.NewGuid();
+
+        var response = await handler.Handle(
+            new ApplyPenaltyCommand(
+                liveSessionId,
+                sessionTeamId,
+                commandId,
+                "Major",
+                "operator-7",
+                "Uso indebido de pista.",
+                DateTimeOffset.Parse("2026-06-04T02:15:00Z")),
+            CancellationToken.None);
+
+        var persistedEvent = await dbContext.SessionEventLogs.SingleAsync();
+        var expectedDescription = $"Penalty of severity 'Major' applied to Session Team '{sessionTeamId}' by Operator 'operator-7' for reason: Uso indebido de pista. Score variation: -100 points.";
+        Assert.True(response.PenaltyApplied);
+        Assert.Equal(liveSessionId, persistedEvent.LiveSessionId);
+        Assert.Equal("PenaltyApplied", persistedEvent.EventType);
+        Assert.Equal(expectedDescription, persistedEvent.Description);
+        Assert.Single(hubClient.EventLogPayloads);
+        Assert.Equal(persistedEvent.Id, hubClient.EventLogPayloads[0].Id);
+        Assert.Single(hubClient.RankingPayloads);
+    }
+
+    [Fact]
+    public async Task ApplyPenaltyCommand_ReplayedCommandDoesNotDuplicateScoreEntryOrPenaltyAppliedEvent()
+    {
+        await using var dbContext = CreateDbContext();
+        var hubClient = new CapturingScoringAuditClient();
+        var handler = new ApplyPenaltyHandler(
+            dbContext,
+            TimeProvider.System,
+            new CapturingScoringAuditHubContext(hubClient));
+        var liveSessionId = Guid.NewGuid();
+        var sessionTeamId = Guid.NewGuid();
+        var commandId = Guid.NewGuid();
+        var command = new ApplyPenaltyCommand(
+            liveSessionId,
+            sessionTeamId,
+            commandId,
+            "Minor",
+            "operator-9",
+            "Reenvio accidental.",
+            DateTimeOffset.Parse("2026-06-04T02:45:00Z"));
+
+        var firstResponse = await handler.Handle(command, CancellationToken.None);
+        var replayResponse = await handler.Handle(command, CancellationToken.None);
+
+        Assert.True(firstResponse.PenaltyApplied);
+        Assert.False(replayResponse.PenaltyApplied);
+        Assert.Equal(1, await dbContext.ScoreEntries.CountAsync());
+        Assert.Equal(1, await dbContext.SessionEventLogs.CountAsync());
+        var eventLog = await dbContext.SessionEventLogs.SingleAsync();
+        Assert.Equal("PenaltyApplied", eventLog.EventType);
+        Assert.Single(hubClient.RankingPayloads);
+        Assert.Single(hubClient.EventLogPayloads);
+    }
+
     private static ScoringAuditDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ScoringAuditDbContext>()

@@ -194,7 +194,8 @@ public sealed class GetSessionTeamDetailQueryHandler(
             currentStage.SourceOrder,
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
-            currentStage.GameType);
+            currentStage.GameType,
+            currentStage.Prompt);
     }
 
     private static IReadOnlyList<SessionTeamReleasedHintDetail> MapReleasedHints(

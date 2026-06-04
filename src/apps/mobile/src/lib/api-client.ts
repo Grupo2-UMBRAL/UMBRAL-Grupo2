@@ -145,6 +145,7 @@ export type CurrentSessionStageSnapshot = {
   resolvedTimeBudgetMinutes: number;
   difficulty: string;
   gameType: string;
+  prompt: string;
 };
 
 export type VisibleHintSnapshot = {
@@ -166,6 +167,7 @@ export type SessionTeamSnapshot = {
   progressState: string;
   currentStage?: CurrentSessionStageSnapshot;
   visibleHints: VisibleHintSnapshot[];
+  allStages?: CurrentSessionStageSnapshot[];
   sync: SnapshotSyncMetadata;
 };
 

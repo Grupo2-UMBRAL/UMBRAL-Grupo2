@@ -61,7 +61,8 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             liveSession.GetProgressStateForTeam(sessionTeam.Id),
             MapCurrentStage(liveSession.GetCurrentStageForTeam(sessionTeam.Id)),
             MapVisibleHints(liveSession, sessionTeam.Id),
-            CreateSyncMetadata(liveSession, sessionTeam, serverTimeUtc));
+            CreateSyncMetadata(liveSession, sessionTeam, serverTimeUtc),
+            MapAllStages(liveSession));
     }
 
     private static UmbralDomainException CreateSessionTeamNotFoundException(Guid sessionTeamId)
@@ -125,7 +126,21 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             currentStage.SourceOrder,
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
-            currentStage.GameType);
+            currentStage.GameType,
+            currentStage.Prompt);
+    }
+
+    private static IReadOnlyList<CurrentSessionStageSnapshot>? MapAllStages(LiveSession liveSession)
+    {
+        if (!string.Equals(liveSession.State, LiveSessionStates.Finalized, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return liveSession.SessionStageFlow
+            .OrderBy(stage => stage.SessionStageOrder)
+            .Select(stage => MapCurrentStage(stage)!)
+            .ToArray();
     }
 
     private static IReadOnlyList<VisibleHintSnapshot> MapVisibleHints(
@@ -146,6 +161,12 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
 
             var hint = sessionStage.Hints.FirstOrDefault(stageHint => stageHint.Id == releasedHint.HintId);
             if (hint is null)
+            {
+                continue;
+            }
+
+            if (hint.IsSolution
+                && !string.Equals(liveSession.State, LiveSessionStates.Finalized, StringComparison.Ordinal))
             {
                 continue;
             }

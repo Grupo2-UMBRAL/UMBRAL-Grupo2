@@ -157,6 +157,11 @@ public sealed class LiveSession
 
     public void FinalizeSession()
     {
+        if (string.Equals(State, LiveSessionStates.Finalized, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         EnsureState(
             LiveSessionStates.Active,
             LiveSessionStates.Paused,
@@ -164,6 +169,48 @@ public sealed class LiveSession
             "Only an Active or Paused LiveSession can finalize.");
 
         State = LiveSessionStates.Finalized;
+    }
+
+    public IReadOnlyList<ReleasedHint> FinalizeAndRevealAllHints(DateTimeOffset releasedAtUtc)
+    {
+        FinalizeSession();
+
+        var releasedHints = new List<ReleasedHint>();
+        var orderedStages = SessionStageFlow.OrderBy(stage => stage.SessionStageOrder).ToArray();
+
+        foreach (var sessionTeam in SessionTeams)
+        {
+            foreach (var sessionStage in orderedStages)
+            {
+                foreach (var sessionStageHint in sessionStage.Hints)
+                {
+                    if (ReleasedHints.Any(releasedHint =>
+                        releasedHint.SessionTeamId == sessionTeam.Id
+                        && releasedHint.MissionStageId == sessionStage.MissionStageId
+                        && releasedHint.HintId == sessionStageHint.Id))
+                    {
+                        continue;
+                    }
+
+                    var releasedHint = ReleasedHint.Create(
+                        Id,
+                        sessionTeam.Id,
+                        sessionStage.MissionStageId,
+                        sessionStageHint.Id,
+                        releasedAtUtc,
+                        "Rule");
+                    ReleasedHints.Add(releasedHint);
+                    releasedHints.Add(releasedHint);
+                }
+            }
+        }
+
+        if (releasedHints.Count > 0)
+        {
+            SequenceNumber++;
+        }
+
+        return releasedHints;
     }
 
     public void Cancel()

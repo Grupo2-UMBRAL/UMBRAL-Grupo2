@@ -105,7 +105,8 @@ function createSnapshot(overrides: Partial<SessionTeamSnapshot> = {}): SessionTe
       sourceOrder: 10,
       resolvedTimeBudgetMinutes: 15,
       difficulty: "Medium",
-      gameType: "Trivia"
+      gameType: "Trivia",
+      prompt: "Decode the message hidden in the seal."
     },
     visibleHints: [
       {
@@ -270,6 +271,108 @@ test("renders a static map only when the unlocked hint includes coordinates", as
   ).toBeTruthy();
 });
 
+test("renders final mission resolutions with stage metadata, solutions and maps", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(
+    createSnapshot({
+      sessionState: "Finalized",
+      currentStage: undefined,
+      progressState: "Completed",
+      allStages: [
+        {
+          missionStageId: "stage-1",
+          name: "Decode the seal",
+          sessionStageOrder: 1,
+          sourceOrder: 10,
+          resolvedTimeBudgetMinutes: 15,
+          difficulty: "Medium",
+          gameType: "Trivia",
+          prompt: "Decode the message hidden in the seal."
+        },
+        {
+          missionStageId: "stage-2",
+          name: "Find the archive gate",
+          sessionStageOrder: 2,
+          sourceOrder: 20,
+          resolvedTimeBudgetMinutes: 10,
+          difficulty: "Hard",
+          gameType: "TreasureHunt",
+          prompt: "Find the archive gate marker."
+        }
+      ],
+      visibleHints: [
+        {
+          hintId: "hint-1",
+          missionStageId: "stage-1",
+          content: "Look for the blue sigil.",
+          isSolution: false,
+          unlockedAtUtc: "2026-06-03T08:00:00Z",
+          unlockReason: "Manual"
+        },
+        {
+          hintId: "solution-1",
+          missionStageId: "stage-1",
+          content: "The answer is aurora.",
+          isSolution: true,
+          latitude: 10.50001,
+          longitude: -66.90001,
+          unlockedAtUtc: "2026-06-03T09:00:00Z",
+          unlockReason: "Rule"
+        }
+      ]
+    })
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Resoluciones de la Misión")).toBeTruthy();
+  });
+
+  expect(screen.getByText("Decode the seal")).toBeTruthy();
+  expect(screen.getByText("Stage 1")).toBeTruthy();
+  expect(screen.getByText("The answer is aurora.")).toBeTruthy();
+  expect(screen.getByText("Solution")).toBeTruthy();
+  expect(screen.getByText(/Lat 10.50001 \| Lon -66.90001/)).toBeTruthy();
+  expect(screen.getByText("Evidence CTA disabled by lifecycle guard.")).toBeTruthy();
+  expect(screen.queryByPlaceholderText("Escribe tu respuesta...")).toBeNull();
+});
+
+test("keeps final solutions out of live Visible hints before finalization", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(
+    createSnapshot({
+      visibleHints: [
+        {
+          hintId: "hint-1",
+          missionStageId: "stage-1",
+          content: "Look for the blue sigil.",
+          isSolution: false,
+          unlockedAtUtc: "2026-06-03T08:00:00Z",
+          unlockReason: "Manual"
+        },
+        {
+          hintId: "solution-1",
+          missionStageId: "stage-1",
+          content: "The answer is aurora.",
+          isSolution: true,
+          unlockedAtUtc: "2026-06-03T09:00:00Z",
+          unlockReason: "Rule"
+        }
+      ]
+    })
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
+  });
+
+  expect(screen.queryByText("Resoluciones de la Misión")).toBeNull();
+  expect(screen.queryByText("The answer is aurora.")).toBeNull();
+});
+
 test("does not duplicate a hint when ReceiveHintUnlocked repeats an existing snapshot hint", async () => {
   const apiClient = createMockApiClient();
   apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
@@ -374,7 +477,8 @@ test("resync callback fetches a fresh snapshot after SignalR reconnect", async (
           sourceOrder: 20,
           resolvedTimeBudgetMinutes: 10,
           difficulty: "Hard",
-          gameType: "TreasureHunt"
+          gameType: "TreasureHunt",
+          prompt: "Find the archive gate marker."
         },
         sync: {
           sequenceNumber: 3,

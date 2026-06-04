@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Umbral.ScoringAudit.Api.Application.Audit;
+using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ScoringAudit.Api.Domain.Penalties;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
@@ -73,11 +75,19 @@ public sealed class ApplyPenaltyHandler(
             request.RecordedAt);
 
         ScoreEntry? scoreEntry = null;
+        SessionEventLog? eventLog = null;
         var penaltyApplied = false;
 
         try
         {
             scoreEntry = scoreboard.ApplyPenalty(penalty);
+            eventLog = new SessionEventLog(
+                Guid.NewGuid(),
+                request.LiveSessionId,
+                "PenaltyApplied",
+                CreatePenaltyAppliedDescription(penalty, scoreEntry),
+                request.RecordedAt);
+            dbContext.SessionEventLogs.Add(eventLog);
             await dbContext.SaveChangesAsync(cancellationToken);
             scoreboard.RebuildState();
             penaltyApplied = true;
@@ -91,6 +101,13 @@ public sealed class ApplyPenaltyHandler(
         if (penaltyApplied)
         {
             await hubContext.Clients.All.ReceiveRankingUpdated(ranking).WaitAsync(cancellationToken);
+
+            if (eventLog is not null)
+            {
+                await hubContext.Clients.All
+                    .ReceiveEventLogUpdated(SessionEventLogPayload.FromEntity(eventLog))
+                    .WaitAsync(cancellationToken);
+            }
         }
 
         return new ApplyPenaltyResponse(
@@ -115,5 +132,14 @@ public sealed class ApplyPenaltyHandler(
             "penalty.unknown_severity",
             "Penalty Severity is not supported.",
             UmbralFailureCategory.Validation);
+    }
+
+    private static string CreatePenaltyAppliedDescription(Penalty penalty, ScoreEntry scoreEntry)
+    {
+        var reason = penalty.Reason.EndsWith(".", StringComparison.Ordinal)
+            ? penalty.Reason
+            : $"{penalty.Reason}.";
+
+        return $"Penalty of severity '{penalty.Severity}' applied to Session Team '{penalty.SessionTeamId}' by Operator '{penalty.AppliedByOperatorUserId}' for reason: {reason} Score variation: {scoreEntry.Delta} points.";
     }
 }

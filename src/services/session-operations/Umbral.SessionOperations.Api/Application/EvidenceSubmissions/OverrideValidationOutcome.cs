@@ -80,6 +80,12 @@ public sealed class OverrideValidationOutcomeHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await scoringAuditClient.LogSessionEventAsync(
+            liveSession.Id,
+            "ValidationOutcome",
+            $"Evidence submission '{evidenceSubmission.Id}' for Session Team '{evidenceSubmission.SessionTeamId}' on Mission Stage '{evidenceSubmission.MissionStageId}' was validated as {evidenceSubmission.Outcome}. Source: OperatorOverride. Reason: {request.Reason}.",
+            cancellationToken);
+
         if (!string.Equals(previousOutcome, ValidationOutcome.Accepted.ToString(), StringComparison.Ordinal)
             && evidenceSubmission.Outcome == ValidationOutcome.Accepted)
         {
@@ -213,7 +219,8 @@ public sealed class OverrideValidationOutcomeHandler(
             currentStage.SourceOrder,
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
-            currentStage.GameType);
+            currentStage.GameType,
+            currentStage.Prompt);
     }
 
     private static RecordStageCreditRequest CreateStageCreditRequest(

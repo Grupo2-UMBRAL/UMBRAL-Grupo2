@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
 using Umbral.SessionOperations.Api.Hubs;
@@ -18,7 +19,8 @@ public sealed record ReleaseHintRequest(Guid? SessionTeamId);
 public sealed class ReleaseHintHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
+    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    IScoringAuditClient scoringAuditClient)
     : IRequestHandler<ReleaseHintCommand, IReadOnlyList<VisibleHintSnapshot>>
 {
     public async Task<IReadOnlyList<VisibleHintSnapshot>> Handle(
@@ -46,6 +48,11 @@ public sealed class ReleaseHintHandler(
             : ReleaseForEligibleTeams(liveSession, request.HintId, releasedAtUtc);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var releasedHint in releasedHints)
+        {
+            await LogHintReleasedAsync(releasedHint, cancellationToken);
+        }
 
         var visibleHints = releasedHints
             .Select(releasedHint => MapVisibleHint(liveSession, releasedHint))
@@ -135,6 +142,15 @@ public sealed class ReleaseHintHandler(
 
         await hubContext.Clients.All.ReceiveHintUnlocked(payload).WaitAsync(cancellationToken);
     }
+
+    private async Task LogHintReleasedAsync(
+        ReleasedHint releasedHint,
+        CancellationToken cancellationToken)
+        => await scoringAuditClient.LogSessionEventAsync(
+            releasedHint.LiveSessionId,
+            "HintReleased",
+            $"Hint '{releasedHint.HintId}' released to Session Team '{releasedHint.SessionTeamId}' for Mission Stage '{releasedHint.MissionStageId}'. Reason: {releasedHint.UnlockReason}.",
+            cancellationToken);
 
     private static VisibleHintSnapshot MapVisibleHint(LiveSession liveSession, ReleasedHint releasedHint)
     {

@@ -285,7 +285,7 @@ public sealed class SessionSnapshotsQaTests
             metadata,
             AlphaTeamId,
             PreviousStage: null,
-            new CurrentSessionStageSnapshot(StageTwoId, "Stage Two", 2, 20, 45, "Hard", "Qr"),
+            new CurrentSessionStageSnapshot(StageTwoId, "Stage Two", 2, 20, 45, "Hard", "Qr", "Stage Two prompt"),
             "InProgress");
         var hintUnlocked = new HintUnlockedPayload(
             metadata,

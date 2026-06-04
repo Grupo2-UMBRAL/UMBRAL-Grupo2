@@ -30,7 +30,8 @@ public sealed record SessionTeamSnapshot(
     string ProgressState,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? CurrentStage,
     IReadOnlyList<VisibleHintSnapshot> VisibleHints,
-    SnapshotSyncMetadata Sync);
+    SnapshotSyncMetadata Sync,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<CurrentSessionStageSnapshot>? AllStages);
 
 public sealed record CurrentSessionStageSnapshot(
     Guid MissionStageId,
@@ -39,7 +40,8 @@ public sealed record CurrentSessionStageSnapshot(
     int SourceOrder,
     int ResolvedTimeBudgetMinutes,
     string Difficulty,
-    string GameType);
+    string GameType,
+    string Prompt);
 
 public sealed record VisibleHintSnapshot(
     Guid HintId,

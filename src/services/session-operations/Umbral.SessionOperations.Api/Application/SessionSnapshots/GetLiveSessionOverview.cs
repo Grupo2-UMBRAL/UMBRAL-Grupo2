@@ -132,7 +132,8 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             currentStage.SourceOrder,
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
-            currentStage.GameType);
+            currentStage.GameType,
+            currentStage.Prompt);
     }
 
     private static IReadOnlyList<VisibleHintSnapshot> MapVisibleHints(
