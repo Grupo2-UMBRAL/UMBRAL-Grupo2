@@ -714,6 +714,78 @@ textarea {
   color: var(--text);
 }
 
+.live-session-overview-dashboard {
+    align-content: start;
+}
+
+.overview-command-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+    padding: 1rem;
+    border-radius: var(--radius-control);
+    border: 1px solid rgba(75, 64, 51, 0.1);
+    background: rgba(255, 255, 255, 0.74);
+}
+
+.overview-command-bar h3,
+.overview-command-bar h4,
+.overview-slot h4,
+.operator-detail-card h4 {
+    margin: 0.2rem 0 0;
+}
+
+.overview-command-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.75rem;
+}
+
+.overview-metric-grid,
+.session-team-grid,
+.overview-secondary-grid {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.overview-metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.overview-metric-value {
+    font-size: 1.35rem;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.session-team-grid {
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.session-team-card,
+.overview-slot {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-radius: var(--radius-control);
+    border: 1px solid rgba(75, 64, 51, 0.1);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.session-team-definition-grid {
+    gap: 0.6rem;
+}
+
+.session-team-definition-grid div {
+    padding-top: 0.6rem;
+}
+
+.overview-secondary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .tree-empty-state {
     padding: 1rem;
     border-radius: var(--radius-control);
@@ -838,6 +910,8 @@ textarea {
     .focus-list,
     .status-grid,
     .mission-summary-grid,
+    .overview-metric-grid,
+    .overview-secondary-grid,
     .operator-workspace-grid,
     .mission-workspace-grid,
     .form-grid-two,
@@ -852,10 +926,15 @@ textarea {
     }
 
     .mission-list-header,
+    .overview-command-bar,
     .mission-list-item-top,
     .mission-node-header,
     .node-actions {
         flex-direction: column;
+    }
+
+    .overview-command-actions {
+        justify-content: start;
     }
 }
 

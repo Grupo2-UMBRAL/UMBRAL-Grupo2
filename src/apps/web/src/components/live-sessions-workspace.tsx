@@ -7,7 +7,6 @@ import {
   LogLevel
 } from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
-import { useSessionOperationsConnection } from "@/hooks/use-session-operations-connection";
 
 type EligibleMissionSummary = {
   id: string;
@@ -133,6 +132,46 @@ type LiveSessionOverview = {
   sessionTeams: LiveSessionOverviewTeam[];
 };
 
+type SnapshotRefreshPolicy = 1 | 2 | "ApplyIncremental" | "RefreshSnapshot";
+
+type RealtimeEventMetadata = {
+  liveSessionId: string;
+  sequenceNumber: number;
+  occurredAtUtc: string;
+  refreshPolicy: SnapshotRefreshPolicy;
+  reason: string;
+};
+
+type SessionStateChangedPayload = {
+  metadata: RealtimeEventMetadata;
+  previousState: string;
+  currentState: string;
+  remainingSeconds?: number | null;
+};
+
+type TeamProgressChangedPayload = {
+  metadata: RealtimeEventMetadata;
+  sessionTeamId: string;
+  previousStage?: CurrentSessionStageSnapshot | null;
+  currentStage?: CurrentSessionStageSnapshot | null;
+  progressState: string;
+};
+
+type LegacyLiveSessionStateChangedEvent = {
+  liveSessionId: string;
+  previousState: string;
+  state: string;
+  registeredSessionTeamCount: number;
+  occurredAtUtc: string;
+};
+
+type RealtimeConnectionState =
+  | { kind: "connecting"; label: "Reconectando"; detail: string }
+  | { kind: "connected"; label: "Conectado"; detail: string }
+  | { kind: "reconnecting"; label: "Reconectando"; detail: string }
+  | { kind: "disconnected"; label: "Desconectado"; detail: string }
+  | { kind: "error"; label: "Desconectado"; detail: string };
+
 type RankingItem = {
   rank: number;
   sessionTeamId: string;
@@ -162,6 +201,26 @@ type SessionStageOperationalStatus = "Completed" | "Pending";
 
 type LiveSessionsWorkspaceProps = {
   accessToken: string;
+};
+
+type LifecycleActionViewModel = {
+  action: LiveSessionLifecycleAction;
+  label: string;
+  requiresConfirmation: boolean;
+  disabled: boolean;
+};
+
+type LiveSessionOverviewDashboardProps = {
+  liveSession: LiveSession;
+  overview: LiveSessionOverview | null;
+  connectionState: RealtimeConnectionState;
+  isLoadingOverview: boolean;
+  lifecycleActions: LifecycleActionViewModel[];
+  lifecycleActionPending: LiveSessionLifecycleAction | null;
+  rankingItemCount: number;
+  isLoadingRanking: boolean;
+  onLifecycleAction: (action: LiveSessionLifecycleAction) => void;
+  onRefreshOverview: () => void;
 };
 
 function createAuthorizedHeaders(accessToken: string) {
@@ -232,6 +291,40 @@ function formatTimestamp(value: string | null) {
   return timestamp.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 }
 
+function formatShortTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return "No sync yet";
+  }
+
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) {
+    return value;
+  }
+
+  return timestamp.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function formatRemainingSeconds(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "No timer";
+  }
+
+  const clampedValue = Math.max(0, value);
+  const hours = Math.floor(clampedValue / 3600);
+  const minutes = Math.floor((clampedValue % 3600) / 60);
+  const seconds = clampedValue % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  }
+
+  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
+
 function formatResolutionTime(value: string) {
   const [hours = "00", minutes = "00", seconds = "00"] = value.split(":");
   const secondParts = seconds.split(".");
@@ -262,6 +355,79 @@ function getReleasedHintsForTeam(team: LiveSessionOverviewTeam) {
   return team.releasedHints ?? [];
 }
 
+function getConnectionSignalClass(connectionState: RealtimeConnectionState) {
+  if (connectionState.kind === "connected") {
+    return "status-pill status-ok";
+  }
+
+  if (connectionState.kind === "connecting" || connectionState.kind === "reconnecting") {
+    return "status-pill status-loading";
+  }
+
+  return "status-pill status-error";
+}
+
+function getSessionStatePillClass(sessionState: string) {
+  if (["Active", "Running"].includes(sessionState)) {
+    return "status-pill status-ok";
+  }
+
+  if (sessionState === "Paused") {
+    return "status-pill status-loading";
+  }
+
+  if (["Cancelled", "Canceled"].includes(sessionState)) {
+    return "status-pill status-error";
+  }
+
+  return "status-pill status-ok";
+}
+
+function getProgressPillClass(progressState: string) {
+  if (progressState === "Completed") {
+    return "status-pill status-ok";
+  }
+
+  if (progressState === "NotStarted") {
+    return "status-pill status-loading";
+  }
+
+  return "status-pill status-ok";
+}
+
+function getStageLabel(stage: CurrentSessionStageSnapshot | null) {
+  if (!stage) {
+    return "Sin etapa actual";
+  }
+
+  return `#${stage.sessionStageOrder} ${stage.name}`;
+}
+
+function isSnapshotRefreshRequired(refreshPolicy: SnapshotRefreshPolicy) {
+  return refreshPolicy === 2 || refreshPolicy === "RefreshSnapshot";
+}
+
+function syncFromMetadata(metadata: RealtimeEventMetadata, previousSync: LiveSessionOverview["sync"]) {
+  return {
+    sequenceNumber: metadata.sequenceNumber,
+    lastUpdatedUtc: metadata.occurredAtUtc,
+    serverTimeUtc: previousSync.serverTimeUtc
+  };
+}
+
+function sortOverviewTeams(teams: LiveSessionOverviewTeam[]) {
+  return [...teams].sort((left, right) => {
+    const leftCompleted = left.progressState === "Completed";
+    const rightCompleted = right.progressState === "Completed";
+
+    if (leftCompleted !== rightCompleted) {
+      return leftCompleted ? 1 : -1;
+    }
+
+    return left.teamName.localeCompare(right.teamName);
+  });
+}
+
 function getSessionStageOperationalStatus(
   sessionStage: LiveSessionStage,
   sessionTeams: LiveSessionOverviewTeam[]
@@ -281,6 +447,171 @@ function countTeamsAtOrBeyondSessionStage(sessionStage: LiveSessionStage, sessio
       team.progressState === "Completed" ||
       (team.currentStage !== null && team.currentStage.sessionStageOrder >= sessionStage.sessionStageOrder)
   ).length;
+}
+
+function LiveSessionOverviewDashboard({
+  liveSession,
+  overview,
+  connectionState,
+  isLoadingOverview,
+  lifecycleActions,
+  lifecycleActionPending,
+  rankingItemCount,
+  isLoadingRanking,
+  onLifecycleAction,
+  onRefreshOverview
+}: LiveSessionOverviewDashboardProps) {
+  const sessionState = overview?.sessionState ?? liveSession.state;
+  const teams = overview ? sortOverviewTeams(overview.sessionTeams) : [];
+  const activeTeamCount = teams.filter((team) => team.progressState !== "Completed").length;
+  const remainingSeconds = overview?.remainingSeconds;
+  const lastSyncLabel = formatShortTimestamp(overview?.sync.lastUpdatedUtc);
+  const overviewIsStale = connectionState.kind !== "connected";
+
+  return (
+    <div className="live-session-overview-dashboard stack-gap">
+      <section className="overview-command-bar">
+        <div>
+          <p className="eyebrow">Live operation</p>
+          <h3>{overview?.name ?? liveSession.name}</h3>
+          <p className="muted-copy">{overview?.missionName ?? liveSession.missionName}</p>
+        </div>
+
+        <div className="overview-command-actions">
+          <span className={getConnectionSignalClass(connectionState)}>
+            Realtime Sync: {connectionState.label}
+          </span>
+          <button className="ghost-button" disabled={isLoadingOverview} onClick={onRefreshOverview} type="button">
+            {isLoadingOverview ? "Refreshing..." : "Refresh overview"}
+          </button>
+        </div>
+      </section>
+
+      <div className="overview-metric-grid">
+        <article className="signal-card">
+          <strong>Session State</strong>
+          <p className="metric-value overview-metric-value">{sessionState}</p>
+        </article>
+        <article className="signal-card">
+          <strong>Remaining time</strong>
+          <p className="metric-value overview-metric-value">{formatRemainingSeconds(remainingSeconds)}</p>
+        </article>
+        <article className="signal-card">
+          <strong>Active teams</strong>
+          <p className="metric-value overview-metric-value">{overview ? activeTeamCount : liveSession.registeredSessionTeamCount}</p>
+        </article>
+        <article className="signal-card">
+          <strong>Last sync</strong>
+          <p className="metric-value overview-metric-value">{lastSyncLabel}</p>
+        </article>
+      </div>
+
+      <section className="operator-detail-card">
+        <div className="mission-list-header">
+          <div>
+            <p className="eyebrow">Lifecycle</p>
+            <h4>Control de sesion</h4>
+          </div>
+          <span className={getSessionStatePillClass(sessionState)}>{sessionState}</span>
+        </div>
+
+        <div className="mission-action-row">
+          {lifecycleActions.map((action) => (
+            <button
+              className={action.action === "cancel" ? "ghost-button danger-button" : "ghost-button"}
+              disabled={action.disabled || lifecycleActionPending !== null}
+              key={action.action}
+              onClick={() => onLifecycleAction(action.action)}
+              type="button"
+            >
+              {lifecycleActionPending === action.action ? "Updating..." : action.label}
+            </button>
+          ))}
+        </div>
+
+        {overviewIsStale ? (
+          <p className="field-hint">
+            Realtime connection is not fully connected. Snapshot remains visible and manual refresh is available.
+          </p>
+        ) : (
+          <p className="field-hint">{connectionState.detail}</p>
+        )}
+      </section>
+
+      <section className="operator-detail-card">
+        <div className="mission-list-header">
+          <div>
+            <p className="eyebrow">Session Teams</p>
+            <h4>Operational progress</h4>
+          </div>
+          {isLoadingOverview ? <span className="status-pill status-loading">Syncing</span> : null}
+        </div>
+
+        {teams.length > 0 ? (
+          <div className="session-team-grid">
+            {teams.map((team) => (
+              <article className="session-team-card" key={team.sessionTeamId}>
+                <div className="mission-list-item-top">
+                  <div>
+                    <strong>{team.teamName}</strong>
+                    <p className="field-hint">{team.participantCount} participant(s)</p>
+                  </div>
+                  <span className={getProgressPillClass(team.progressState)}>{team.progressState}</span>
+                </div>
+
+                <dl className="definition-grid session-team-definition-grid">
+                  <div>
+                    <dt>Current Stage</dt>
+                    <dd>{getStageLabel(team.currentStage)}</dd>
+                  </div>
+                  <div>
+                    <dt>Difficulty</dt>
+                    <dd>{team.currentStage?.difficulty ?? "N/A"}</dd>
+                  </div>
+                  <div>
+                    <dt>Game Type</dt>
+                    <dd>{team.currentStage?.gameType ?? "N/A"}</dd>
+                  </div>
+                  <div>
+                    <dt>Visible hints</dt>
+                    <dd>{getReleasedHintsForTeam(team).length}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <strong>No Session Teams loaded.</strong>
+            <p>Use manual refresh if enrollment changed while realtime was reconnecting.</p>
+          </div>
+        )}
+      </section>
+
+      <div className="overview-secondary-grid">
+        <section className="overview-slot">
+          <div>
+            <p className="eyebrow">Scoring and Audit</p>
+            <h4>Ranking widget</h4>
+          </div>
+          <p className="muted-copy">
+            {isLoadingRanking
+              ? "Ranking sync is running in background."
+              : `${rankingItemCount} ranking item(s) available. Widget remains out of this slice.`}
+          </p>
+        </section>
+        <section className="overview-slot">
+          <div>
+            <p className="eyebrow">Audit Log</p>
+            <h4>Timeline</h4>
+          </div>
+          <p className="muted-copy">
+            Event timeline is intentionally absent for UMB-25. Overview keeps rendering without it.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
 }
 
 export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProps) {
@@ -305,6 +636,11 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
+  const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
+    kind: "disconnected",
+    label: "Desconectado",
+    detail: "SignalR waiting for selected LiveSession."
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -338,22 +674,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       return [];
     }
 
-    const actions: Array<{
-      action: LiveSessionLifecycleAction;
-      label: string;
-      requiresConfirmation: boolean;
-      disabled: boolean;
-    }> = [
+    const actions: LifecycleActionViewModel[] = [
       {
         action: "start",
         label: "Start session",
-        requiresConfirmation: false,
+        requiresConfirmation: true,
         disabled: selectedLiveSession.state !== "Scheduled" || selectedLiveSession.registeredSessionTeamCount === 0
       },
       {
         action: "pause",
         label: "Pause session",
-        requiresConfirmation: false,
+        requiresConfirmation: true,
         disabled: selectedLiveSession.state !== "Active"
       },
       {
@@ -532,8 +863,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
         const payload = (await response.json()) as RankingPayload;
         setSelectedLiveSessionRanking(payload);
-      } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Could not load LiveSession ranking.");
+      } catch {
         setSelectedLiveSessionRanking(null);
       } finally {
         setIsLoadingRanking(false);
@@ -572,14 +902,233 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [accessToken, eligibleMissionsUrl]
   );
 
-  useSessionOperationsConnection({
-    accessToken,
-    hubUrl: sessionHubUrl,
-    onResync: () => {
-      setIsLoadingLiveSessions(true);
-      void loadLiveSessions(selectedLiveSessionId ?? undefined);
+  const refreshSelectedOverview = useCallback(() => {
+    if (!selectedLiveSessionId) {
+      return;
     }
-  });
+
+    setIsLoadingLiveSessions(true);
+    void loadLiveSessions(selectedLiveSessionId);
+    void loadLiveSessionOverview(selectedLiveSessionId);
+  }, [loadLiveSessionOverview, loadLiveSessions, selectedLiveSessionId]);
+
+  const applySessionStateChanged = useCallback(
+    (payload: SessionStateChangedPayload) => {
+      if (payload.metadata.liveSessionId !== selectedLiveSessionId) {
+        return;
+      }
+
+      setLiveSessions((current) =>
+        current.map((liveSession) =>
+          liveSession.id === payload.metadata.liveSessionId
+            ? { ...liveSession, state: payload.currentState }
+            : liveSession
+        )
+      );
+
+      setSelectedLiveSessionOverview((current) => {
+        if (!current || current.liveSessionId !== payload.metadata.liveSessionId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          sessionState: payload.currentState,
+          remainingSeconds: payload.remainingSeconds ?? current.remainingSeconds,
+          sync: syncFromMetadata(payload.metadata, current.sync)
+        };
+      });
+
+      if (isSnapshotRefreshRequired(payload.metadata.refreshPolicy)) {
+        refreshSelectedOverview();
+      }
+    },
+    [refreshSelectedOverview, selectedLiveSessionId]
+  );
+
+  const applyTeamProgressChanged = useCallback(
+    (payload: TeamProgressChangedPayload) => {
+      if (payload.metadata.liveSessionId !== selectedLiveSessionId) {
+        return;
+      }
+
+      setSelectedLiveSessionOverview((current) => {
+        if (!current || current.liveSessionId !== payload.metadata.liveSessionId) {
+          return current;
+        }
+
+        const hasTeam = current.sessionTeams.some((team) => team.sessionTeamId === payload.sessionTeamId);
+        if (!hasTeam) {
+          return current;
+        }
+
+        return {
+          ...current,
+          sessionTeams: current.sessionTeams.map((team) =>
+            team.sessionTeamId === payload.sessionTeamId
+              ? {
+                  ...team,
+                  currentStage: payload.currentStage ?? null,
+                  progressState: payload.progressState
+                }
+              : team
+          ),
+          sync: syncFromMetadata(payload.metadata, current.sync)
+        };
+      });
+
+      if (isSnapshotRefreshRequired(payload.metadata.refreshPolicy)) {
+        refreshSelectedOverview();
+      }
+    },
+    [refreshSelectedOverview, selectedLiveSessionId]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    if (!selectedLiveSessionId || !accessToken.trim() || !sessionHubUrl.trim()) {
+      queueMicrotask(() => {
+        if (active) {
+          setSessionRealtimeConnection({
+            kind: "disconnected",
+            label: "Desconectado",
+            detail: "SignalR waiting for selected LiveSession."
+          });
+        }
+      });
+
+      return () => {
+        active = false;
+      };
+    }
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(sessionHubUrl, {
+        accessTokenFactory: () => accessToken,
+        skipNegotiation: false,
+        transport: HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on("ReceiveSessionStateChanged", (payload: SessionStateChangedPayload) => {
+      if (active) {
+        applySessionStateChanged(payload);
+      }
+    });
+
+    connection.on("ReceiveTeamProgressChanged", (payload: TeamProgressChangedPayload) => {
+      if (active) {
+        applyTeamProgressChanged(payload);
+      }
+    });
+
+    connection.on("liveSessionStateChanged", (payload: LegacyLiveSessionStateChangedEvent) => {
+      if (!active || payload.liveSessionId !== selectedLiveSessionId) {
+        return;
+      }
+
+      setLiveSessions((current) =>
+        current.map((liveSession) =>
+          liveSession.id === payload.liveSessionId
+            ? {
+                ...liveSession,
+                state: payload.state,
+                registeredSessionTeamCount: payload.registeredSessionTeamCount
+              }
+            : liveSession
+        )
+      );
+      refreshSelectedOverview();
+    });
+
+    connection.onreconnecting(() => {
+      if (!active) {
+        return;
+      }
+
+      setSessionRealtimeConnection({
+        kind: "reconnecting",
+        label: "Reconectando",
+        detail: "Realtime stream dropped. Snapshot remains visible."
+      });
+    });
+
+    connection.onreconnected(() => {
+      if (!active) {
+        return;
+      }
+
+      setSessionRealtimeConnection({
+        kind: "connected",
+        label: "Conectado",
+        detail: "Realtime session stream restored."
+      });
+      refreshSelectedOverview();
+    });
+
+    connection.onclose((error) => {
+      if (!active) {
+        return;
+      }
+
+      setSessionRealtimeConnection({
+        kind: error ? "error" : "disconnected",
+        label: "Desconectado",
+        detail: error ? `SignalR closed: ${error.message}` : "Realtime session stream closed."
+      });
+    });
+
+    queueMicrotask(() => {
+      if (active) {
+        setSessionRealtimeConnection({
+          kind: "connecting",
+          label: "Reconectando",
+          detail: "Opening realtime session stream."
+        });
+      }
+    });
+
+    void connection.start().then(
+      () => {
+        if (!active) {
+          void connection.stop();
+          return;
+        }
+
+        setSessionRealtimeConnection({
+          kind: "connected",
+          label: "Conectado",
+          detail: "Realtime session stream connected."
+        });
+      },
+      (error: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        setSessionRealtimeConnection({
+          kind: "error",
+          label: "Desconectado",
+          detail: error instanceof Error ? error.message : "Could not connect realtime session stream."
+        });
+      }
+    );
+
+    return () => {
+      active = false;
+      void connection.stop();
+    };
+  }, [
+    accessToken,
+    applySessionStateChanged,
+    applyTeamProgressChanged,
+    refreshSelectedOverview,
+    selectedLiveSessionId,
+    sessionHubUrl
+  ]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -794,6 +1343,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       }
 
       await loadLiveSessions(selectedLiveSession.id);
+      await loadLiveSessionOverview(selectedLiveSession.id);
       setFeedback(`LiveSession moved through lifecycle action: ${action}.`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Could not update Session Lifecycle.");
@@ -1227,38 +1777,57 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
             {selectedLiveSession ? (
               <>
-                <dl className="definition-grid">
-                  <div>
-                    <dt>Mission</dt>
-                    <dd>{selectedLiveSession.missionName}</dd>
-                  </div>
-                  <div>
-                    <dt>Scheduled start</dt>
-                    <dd>{formatTimestamp(selectedLiveSession.scheduledStartAtUtc)}</dd>
-                  </div>
-                  <div>
-                    <dt>Created at</dt>
-                    <dd>{formatTimestamp(selectedLiveSession.createdAtUtc)}</dd>
-                  </div>
-                  <div>
-                    <dt>Join code</dt>
-                    <dd>{selectedLiveSession.joinCode ?? "Not generated yet"}</dd>
-                  </div>
-                  <div>
-                    <dt>Enrollment window</dt>
-                    <dd>
-                      {selectedLiveSession.enrollmentWindowOpenedAtUtc
-                        ? selectedLiveSession.enrollmentWindowClosedAtUtc
-                          ? `Closed at ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
-                          : `Open since ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
-                        : "Not opened"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Registered teams</dt>
-                    <dd>{selectedLiveSession.registeredSessionTeamCount}</dd>
-                  </div>
-                </dl>
+                {selectedLiveSession.state !== "Scheduled" ? (
+                  <LiveSessionOverviewDashboard
+                    connectionState={sessionRealtimeConnection}
+                    isLoadingOverview={isLoadingLiveSessionOverview}
+                    isLoadingRanking={isLoadingRanking}
+                    lifecycleActionPending={lifecycleActionPending}
+                    lifecycleActions={lifecycleActions}
+                    liveSession={selectedLiveSession}
+                    onLifecycleAction={(action) => {
+                      void handleLifecycleAction(action);
+                    }}
+                    onRefreshOverview={refreshSelectedOverview}
+                    overview={isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview : null}
+                    rankingItemCount={selectedRankingItems.length}
+                  />
+                ) : null}
+
+                {selectedLiveSession.state === "Scheduled" ? (
+                  <>
+                    <dl className="definition-grid">
+                      <div>
+                        <dt>Mission</dt>
+                        <dd>{selectedLiveSession.missionName}</dd>
+                      </div>
+                      <div>
+                        <dt>Scheduled start</dt>
+                        <dd>{formatTimestamp(selectedLiveSession.scheduledStartAtUtc)}</dd>
+                      </div>
+                      <div>
+                        <dt>Created at</dt>
+                        <dd>{formatTimestamp(selectedLiveSession.createdAtUtc)}</dd>
+                      </div>
+                      <div>
+                        <dt>Join code</dt>
+                        <dd>{selectedLiveSession.joinCode ?? "Not generated yet"}</dd>
+                      </div>
+                      <div>
+                        <dt>Enrollment window</dt>
+                        <dd>
+                          {selectedLiveSession.enrollmentWindowOpenedAtUtc
+                            ? selectedLiveSession.enrollmentWindowClosedAtUtc
+                              ? `Closed at ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
+                              : `Open since ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
+                            : "Not opened"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Registered teams</dt>
+                        <dd>{selectedLiveSession.registeredSessionTeamCount}</dd>
+                      </div>
+                    </dl>
 
                 <div className="mission-action-row">
                   {lifecycleActions.map((action) => (
@@ -1282,58 +1851,60 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   </p>
                 ) : null}
 
-                <div className="live-session-flow-list">
-                  {selectedLiveSession.sessionStageFlow.map((missionStage) => {
-                    const stageStatus = getSessionStageOperationalStatus(
-                      missionStage,
-                      selectedLiveSessionOverviewTeams
-                    );
-                    const isStageCompleted = stageStatus === "Completed";
-                    const teamsAtOrBeyondStage = countTeamsAtOrBeyondSessionStage(
-                      missionStage,
-                      selectedLiveSessionOverviewTeams
-                    );
-                    const disableDeactivation =
-                      !isSelectedLiveSessionStageDeactivationAllowed ||
-                      !isSelectedLiveSessionOverviewCurrent ||
-                      isLoadingLiveSessionOverview ||
-                      isStageCompleted ||
-                      hasSingleSelectedLiveSessionStage ||
-                      pendingLiveSessionStageCount <= 1 ||
-                      deactivatingStageId !== null;
+                    <div className="live-session-flow-list">
+                      {selectedLiveSession.sessionStageFlow.map((missionStage) => {
+                        const stageStatus = getSessionStageOperationalStatus(
+                          missionStage,
+                          selectedLiveSessionOverviewTeams
+                        );
+                        const isStageCompleted = stageStatus === "Completed";
+                        const teamsAtOrBeyondStage = countTeamsAtOrBeyondSessionStage(
+                          missionStage,
+                          selectedLiveSessionOverviewTeams
+                        );
+                        const disableDeactivation =
+                          !isSelectedLiveSessionStageDeactivationAllowed ||
+                          !isSelectedLiveSessionOverviewCurrent ||
+                          isLoadingLiveSessionOverview ||
+                          isStageCompleted ||
+                          hasSingleSelectedLiveSessionStage ||
+                          pendingLiveSessionStageCount <= 1 ||
+                          deactivatingStageId !== null;
 
-                    return (
-                      <article className="live-session-flow-item" key={missionStage.missionStageId}>
-                        <div className="mission-list-item-top">
-                          <strong>
-                            #{missionStage.sessionStageOrder} {missionStage.name}
-                          </strong>
-                          <div className="mission-action-row">
-                            <span className="status-pill status-ok">{missionStage.gameType}</span>
-                            <span className={isStageCompleted ? "status-pill status-error" : "status-pill status-loading"}>
-                              {isStageCompleted ? "Completada" : "Pendiente"}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="muted-copy">
-                          Source order {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                          {missionStage.hints.length} hints in snapshot. {teamsAtOrBeyondStage} equipos en esta etapa o
-                          mas adelante.
-                        </p>
-                        <div className="mission-action-row">
-                          <button
-                            className="ghost-button danger-button"
-                            disabled={disableDeactivation}
-                            onClick={() => void handleDeactivateStage(missionStage.missionStageId)}
-                            type="button"
-                          >
-                            {deactivatingStageId === missionStage.missionStageId ? "Desactivando..." : "Desactivar Etapa"}
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                        return (
+                          <article className="live-session-flow-item" key={missionStage.missionStageId}>
+                            <div className="mission-list-item-top">
+                              <strong>
+                                #{missionStage.sessionStageOrder} {missionStage.name}
+                              </strong>
+                              <div className="mission-action-row">
+                                <span className="status-pill status-ok">{missionStage.gameType}</span>
+                                <span className={isStageCompleted ? "status-pill status-error" : "status-pill status-loading"}>
+                                  {isStageCompleted ? "Completada" : "Pendiente"}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="muted-copy">
+                              Source order {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
+                              {missionStage.hints.length} hints in snapshot. {teamsAtOrBeyondStage} equipos en esta etapa o
+                              mas adelante.
+                            </p>
+                            <div className="mission-action-row">
+                              <button
+                                className="ghost-button danger-button"
+                                disabled={disableDeactivation}
+                                onClick={() => void handleDeactivateStage(missionStage.missionStageId)}
+                                type="button"
+                              >
+                                {deactivatingStageId === missionStage.missionStageId ? "Desactivando..." : "Desactivar Etapa"}
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
 
                 {isSelectedLiveSessionActive ? (
                   <section className="operator-detail-card">
