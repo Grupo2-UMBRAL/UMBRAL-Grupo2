@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Application.Rankings;
+using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
 using Umbral.ScoringAudit.Api.Hubs;
 using Umbral.ScoringAudit.Api.Hubs.Contracts;
@@ -69,8 +71,16 @@ public sealed class RecordStageCreditHandler(
             request.RecordedAt,
             request.ValidationOverride);
 
+        SessionEventLog? eventLog = null;
         if (scoreEntry is not null)
         {
+            eventLog = new SessionEventLog(
+                Guid.NewGuid(),
+                request.LiveSessionId,
+                "StageCredit",
+                CreateStageCreditDescription(request, scoreEntry),
+                request.RecordedAt);
+            dbContext.SessionEventLogs.Add(eventLog);
             await dbContext.SaveChangesAsync(cancellationToken);
             scoreboard.RebuildState();
         }
@@ -79,6 +89,13 @@ public sealed class RecordStageCreditHandler(
         if (scoreEntry is not null)
         {
             await hubContext.Clients.All.ReceiveRankingUpdated(ranking).WaitAsync(cancellationToken);
+
+            if (eventLog is not null)
+            {
+                await hubContext.Clients.All
+                    .ReceiveEventLogUpdated(SessionEventLogPayload.FromEntity(eventLog))
+                    .WaitAsync(cancellationToken);
+            }
         }
 
         return new RecordStageCreditResponse(
@@ -102,5 +119,14 @@ public sealed class RecordStageCreditHandler(
             "scoreboard.unknown_difficulty",
             "Mission Stage difficulty is not supported.",
             UmbralFailureCategory.Validation);
+    }
+
+    private static string CreateStageCreditDescription(
+        RecordStageCreditCommand request,
+        ScoreEntry scoreEntry)
+    {
+        var source = request.ValidationOverride ? " through Validation Override" : string.Empty;
+
+        return $"Session Team '{request.SessionTeamId}' completed Mission Stage '{request.MissionStageId}'{source} and received {scoreEntry.Delta} point(s). Visible score: {scoreEntry.VisibleScoreAfter}.";
     }
 }

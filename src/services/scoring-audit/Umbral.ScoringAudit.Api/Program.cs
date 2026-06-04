@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MediatR;
+using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Application.Bootstrap.Commands;
 using Umbral.ScoringAudit.Api.Application.Bootstrap.Queries;
 using Umbral.ScoringAudit.Api.Application.Rankings;
@@ -69,6 +70,28 @@ authorizedApi.MapGet(
     "/sessions/{liveSessionId:guid}/ranking",
     async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
         Results.Ok(await sender.Send(new GetRankingQuery(liveSessionId), cancellationToken)));
+authorizedApi.MapGet(
+    "/sessions/{liveSessionId:guid}/event-log",
+    async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
+        Results.Ok(await sender.Send(new GetSessionEventLogQuery(liveSessionId), cancellationToken)))
+    .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
+authorizedApi.MapPost(
+    "/sessions/{liveSessionId:guid}/event-log",
+    async (
+        Guid liveSessionId,
+        LogSessionEventRequest request,
+        ISender sender,
+        CancellationToken cancellationToken) =>
+    {
+        var payload = await sender.Send(
+            new LogSessionEventCommand(liveSessionId, request.EventType, request.Description),
+            cancellationToken);
+
+        return Results.Created(
+            $"/api/scoring-audit/sessions/{liveSessionId}/event-log/{payload.Id}",
+            payload);
+    })
+    .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
 authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
