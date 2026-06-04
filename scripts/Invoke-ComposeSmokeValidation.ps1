@@ -74,8 +74,7 @@ function Wait-HttpOk {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         try {
-            $response = Invoke-WebRequest -Uri $Uri -Method Get -TimeoutSec 15 -SkipHttpErrorCheck
-            if ($response.StatusCode -eq 200) {
+            if ((Get-HttpStatusCode -Uri $Uri -TimeoutSeconds 15) -eq 200) {
                 return
             }
         }
@@ -86,6 +85,54 @@ function Wait-HttpOk {
     } while ((Get-Date) -lt $deadline)
 
     throw "$Name did not return HTTP 200 within $TimeoutSeconds seconds: $Uri"
+}
+
+function Get-HttpStatusCode {
+    param(
+        [string]$Uri,
+        [int]$TimeoutSeconds = 15
+    )
+
+    $curlCommand = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if ($null -eq $curlCommand) {
+        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue
+    }
+
+    if ($null -ne $curlCommand) {
+        $temporaryOutputFile = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), [System.IO.Path]::GetRandomFileName())
+        try {
+            $statusCode = & $curlCommand.Source `
+                --silent `
+                --show-error `
+                --location `
+                --max-time $TimeoutSeconds `
+                --output $temporaryOutputFile `
+                --write-out "%{http_code}" `
+                $Uri
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "curl failed for $Uri with exit code $LASTEXITCODE"
+            }
+
+            return [int]$statusCode
+        }
+        finally {
+            Remove-Item -LiteralPath $temporaryOutputFile -ErrorAction SilentlyContinue
+        }
+    }
+
+    $handler = [System.Net.Http.HttpClientHandler]::new()
+    $client = [System.Net.Http.HttpClient]::new($handler)
+    $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
+
+    try {
+        $response = $client.GetAsync($Uri).GetAwaiter().GetResult()
+        return [int]$response.StatusCode
+    }
+    finally {
+        $client.Dispose()
+        $handler.Dispose()
+    }
 }
 
 function Wait-ContainerHealthy {
@@ -211,6 +258,11 @@ try {
     Wait-ContainerHealthy -ContainerName "umbral-postgres"
     Wait-ContainerHealthy -ContainerName "umbral-rabbitmq"
     Wait-ContainerHealthy -ContainerName "umbral-keycloak"
+    Wait-ContainerHealthy -ContainerName "umbral-identity-access-service"
+    Wait-ContainerHealthy -ContainerName "umbral-mission-design-service"
+    Wait-ContainerHealthy -ContainerName "umbral-session-operations-service"
+    Wait-ContainerHealthy -ContainerName "umbral-scoring-audit-service"
+    Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health"
     Wait-HttpOk -Uri "http://localhost:$identityAccessPort/health" -Name "identity-access health"
@@ -220,6 +272,7 @@ try {
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery"
 
     Invoke-ComposeCommand -Files $composeWithUtils -Arguments @("run", "--rm", "auth-smoke-tests") | Out-File -FilePath $authSmokeLog -Encoding utf8
+
     Write-Output "Compose smoke validation passed."
 }
 catch {
