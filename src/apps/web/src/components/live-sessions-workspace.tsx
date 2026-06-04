@@ -1435,7 +1435,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [isSelectedLiveSessionOverviewCurrent, selectedLiveSessionOverview]
   );
   const selectedRankingItems =
-    selectedLiveSessionRanking?.liveSessionId === selectedLiveSession?.id
+    selectedLiveSessionRanking &&
+    selectedLiveSessionRanking.liveSessionId === selectedLiveSession?.id
       ? selectedLiveSessionRanking.items
       : [];
   const selectedEventLogItems = selectedLiveSession
@@ -1794,8 +1795,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     const connection = new HubConnectionBuilder()
       .withUrl(sessionHubUrl, {
         accessTokenFactory: () => accessToken,
-        skipNegotiation: false,
-        transport: HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(LogLevel.Warning)
@@ -2000,8 +2001,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     const connection = new HubConnectionBuilder()
       .withUrl(scoringAuditHubUrl, {
         accessTokenFactory: () => accessToken,
-        skipNegotiation: false,
-        transport: HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .configureLogging(LogLevel.Warning)
