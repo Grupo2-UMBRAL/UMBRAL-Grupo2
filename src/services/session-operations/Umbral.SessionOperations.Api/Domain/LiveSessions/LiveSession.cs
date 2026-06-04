@@ -316,6 +316,61 @@ public sealed class LiveSession
 
     public bool IsEnrollmentOpenAt(DateTimeOffset nowUtc) => EnrollmentWindow.IsOpenAt(nowUtc);
 
+    public bool IsStagePending(Guid missionStageId)
+    {
+        var orderedStages = GetOrderedStages();
+        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (stageIndex < 0)
+        {
+            return false;
+        }
+
+        return TeamProgressions.All(progress =>
+            progress.CurrentStageIndex <= stageIndex
+            && !string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal));
+    }
+
+    public void DeactivateStage(Guid missionStageId, DateTimeOffset updatedAtUtc)
+    {
+        EnsureStageDeactivationAllowed();
+
+        var orderedStages = GetOrderedStages();
+        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (stageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_found",
+                "Session Stage does not belong to this LiveSession flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        if (!IsStagePending(missionStageId))
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_pending",
+                "Session Stage is already completed by at least one Session Team.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var pendingStageCount = orderedStages.Count(stage => IsStagePending(stage.MissionStageId));
+        if (pendingStageCount <= 1)
+        {
+            throw new UmbralDomainException(
+                "session_stage_flow_last_pending_stage",
+                "Session Stage is the last pending stage in this LiveSession flow.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var updatedStages = orderedStages
+            .Where((_, index) => index != stageIndex)
+            .Select((stage, index) => stage with { SessionStageOrder = index + 1 })
+            .ToArray();
+
+        ReplaceSessionStageFlow(updatedStages);
+        RecalculateTeamProgressionsAfterStageDeactivation(stageIndex, updatedStages.Length, updatedAtUtc);
+        SequenceNumber++;
+    }
+
     public EvidenceSubmission SubmitEvidence(Guid sessionTeamId, string qrHash, DateTimeOffset submittedAtUtc)
     {
         EnsureEvidenceSubmissionAllowed();

@@ -180,6 +180,7 @@ public sealed class EvidenceSubmissionQaTests
                     10,
                     "Medium",
                     "TreasureHunt",
+                    $"Prompt for Stage {stageOrder}",
                     expectedQrHash: $"qr-stage-{stageOrder}"))
                 .ToArray());
 
@@ -206,6 +207,7 @@ public sealed class EvidenceSubmissionQaTests
                     10,
                     "Medium",
                     "Trivia",
+                    $"Prompt for Trivia Stage {stageOrder}",
                     triviaValidAnswer: "Caracas"))
                 .ToArray());
 

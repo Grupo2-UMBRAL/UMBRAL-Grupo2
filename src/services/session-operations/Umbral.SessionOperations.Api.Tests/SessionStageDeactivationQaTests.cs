@@ -231,6 +231,7 @@ public sealed class SessionStageDeactivationQaTests
                 10,
                 "Medium",
                 "TreasureHunt",
+                $"Prompt for Stage {stageOrder}",
                 expectedQrHash: $"qr-stage-{stageOrder}"))
             .ToArray();
     }

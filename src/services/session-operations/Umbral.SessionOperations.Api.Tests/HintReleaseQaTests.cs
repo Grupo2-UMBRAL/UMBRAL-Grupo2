@@ -172,6 +172,7 @@ public sealed class HintReleaseQaTests
                     30,
                     "Easy",
                     "Trivia",
+                    "Prompt for Stage One",
                     triviaValidAnswer: "seal",
                     hints:
                     [
@@ -188,6 +189,7 @@ public sealed class HintReleaseQaTests
                     45,
                     "Hard",
                     "TreasureHunt",
+                    "Prompt for Stage Two",
                     expectedQrHash: "qr-stage-2",
                     hints:
                     [
