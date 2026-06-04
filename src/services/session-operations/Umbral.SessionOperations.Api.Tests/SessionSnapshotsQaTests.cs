@@ -20,6 +20,8 @@ public sealed class SessionSnapshotsQaTests
     private static readonly Guid MissionId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     private static readonly Guid StageOneId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid StageTwoId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid StageOneHintId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+    private static readonly Guid StageTwoHintId = Guid.Parse("66666666-6666-6666-6666-666666666666");
     private static readonly Guid AlphaTeamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     private static readonly Guid BetaTeamId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
@@ -91,6 +93,178 @@ public sealed class SessionSnapshotsQaTests
         Assert.DoesNotContain("Beta Team", json, StringComparison.Ordinal);
         Assert.DoesNotContain("creator-beta", json, StringComparison.Ordinal);
         Assert.DoesNotContain("sessionTeams", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetSessionTeamDetailQuery_ReturnsOnlyRequestedSessionTeamActivity()
+    {
+        await using var dbContext = CreateDbContext();
+        var liveSession = CreateLiveSessionWithTeams();
+        liveSession.Start(NowUtc.AddMinutes(1));
+        liveSession.ReleaseHint(AlphaTeamId, StageOneHintId, NowUtc.AddMinutes(2));
+        liveSession.SubmitTriviaAnswer(AlphaTeamId, "wrong answer", NowUtc.AddMinutes(3));
+        liveSession.ReleaseHint(BetaTeamId, StageOneHintId, NowUtc.AddMinutes(4));
+        liveSession.SubmitTriviaAnswer(BetaTeamId, "beta answer", NowUtc.AddMinutes(5));
+        await SeedLiveSessionAsync(dbContext, liveSession);
+        var handler = new GetSessionTeamDetailQueryHandler(
+            dbContext,
+            new FixedTimeProvider(NowUtc.AddMinutes(6)));
+
+        var detail = await handler.Handle(
+            new GetSessionTeamDetailQuery(liveSession.Id, AlphaTeamId),
+            CancellationToken.None);
+        var json = JsonSerializer.Serialize(detail, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(AlphaTeamId, detail.SessionTeamId);
+        Assert.Equal("Alpha Team", detail.TeamName);
+        Assert.Equal(1, detail.ParticipantCount);
+        Assert.All(detail.ReleasedHints, hint => Assert.Equal(StageOneId, hint.MissionStageId));
+        Assert.All(detail.EvidenceSubmissions, submission => Assert.Equal(StageOneId, submission.MissionStageId));
+        Assert.DoesNotContain("Beta Team", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("beta answer", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetSessionTeamDetailQuery_MarksInactive_WhenLastEvidenceSubmissionExceedsThreshold()
+    {
+        await using var dbContext = CreateDbContext();
+        var liveSession = CreateLiveSessionWithTeams();
+        liveSession.Start(NowUtc.AddMinutes(1));
+        liveSession.SubmitTriviaAnswer(AlphaTeamId, "wrong answer", NowUtc.AddMinutes(5));
+        await SeedLiveSessionAsync(dbContext, liveSession);
+        var handler = new GetSessionTeamDetailQueryHandler(
+            dbContext,
+            new FixedTimeProvider(NowUtc.AddMinutes(20)));
+
+        var detail = await handler.Handle(
+            new GetSessionTeamDetailQuery(liveSession.Id, AlphaTeamId, InactivityThresholdMinutes: 10),
+            CancellationToken.None);
+
+        Assert.True(detail.IsInactive);
+        Assert.Equal(10, detail.InactivityThresholdMinutes);
+    }
+
+    [Fact]
+    public async Task GetSessionTeamDetailQuery_KeepsActive_WhenLastEvidenceSubmissionIsInsideThreshold()
+    {
+        await using var dbContext = CreateDbContext();
+        var liveSession = CreateLiveSessionWithTeams();
+        liveSession.Start(NowUtc.AddMinutes(1));
+        liveSession.SubmitTriviaAnswer(AlphaTeamId, "wrong answer", NowUtc.AddMinutes(15));
+        await SeedLiveSessionAsync(dbContext, liveSession);
+        var handler = new GetSessionTeamDetailQueryHandler(
+            dbContext,
+            new FixedTimeProvider(NowUtc.AddMinutes(20)));
+
+        var detail = await handler.Handle(
+            new GetSessionTeamDetailQuery(liveSession.Id, AlphaTeamId, InactivityThresholdMinutes: 10),
+            CancellationToken.None);
+
+        Assert.False(detail.IsInactive);
+    }
+
+    [Fact]
+    public async Task GetSessionTeamDetailQuery_UsesLastProgressAdvanceAsCurrentStageStartedAtUtc()
+    {
+        await using var dbContext = CreateDbContext();
+        var liveSession = CreateLiveSessionWithTeams();
+        liveSession.Start(NowUtc.AddMinutes(1));
+        liveSession.SubmitTriviaAnswer(AlphaTeamId, "seal", NowUtc.AddMinutes(5));
+        await SeedLiveSessionAsync(dbContext, liveSession);
+        var handler = new GetSessionTeamDetailQueryHandler(
+            dbContext,
+            new FixedTimeProvider(NowUtc.AddMinutes(8)));
+
+        var detail = await handler.Handle(
+            new GetSessionTeamDetailQuery(liveSession.Id, AlphaTeamId),
+            CancellationToken.None);
+
+        Assert.Equal(NowUtc.AddMinutes(5), detail.CurrentStageStartedAtUtc);
+        Assert.NotNull(detail.CurrentStage);
+        Assert.Equal(StageTwoId, detail.CurrentStage.MissionStageId);
+        Assert.Equal(2, detail.CurrentStage.SessionStageOrder);
+    }
+
+    [Fact]
+    public async Task GetSessionTeamDetailQuery_ReturnsHistoricalHintsAndEvidenceForEvaluatedTeam()
+    {
+        await using var dbContext = CreateDbContext();
+        var liveSession = CreateLiveSessionWithTeams();
+        liveSession.Start(NowUtc.AddMinutes(1));
+        liveSession.ReleaseHint(AlphaTeamId, StageOneHintId, NowUtc.AddMinutes(2));
+        var rejectedTriviaSubmission = liveSession.SubmitTriviaAnswer(AlphaTeamId, "wrong answer", NowUtc.AddMinutes(3));
+        var acceptedTriviaSubmission = liveSession.SubmitTriviaAnswer(AlphaTeamId, "seal", NowUtc.AddMinutes(5));
+        liveSession.ReleaseHint(AlphaTeamId, StageTwoHintId, NowUtc.AddMinutes(6));
+        var rejectedQrSubmission = liveSession.SubmitEvidence(AlphaTeamId, "wrong-qr", NowUtc.AddMinutes(8));
+        await SeedLiveSessionAsync(dbContext, liveSession);
+        var handler = new GetSessionTeamDetailQueryHandler(
+            dbContext,
+            new FixedTimeProvider(NowUtc.AddMinutes(20)));
+
+        var detail = await handler.Handle(
+            new GetSessionTeamDetailQuery(liveSession.Id, AlphaTeamId, InactivityThresholdMinutes: 10),
+            CancellationToken.None);
+
+        Assert.Equal(liveSession.Id, detail.LiveSessionId);
+        Assert.Equal(AlphaTeamId, detail.SessionTeamId);
+        Assert.Equal("Alpha Team", detail.TeamName);
+        Assert.Equal(1, detail.ParticipantCount);
+        Assert.Equal(SessionTeamProgressStates.InProgress, detail.ProgressState);
+        Assert.True(detail.IsInactive);
+        Assert.Equal(10, detail.InactivityThresholdMinutes);
+        Assert.Equal(NowUtc.AddMinutes(5), detail.CurrentStageStartedAtUtc);
+        Assert.NotNull(detail.CurrentStage);
+        Assert.Equal(StageTwoId, detail.CurrentStage.MissionStageId);
+
+        Assert.Collection(
+            detail.ReleasedHints,
+            first =>
+            {
+                Assert.Equal(StageTwoHintId, first.HintId);
+                Assert.Equal(StageTwoId, first.MissionStageId);
+                Assert.Equal("Follow the blue marker.", first.Content);
+                Assert.Equal(NowUtc.AddMinutes(6), first.ReleasedAtUtc);
+            },
+            second =>
+            {
+                Assert.Equal(StageOneHintId, second.HintId);
+                Assert.Equal(StageOneId, second.MissionStageId);
+                Assert.Equal("Look under the seal.", second.Content);
+                Assert.Equal(NowUtc.AddMinutes(2), second.ReleasedAtUtc);
+            });
+
+        Assert.Collection(
+            detail.EvidenceSubmissions,
+            first =>
+            {
+                Assert.Equal(rejectedQrSubmission.Id, first.Id);
+                Assert.Equal(StageTwoId, first.MissionStageId);
+                Assert.Equal("Stage Two", first.StageName);
+                Assert.Equal(2, first.SessionStageOrder);
+                Assert.Equal("Hard", first.Difficulty);
+                Assert.Equal("Treasure Hunt", first.GameType);
+                Assert.Equal("wrong-qr", first.SubmittedHash);
+                Assert.Equal(ValidationOutcome.Rejected.ToString(), first.ValidationOutcome);
+                Assert.False(first.IsTriviaCorrectionEligible);
+            },
+            second =>
+            {
+                Assert.Equal(acceptedTriviaSubmission.Id, second.Id);
+                Assert.Equal(StageOneId, second.MissionStageId);
+                Assert.Equal("Trivia", second.GameType);
+                Assert.Equal("seal", second.SubmittedText);
+                Assert.Equal(ValidationOutcome.Accepted.ToString(), second.ValidationOutcome);
+                Assert.False(second.IsTriviaCorrectionEligible);
+            },
+            third =>
+            {
+                Assert.Equal(rejectedTriviaSubmission.Id, third.Id);
+                Assert.Equal(StageOneId, third.MissionStageId);
+                Assert.Equal("Trivia", third.GameType);
+                Assert.Equal("wrong answer", third.SubmittedText);
+                Assert.Equal(ValidationOutcome.Rejected.ToString(), third.ValidationOutcome);
+                Assert.True(third.IsTriviaCorrectionEligible);
+            });
     }
 
     [Fact]
@@ -224,8 +398,16 @@ public sealed class SessionSnapshotsQaTests
                     20,
                     45,
                     "Hard",
-                    "Qr",
-                    "Prompt for Stage Two"),
+                    "Treasure Hunt",
+                    "Prompt for Stage Two",
+                    expectedQrHash: "stage-two-qr",
+                    hints:
+                    [
+                        LiveSessionStageHint.Create(
+                            StageTwoHintId,
+                            "Follow the blue marker.",
+                            isSolution: false)
+                    ]),
                 LiveSessionStage.Create(
                     StageOneId,
                     "Stage One",
@@ -235,7 +417,14 @@ public sealed class SessionSnapshotsQaTests
                     "Easy",
                     "Trivia",
                     "Prompt for Stage One",
-                    triviaValidAnswer: "seal")
+                    triviaValidAnswer: "seal",
+                    hints:
+                    [
+                        LiveSessionStageHint.Create(
+                            StageOneHintId,
+                            "Look under the seal.",
+                            isSolution: false)
+                    ])
             ]);
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));
         liveSession.OpenEnrollmentWindow(NowUtc);
