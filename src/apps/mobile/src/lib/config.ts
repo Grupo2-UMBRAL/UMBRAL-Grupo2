@@ -1,6 +1,6 @@
 const defaults = {
-  edgeProxyPublicBaseUrl: "http://localhost:7000",
-  keycloakPublicBaseUrl: "http://localhost:7000/auth",
+  edgeProxyPublicBaseUrl: "http://localhost:7500",
+  keycloakPublicBaseUrl: "http://localhost:7500/auth",
   sessionHubPath: "/session-hub/hubs/session",
   scoringHubPath: "/scoring-audit/hub/scoring",
   keycloakRealm: "umbral",

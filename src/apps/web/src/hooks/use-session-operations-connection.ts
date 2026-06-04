@@ -67,8 +67,8 @@ export function useSessionOperationsConnection({
       connection = new HubConnectionBuilder()
         .withUrl(hubUrl, {
           accessTokenFactory: () => accessToken,
-          skipNegotiation: false,
-          transport: HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents
+          skipNegotiation: true,
+          transport: HttpTransportType.WebSockets
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000])
         .configureLogging(LogLevel.Warning)

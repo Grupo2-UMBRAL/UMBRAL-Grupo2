@@ -19,7 +19,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 
 ## Puertos locales
 
-- `edge-proxy`: `7000`
+- `edge-proxy`: `7500`
 - `keycloak`: `8080`
 - `mission-design-service`: `7101`
 - `session-operations-service`: `7102`
@@ -60,7 +60,7 @@ Los servicios dentro de Docker validan tokens contra:
 Los clientes que corran en el host suelen descubrir Keycloak por:
 
 - `http://localhost:8080/realms/umbral`
-- o por el proxy `http://localhost:7000/auth/realms/umbral`
+- o por el proxy `http://localhost:7500/auth/realms/umbral`
 
 En fases posteriores hay que fijar una estrategia unica de issuer para evitar que un token emitido con host `localhost` sea rechazado por servicios configurados con host interno `keycloak`. Hasta cerrar esa decision, probar autenticacion desde el mismo contexto de red indicado por la configuracion activa.
 
@@ -103,8 +103,8 @@ Cada servicio incluye:
 
 1. copiar `.env.example` a `.env`
 2. ejecutar `docker compose -f docker-compose.dev.yml up --build`
-3. probar `http://localhost:7000/health`
-4. probar `http://localhost:7000/auth/realms/umbral/.well-known/openid-configuration`
+3. probar `http://localhost:7500/health`
+4. probar `http://localhost:7500/auth/realms/umbral/.well-known/openid-configuration`
 
 ## Compose de utilidades
 

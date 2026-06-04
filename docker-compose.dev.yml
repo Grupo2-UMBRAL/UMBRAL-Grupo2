@@ -92,6 +92,7 @@ services:
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-mission-design-api
+      Persistence__ApplyMigrationsOnStartup: "true"
     ports:
       - "${MISSION_DESIGN_PORT}:8080"
     depends_on:
@@ -118,6 +119,7 @@ services:
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-session-operations-api
       SignalR__Enabled: true
+      Persistence__ApplyMigrationsOnStartup: "true"
     ports:
       - "${SESSION_OPERATIONS_PORT}:8080"
     depends_on:
@@ -144,6 +146,7 @@ services:
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-scoring-audit-api
+      Persistence__ApplyMigrationsOnStartup: "true"
     ports:
       - "${SCORING_AUDIT_PORT}:8080"
     depends_on:
