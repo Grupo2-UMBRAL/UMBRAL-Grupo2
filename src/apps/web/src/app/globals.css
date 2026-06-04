@@ -872,6 +872,39 @@ textarea {
     background: rgba(255, 255, 255, 0.72);
 }
 
+.session-team-inspection-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.72fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.session-team-card-button {
+    width: 100%;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 120ms ease,
+        background-color 120ms ease,
+        box-shadow 120ms ease,
+        transform 120ms ease;
+}
+
+.session-team-card-button:hover,
+.session-team-card-button:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(39, 105, 199, 0.28);
+    box-shadow: 0 12px 28px rgba(61, 45, 30, 0.08);
+    outline: none;
+}
+
+.session-team-card-button.is-active {
+    border-color: rgba(39, 105, 199, 0.38);
+    background: rgba(39, 105, 199, 0.08);
+}
+
 .session-team-definition-grid {
     gap: 0.6rem;
 }
@@ -882,6 +915,109 @@ textarea {
 
 .overview-secondary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.team-detail-panel {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-control);
+    border: 1px solid rgba(75, 64, 51, 0.12);
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.team-detail-header,
+.team-detail-subheader,
+.team-detail-controls,
+.team-submission-header {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.team-detail-header,
+.team-detail-subheader,
+.team-submission-header {
+    justify-content: space-between;
+    align-items: start;
+}
+
+.team-detail-controls {
+    align-items: end;
+}
+
+.team-detail-controls .field {
+    flex: 1;
+}
+
+.team-inactivity-alert {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-control);
+    border: 1px solid rgba(182, 112, 25, 0.28);
+    background: rgba(182, 112, 25, 0.1);
+    color: var(--text);
+}
+
+.team-inactivity-alert p {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.team-detail-stage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.team-detail-stat {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.75rem;
+    border-radius: calc(var(--radius-control) - 4px);
+    background: rgba(75, 64, 51, 0.05);
+}
+
+.team-detail-value {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    word-break: break-word;
+}
+
+.trivia-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: min(100%, 16rem);
+    font-size: 0.88rem;
+    color: var(--text);
+}
+
+.team-detail-timeline {
+    max-height: 32rem;
+    overflow: auto;
+    padding-right: 0.2rem;
+}
+
+.team-detail-timeline-content {
+    min-width: 0;
+}
+
+.override-control {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+}
+
+.override-reason-panel {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border-radius: var(--radius-control);
+    border: 1px solid rgba(39, 105, 199, 0.18);
+    background: rgba(39, 105, 199, 0.07);
 }
 
 .tree-empty-state {
@@ -1009,6 +1145,8 @@ textarea {
     .status-grid,
     .mission-summary-grid,
     .overview-metric-grid,
+    .session-team-inspection-layout,
+    .team-detail-stage-grid,
     .overview-secondary-grid,
     .operator-workspace-grid,
     .mission-workspace-grid,
@@ -1028,6 +1166,10 @@ textarea {
     .mission-list-item-top,
     .mission-node-header,
     .widget-header,
+    .team-detail-header,
+    .team-detail-subheader,
+    .team-detail-controls,
+    .team-submission-header,
     .node-actions {
         flex-direction: column;
     }

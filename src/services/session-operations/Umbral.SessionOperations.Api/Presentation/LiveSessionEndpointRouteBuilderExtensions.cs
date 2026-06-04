@@ -34,6 +34,18 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new GetLiveSessionOverviewQuery(liveSessionId), cancellationToken)));
 
+        liveSessionRoutes.MapGet(
+            "/{liveSessionId:guid}/teams/{sessionTeamId:guid}/detail",
+            async (
+                Guid liveSessionId,
+                Guid sessionTeamId,
+                [FromQuery] int? inactivityThresholdMinutes,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new GetSessionTeamDetailQuery(liveSessionId, sessionTeamId, inactivityThresholdMinutes ?? 10),
+                    cancellationToken)));
+
         liveSessionRoutes.MapPost(
             "/",
             async (
@@ -120,6 +132,21 @@ public static class LiveSessionEndpointRouteBuilderExtensions
                 CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
                     new ReleaseHintCommand(liveSessionId, request.SessionTeamId, hintId),
+                    cancellationToken)));
+
+        var submissionRoutes = authorizedApi
+            .MapGroup("/submissions")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
+
+        submissionRoutes.MapPost(
+            "/{submissionId:guid}/override",
+            async (
+                Guid submissionId,
+                [FromBody] OverrideValidationOutcomeRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new OverrideValidationOutcomeCommand(submissionId, request.IsAccepted, request.Reason),
                     cancellationToken)));
 
         return authorizedApi;
