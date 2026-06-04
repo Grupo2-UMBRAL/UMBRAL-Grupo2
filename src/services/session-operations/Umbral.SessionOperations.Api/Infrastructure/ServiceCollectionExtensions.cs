@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
+        services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ILiveSessionStateNotifier, SignalRLiveSessionStateNotifier>();

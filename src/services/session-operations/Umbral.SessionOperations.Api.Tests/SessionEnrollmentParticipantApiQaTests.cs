@@ -210,7 +210,8 @@ public sealed class SessionEnrollmentParticipantApiQaTests
                     1,
                     30,
                     "Medium",
-                    "Trivia")
+                    "Trivia",
+                    "Prompt for Stage 1")
             ]);
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));
 

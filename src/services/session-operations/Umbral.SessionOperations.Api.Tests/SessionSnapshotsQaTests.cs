@@ -224,7 +224,8 @@ public sealed class SessionSnapshotsQaTests
                     20,
                     45,
                     "Hard",
-                    "Qr"),
+                    "Qr",
+                    "Prompt for Stage Two"),
                 LiveSessionStage.Create(
                     StageOneId,
                     "Stage One",
@@ -233,6 +234,7 @@ public sealed class SessionSnapshotsQaTests
                     30,
                     "Easy",
                     "Trivia",
+                    "Prompt for Stage One",
                     triviaValidAnswer: "seal")
             ]);
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));

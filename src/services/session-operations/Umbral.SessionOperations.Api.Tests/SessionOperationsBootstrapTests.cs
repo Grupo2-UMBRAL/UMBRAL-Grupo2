@@ -223,7 +223,11 @@ public sealed class LiveSessionDomainTests
                     35,
                     "Medium",
                     "Trivia",
-                    "Which code opens the archive?")
+                    "Which code opens the archive?",
+                    null,
+                    null,
+                    null,
+                    [])
             ]);
 
         Assert.Equal(LiveSessionStates.Scheduled, liveSession.State);
