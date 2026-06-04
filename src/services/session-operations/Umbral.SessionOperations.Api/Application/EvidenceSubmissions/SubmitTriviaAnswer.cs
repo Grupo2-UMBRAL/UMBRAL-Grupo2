@@ -62,6 +62,11 @@ public sealed class SubmitTriviaAnswerHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await LogEvidenceSubmissionEventsAsync(
+            evidenceSubmission,
+            "AutomaticTrivia",
+            cancellationToken);
+
         await PublishEvidenceSubmissionOutcomeChangedAsync(
             liveSession,
             evidenceSubmission,
@@ -183,6 +188,24 @@ public sealed class SubmitTriviaAnswerHandler(
             null);
 
         await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
+    }
+
+    private async Task LogEvidenceSubmissionEventsAsync(
+        EvidenceSubmission evidenceSubmission,
+        string source,
+        CancellationToken cancellationToken)
+    {
+        await scoringAuditClient.LogSessionEventAsync(
+            evidenceSubmission.LiveSessionId,
+            "EvidenceSubmitted",
+            $"Session Team '{evidenceSubmission.SessionTeamId}' submitted evidence for Mission Stage '{evidenceSubmission.MissionStageId}'. Game Type: {evidenceSubmission.GameType}.",
+            cancellationToken);
+
+        await scoringAuditClient.LogSessionEventAsync(
+            evidenceSubmission.LiveSessionId,
+            "ValidationOutcome",
+            $"Evidence submission '{evidenceSubmission.Id}' for Session Team '{evidenceSubmission.SessionTeamId}' on Mission Stage '{evidenceSubmission.MissionStageId}' was validated as {evidenceSubmission.Outcome}. Source: {source}.",
+            cancellationToken);
     }
 
     private static RealtimeEventMetadata CreateMetadata(

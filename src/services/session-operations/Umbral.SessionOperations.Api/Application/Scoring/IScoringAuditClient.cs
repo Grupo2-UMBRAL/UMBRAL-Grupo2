@@ -9,6 +9,12 @@ public interface IScoringAuditClient
     Task<ApplyPenaltyResponse> ApplyPenaltyAsync(
         ApplyPenaltyRequest request,
         CancellationToken cancellationToken);
+
+    Task LogSessionEventAsync(
+        Guid liveSessionId,
+        string eventType,
+        string description,
+        CancellationToken cancellationToken);
 }
 
 public sealed record RecordStageCreditRequest(

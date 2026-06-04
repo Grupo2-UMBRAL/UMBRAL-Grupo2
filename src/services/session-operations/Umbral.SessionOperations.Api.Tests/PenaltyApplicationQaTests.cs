@@ -179,6 +179,12 @@ public sealed class PenaltyApplicationQaTests
             RecordStageCreditRequest request,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task LogSessionEventAsync(
+            Guid liveSessionId,
+            string eventType,
+            string description,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
         public Task<Application.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
             Application.Scoring.ApplyPenaltyRequest request,
             CancellationToken cancellationToken)

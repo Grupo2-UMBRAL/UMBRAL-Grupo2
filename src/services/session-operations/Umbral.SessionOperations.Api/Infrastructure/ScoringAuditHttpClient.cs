@@ -68,4 +68,31 @@ public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAudi
         return payload
             ?? throw new HttpRequestException("Scoring Audit returned an empty Penalty response.");
     }
+
+    public async Task LogSessionEventAsync(
+        Guid liveSessionId,
+        string eventType,
+        string description,
+        CancellationToken cancellationToken)
+    {
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/api/scoring-audit/sessions/{liveSessionId}/event-log",
+            new
+            {
+                EventType = eventType,
+                Description = description
+            },
+            cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detail = await response.Content.ReadAsStringAsync(cancellationToken);
+        throw new HttpRequestException(
+            $"Scoring Audit rejected Session Event Log recording with status {(int)response.StatusCode}: {detail}",
+            null,
+            response.StatusCode);
+    }
 }
