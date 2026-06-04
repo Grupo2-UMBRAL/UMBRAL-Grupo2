@@ -146,6 +146,7 @@ public sealed class Mission
         foreach (var missionStage in activeMissionStages)
         {
             _ = missionStage.GetRequiredDifficulty();
+            EnsureMissionStagePrompt(missionStage);
             EnsureMissionStageValidationData(missionStage);
             EnsureMissionStageHintsAreConsistent(missionStage);
         }
@@ -281,6 +282,19 @@ public sealed class Mission
         throw new UmbralDomainException(
             "mission_eligible_stage_game_type_unsupported",
             $"Mission Stage '{missionStage.Name}' has unsupported Game Type '{missionStage.GameType}'.",
+            UmbralFailureCategory.Validation);
+    }
+
+    private static void EnsureMissionStagePrompt(MissionNode missionStage)
+    {
+        if (!string.IsNullOrWhiteSpace(missionStage.Prompt))
+        {
+            return;
+        }
+
+        throw new UmbralDomainException(
+            "mission_eligible_stage_prompt_required",
+            $"Mission Stage '{missionStage.Name}' must define a prompt.",
             UmbralFailureCategory.Validation);
     }
 
