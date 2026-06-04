@@ -35,6 +35,10 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
             .MapGroup("/session-enrollment")
             .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
 
+        var participantSnapshotRoutes = authorizedApi
+            .MapGroup("/session-teams")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
+
         participantRoutes.MapGet(
             "/{joinCode}/validate",
             async (string joinCode, ISender sender, CancellationToken cancellationToken) =>
@@ -72,6 +76,11 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
             .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
 
         participantSessionTeamRoutes.MapGet(
+            "/{sessionTeamId:guid}/snapshot",
+            async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
+
+        participantSnapshotRoutes.MapGet(
             "/{sessionTeamId:guid}/snapshot",
             async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
