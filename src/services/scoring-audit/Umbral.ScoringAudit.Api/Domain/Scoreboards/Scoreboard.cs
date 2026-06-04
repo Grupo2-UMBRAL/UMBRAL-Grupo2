@@ -95,6 +95,8 @@ public sealed class Scoreboard
             penaltyCommandId: null,
             penaltyId: null,
             penaltySeverity: null,
+            penaltyReason: null,
+            appliedByOperatorUserId: null,
             resolutionTime);
     }
 
@@ -118,6 +120,8 @@ public sealed class Scoreboard
             penalty.CommandId,
             penalty.PenaltyId,
             penalty.Severity,
+            penalty.Reason,
+            penalty.AppliedByOperatorUserId,
             resolutionTime: null);
     }
 
@@ -136,6 +140,8 @@ public sealed class Scoreboard
         Guid? penaltyCommandId,
         Guid? penaltyId,
         PenaltySeverity? penaltySeverity,
+        string? penaltyReason,
+        string? appliedByOperatorUserId,
         TimeSpan? resolutionTime)
     {
         var teamScore = GetOrCreateTeamScore(sessionTeamId);
@@ -159,6 +165,8 @@ public sealed class Scoreboard
             penaltyCommandId,
             penaltyId,
             penaltySeverity,
+            penaltyReason,
+            appliedByOperatorUserId,
             resolutionTime);
 
         scoreEntries.Add(scoreEntry);

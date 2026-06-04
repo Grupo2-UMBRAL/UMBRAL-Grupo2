@@ -146,6 +146,15 @@ def role_set(payload: dict[str, Any]) -> set[str]:
     return set()
 
 
+def require_subject_claim(payload: dict[str, Any], client_id: str) -> None:
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.strip():
+        fail(
+            f"{client_id} token does not contain sub. "
+            "Local realm is likely missing the Subject (sub) mapper for lightweight access tokens."
+        )
+
+
 def expect_status(actual_status: int, expected_status: int, label: str) -> None:
     if actual_status != expected_status:
         fail(f"{label}: expected HTTP {expected_status}, got HTTP {actual_status}.")
@@ -157,6 +166,7 @@ def verify_login_and_audiences() -> None:
     for client_id in ("umbral-web", "umbral-mobile"):
         token = get_password_token(client_id, "participant", SEED_USERS["participant"])
         payload = decode_jwt_payload(token)
+        require_subject_claim(payload, client_id)
         audiences = audience_set(payload)
         missing_audiences = sorted(EXPECTED_API_AUDIENCES.difference(audiences))
         if missing_audiences:

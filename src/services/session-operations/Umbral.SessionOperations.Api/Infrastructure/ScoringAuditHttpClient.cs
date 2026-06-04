@@ -35,4 +35,37 @@ public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAudi
             null,
             response.StatusCode);
     }
+
+    public async Task<ApplyPenaltyResponse> ApplyPenaltyAsync(
+        ApplyPenaltyRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        using var response = await httpClient.PostAsJsonAsync(
+            $"/api/scoring-audit/sessions/{request.LiveSessionId}/penalties",
+            new
+            {
+                request.SessionTeamId,
+                request.CommandId,
+                request.Severity,
+                request.AppliedByOperatorUserId,
+                request.Reason,
+                request.RecordedAt
+            },
+            cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(
+                $"Scoring Audit rejected Penalty recording with status {(int)response.StatusCode}: {detail}",
+                null,
+                response.StatusCode);
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<ApplyPenaltyResponse>(cancellationToken);
+        return payload
+            ?? throw new HttpRequestException("Scoring Audit returned an empty Penalty response.");
+    }
 }

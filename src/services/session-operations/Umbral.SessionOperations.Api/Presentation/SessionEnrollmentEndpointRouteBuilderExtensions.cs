@@ -71,7 +71,6 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
                 Results.Ok(await sender.Send(
                     new JoinSessionTeamCommand(request.JoinCode, request.SessionTeamId),
                     cancellationToken)));
-
         participantSnapshotRoutes.MapGet(
             "/{sessionTeamId:guid}/snapshot",
             async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>

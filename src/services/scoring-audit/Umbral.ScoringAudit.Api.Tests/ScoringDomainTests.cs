@@ -75,10 +75,26 @@ public sealed class PenaltySeverityTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             (PenaltySeverity)(-999),
+            "operator-1",
             "Motivo operativo",
             DateTimeOffset.UtcNow));
 
         Assert.Equal("penalty.unknown_severity", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RequiresReason()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => new Penalty(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            PenaltySeverity.Minor,
+            "operator-1",
+            " ",
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("penalty.reason_required", exception.Code);
     }
 }
 
@@ -272,6 +288,8 @@ public sealed class ScoreboardPenaltyTests
         Assert.Equal(0, teamScore.VisibleScore);
         Assert.Equal(penalty.CommandId, entry.PenaltyCommandId);
         Assert.Equal(severity, entry.PenaltySeverity);
+        Assert.Equal("operator-1", entry.AppliedByOperatorUserId);
+        Assert.Equal("Motivo operativo", entry.PenaltyReason);
     }
 
     [Fact]
@@ -339,6 +357,7 @@ public sealed class ScoreboardPenaltyTests
             commandId,
             sessionTeamId,
             severity,
+            "operator-1",
             "Motivo operativo",
             DateTimeOffset.UtcNow);
 

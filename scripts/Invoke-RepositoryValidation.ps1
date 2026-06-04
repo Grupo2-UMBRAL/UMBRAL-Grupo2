@@ -56,16 +56,25 @@ function Invoke-NpmCommand {
         [string]$ComposeService
     )
 
-    $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+    $isWindowsHost = $env:OS -eq "Windows_NT"
 
-    if ($null -eq $npmCommand -and $IsWindows) {
-        $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    $npmCommand = if ($isWindowsHost) {
+        Get-Command npm.cmd -ErrorAction SilentlyContinue
+    } else {
+        Get-Command npm -ErrorAction SilentlyContinue
+    }
+
+    if ($null -eq $npmCommand -and $isWindowsHost) {
+        $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
     }
 
     if ($null -ne $npmCommand) {
         Push-Location $WorkingDirectory
         try {
-            & $npmCommand.Source @CommandArgs
+            & ($npmCommand.Source) @CommandArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "Command '$($npmCommand.Source) $($CommandArgs -join ' ')' failed with exit code $LASTEXITCODE."
+            }
         }
         finally {
             Pop-Location
@@ -76,6 +85,9 @@ function Invoke-NpmCommand {
     Push-Location $repositoryRoot
     try {
         & docker compose --env-file ".env.example" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm $ComposeService @CommandArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose run $ComposeService $($CommandArgs -join ' ') failed with exit code $LASTEXITCODE."
+        }
     }
     finally {
         Pop-Location
