@@ -66,6 +66,23 @@ authorizedApi.MapPost(
                 request.RecordedAt,
                 request.ValidationOverride),
             cancellationToken)));
+authorizedApi.MapPost(
+    "/sessions/{liveSessionId:guid}/penalties",
+    async (
+        Guid liveSessionId,
+        ApplyPenaltyRequest request,
+        ISender sender,
+        CancellationToken cancellationToken) =>
+        Results.Ok(await sender.Send(
+            new ApplyPenaltyCommand(
+                liveSessionId,
+                request.SessionTeamId,
+                request.CommandId,
+                request.Severity,
+                request.AppliedByOperatorUserId,
+                request.Reason,
+                request.RecordedAt),
+            cancellationToken)));
 authorizedApi.MapGet(
     "/sessions/{liveSessionId:guid}/ranking",
     async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>

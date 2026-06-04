@@ -4,6 +4,7 @@ using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.Hints;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.Penalties;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 
@@ -97,6 +98,21 @@ public static class LiveSessionEndpointRouteBuilderExtensions
             async (Guid liveSessionId, ISender sender, CancellationToken cancellationToken) =>
                 Results.Ok(await sender.Send(
                     new TransitionLiveSessionStateCommand(liveSessionId, LiveSessionLifecycleAction.Cancel),
+                    cancellationToken)));
+        liveSessionRoutes.MapPost(
+            "/{liveSessionId:guid}/penalties",
+            async (
+                Guid liveSessionId,
+                [FromBody] ApplyPenaltyRequest request,
+                ISender sender,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(
+                    new ApplyPenaltyCommand(
+                        liveSessionId,
+                        request.SessionTeamId,
+                        request.CommandId,
+                        request.Severity,
+                        request.Reason),
                     cancellationToken)));
         liveSessionRoutes.MapPost(
             "/{liveSessionId:guid}/stages/{missionStageId:guid}/deactivate",

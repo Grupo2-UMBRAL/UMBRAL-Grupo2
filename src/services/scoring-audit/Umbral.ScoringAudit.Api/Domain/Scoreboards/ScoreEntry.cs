@@ -24,6 +24,8 @@ public sealed class ScoreEntry
         Guid? penaltyCommandId = null,
         Guid? penaltyId = null,
         PenaltySeverity? penaltySeverity = null,
+        string? penaltyReason = null,
+        string? appliedByOperatorUserId = null,
         TimeSpan? resolutionTime = null)
     {
         if (scoreEntryId == Guid.Empty)
@@ -60,6 +62,8 @@ public sealed class ScoreEntry
         PenaltyCommandId = penaltyCommandId;
         PenaltyId = penaltyId;
         PenaltySeverity = penaltySeverity;
+        PenaltyReason = penaltyReason;
+        AppliedByOperatorUserId = appliedByOperatorUserId;
         ResolutionTime = resolutionTime;
     }
 
@@ -90,6 +94,10 @@ public sealed class ScoreEntry
     public Guid? PenaltyId { get; private set; }
 
     public PenaltySeverity? PenaltySeverity { get; private set; }
+
+    public string? PenaltyReason { get; private set; }
+
+    public string? AppliedByOperatorUserId { get; private set; }
 
     public TimeSpan? ResolutionTime { get; private set; }
 }
