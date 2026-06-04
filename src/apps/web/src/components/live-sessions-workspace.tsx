@@ -134,6 +134,72 @@ type LiveSessionOverview = {
   sessionTeams: LiveSessionOverviewTeam[];
 };
 
+type SessionTeamReleasedHintDetail = {
+  releasedHintId: string;
+  hintId: string;
+  missionStageId: string;
+  stageName: string;
+  content: string;
+  isSolution: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  releasedAtUtc: string;
+  unlockReason: string;
+};
+
+type SessionTeamEvidenceSubmissionDetail = {
+  id: string;
+  missionStageId: string;
+  stageName: string;
+  sessionStageOrder: number;
+  difficulty: string;
+  gameType: string;
+  submittedHash: string | null;
+  submittedText: string | null;
+  validationOutcome: string;
+  failureReason: string | null;
+  submittedAtUtc: string;
+  isTriviaCorrectionEligible: boolean;
+};
+
+type SessionTeamDetailResponse = {
+  liveSessionId: string;
+  liveSessionName: string;
+  sessionState: string;
+  sessionTeamId: string;
+  teamName: string;
+  participantCount: number;
+  progressState: string;
+  currentStage: CurrentSessionStageSnapshot | null;
+  currentStageStartedAtUtc: string;
+  releasedHints: SessionTeamReleasedHintDetail[];
+  evidenceSubmissions: SessionTeamEvidenceSubmissionDetail[];
+  isInactive: boolean;
+  inactivityThresholdMinutes: number;
+  serverTimeUtc: string;
+  sync: {
+    sequenceNumber: number;
+    lastUpdatedUtc: string;
+    serverTimeUtc: string;
+  };
+};
+
+type TeamDetailTimelineItem =
+  | {
+      kind: "hint";
+      id: string;
+      occurredAtUtc: string;
+      stageName: string;
+      hint: SessionTeamReleasedHintDetail;
+    }
+  | {
+      kind: "submission";
+      id: string;
+      occurredAtUtc: string;
+      stageName: string;
+      submission: SessionTeamEvidenceSubmissionDetail;
+    };
+
 type SnapshotRefreshPolicy = 1 | 2 | "ApplyIncremental" | "RefreshSnapshot";
 
 type RealtimeEventMetadata = {
@@ -234,6 +300,16 @@ type LiveSessionOverviewDashboardProps = {
   isLoadingRanking: boolean;
   rankingError: string | null;
   eventLogError: string | null;
+  selectedSessionTeamId: string | null;
+  sessionTeamDetail: SessionTeamDetailResponse | null;
+  sessionTeamDetailError: string | null;
+  inactivityThresholdMinutes: number;
+  isLoadingSessionTeamDetail: boolean;
+  overridePendingSubmissionId: string | null;
+  onSelectSessionTeam: (sessionTeamId: string) => void;
+  onRefreshSessionTeamDetail: () => void;
+  onInactivityThresholdChange: (nextValue: number) => void;
+  onOverrideSubmission: (submissionId: string, reason: string) => void;
   onLifecycleAction: (action: LiveSessionLifecycleAction) => void;
   onRefreshEventLog: () => void;
   onRefreshOverview: () => void;
@@ -372,6 +448,24 @@ function formatRemainingSeconds(value: number | null | undefined) {
   return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
+function formatElapsedDuration(startedAtUtc: string, nowMs: number) {
+  const startedAtMs = new Date(startedAtUtc).getTime();
+  if (Number.isNaN(startedAtMs)) {
+    return "Unknown";
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - startedAtMs) / 1000));
+  const hours = Math.floor(elapsedSeconds / 3600);
+  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const seconds = elapsedSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes.toString().padStart(2, "0")}m ${seconds.toString().padStart(2, "0")}s`;
+  }
+
+  return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+}
+
 function formatResolutionTime(value: string) {
   const [hours = "00", minutes = "00", seconds = "00"] = value.split(":");
   const secondParts = seconds.split(".");
@@ -396,6 +490,10 @@ function parseOptionalCoordinate(value: string) {
   }
 
   return parsed;
+}
+
+function normalizeInactivityThresholdMinutes(value: number) {
+  return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : 10;
 }
 
 function getReleasedHintsForTeam(team: LiveSessionOverviewTeam) {
@@ -511,6 +609,47 @@ function sortSessionEventLogItems(items: SessionEventLogItem[]) {
 
 function upsertSessionEventLogItem(items: SessionEventLogItem[], nextItem: SessionEventLogItem) {
   return sortSessionEventLogItems([nextItem, ...items.filter((item) => item.id !== nextItem.id)]);
+}
+
+function createTeamDetailTimeline(
+  detail: SessionTeamDetailResponse,
+  showTriviaOnly: boolean
+): TeamDetailTimelineItem[] {
+  const hintItems: TeamDetailTimelineItem[] = showTriviaOnly
+    ? []
+    : detail.releasedHints.map((hint) => ({
+        kind: "hint",
+        id: `hint-${hint.releasedHintId}`,
+        occurredAtUtc: hint.releasedAtUtc,
+        stageName: hint.stageName,
+        hint
+      }));
+  const submissionItems: TeamDetailTimelineItem[] = detail.evidenceSubmissions
+    .filter((submission) =>
+      showTriviaOnly ? stringEqualsIgnoreCase(submission.gameType, "Trivia") : true
+    )
+    .map((submission) => ({
+      kind: "submission",
+      id: `submission-${submission.id}`,
+      occurredAtUtc: submission.submittedAtUtc,
+      stageName: submission.stageName,
+      submission
+    }));
+
+  return [...hintItems, ...submissionItems].sort((left, right) => {
+    const leftTime = new Date(left.occurredAtUtc).getTime();
+    const rightTime = new Date(right.occurredAtUtc).getTime();
+
+    if (Number.isNaN(leftTime) || Number.isNaN(rightTime) || leftTime === rightTime) {
+      return right.id.localeCompare(left.id);
+    }
+
+    return rightTime - leftTime;
+  });
+}
+
+function stringEqualsIgnoreCase(left: string, right: string) {
+  return left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
 }
 
 type ScoringRankingWidgetProps = {
@@ -662,6 +801,252 @@ function SessionEventTimeline({
   );
 }
 
+type SessionTeamDetailPanelProps = {
+  detail: SessionTeamDetailResponse | null;
+  error: string | null;
+  isLoading: boolean;
+  inactivityThresholdMinutes: number;
+  overridePendingSubmissionId: string | null;
+  onInactivityThresholdChange: (nextValue: number) => void;
+  onRefresh: () => void;
+  onOverrideSubmission: (submissionId: string, reason: string) => void;
+};
+
+function SessionTeamDetailPanel({
+  detail,
+  error,
+  isLoading,
+  inactivityThresholdMinutes,
+  overridePendingSubmissionId,
+  onInactivityThresholdChange,
+  onRefresh,
+  onOverrideSubmission
+}: SessionTeamDetailPanelProps) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [showTriviaOnly, setShowTriviaOnly] = useState(false);
+  const [overrideSubmissionId, setOverrideSubmissionId] = useState<string | null>(null);
+  const [overrideReason, setOverrideReason] = useState("");
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const timelineItems = useMemo(
+    () => (detail ? createTeamDetailTimeline(detail, showTriviaOnly) : []),
+    [detail, showTriviaOnly]
+  );
+
+  if (!detail) {
+    return (
+      <aside className="team-detail-panel">
+        <div className="empty-state">
+          <strong>Select a Session Team.</strong>
+          <p>Operator detail opens here with activity, hints, submissions and inactivity state.</p>
+        </div>
+        {error ? (
+          <div className="empty-state degraded-state">
+            <strong>Team detail unavailable.</strong>
+            <p>{error}</p>
+          </div>
+        ) : null}
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="team-detail-panel">
+      <div className="team-detail-header">
+        <div>
+          <p className="eyebrow">Session Team detail</p>
+          <h4>{detail.teamName}</h4>
+          <p className="field-hint">{detail.participantCount} participant(s)</p>
+        </div>
+        <span className={detail.isInactive ? "status-pill status-error" : "status-pill status-ok"}>
+          {detail.isInactive ? "Inactive" : "Active"}
+        </span>
+      </div>
+
+      {detail.isInactive ? (
+        <div className="team-inactivity-alert">
+          <strong>No recent Evidence Submissions.</strong>
+          <p>Last activity is older than the configured threshold.</p>
+        </div>
+      ) : null}
+
+      <div className="team-detail-controls">
+        <label className="field">
+          <span>Inactivity threshold</span>
+          <input
+            className="input"
+            min={1}
+            onChange={(event) => onInactivityThresholdChange(Number(event.target.value))}
+            type="number"
+            value={inactivityThresholdMinutes}
+          />
+        </label>
+        <button className="ghost-button compact-button" disabled={isLoading} onClick={onRefresh} type="button">
+          {isLoading ? "Refreshing" : "Refresh"}
+        </button>
+      </div>
+
+      {error ? (
+        <div className="empty-state degraded-state">
+          <strong>Team detail stale.</strong>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
+      <div className="team-detail-stage-grid">
+        <article className="team-detail-stat">
+          <strong>Current Stage</strong>
+          <p className="team-detail-value">{getStageLabel(detail.currentStage)}</p>
+        </article>
+        <article className="team-detail-stat">
+          <strong>Time in stage</strong>
+          <p className="team-detail-value">{formatElapsedDuration(detail.currentStageStartedAtUtc, nowMs)}</p>
+        </article>
+        <article className="team-detail-stat">
+          <strong>Progress</strong>
+          <p className="team-detail-value">{detail.progressState}</p>
+        </article>
+      </div>
+
+      <section className="node-subsection">
+        <div className="team-detail-subheader">
+          <div>
+            <p className="eyebrow">Activity</p>
+            <h5>Hints and Evidence Submissions</h5>
+          </div>
+          <label className="inline-toggle trivia-filter-toggle">
+            <input
+              checked={showTriviaOnly}
+              onChange={(event) => setShowTriviaOnly(event.target.checked)}
+              type="checkbox"
+            />
+            <span>Mostrar Solo Respuestas Trivia</span>
+          </label>
+        </div>
+
+        {timelineItems.length > 0 ? (
+          <ol className="timeline-list team-detail-timeline">
+            {timelineItems.map((item) => (
+              <li className="timeline-item" key={item.id}>
+                <span className="timeline-marker" aria-hidden="true" />
+                <div className="timeline-content team-detail-timeline-content">
+                  <div className="timeline-meta">
+                    <span className={item.kind === "hint" ? "node-chip is-composite" : "node-chip is-leaf"}>
+                      {item.kind === "hint" ? "Hint" : item.submission.gameType}
+                    </span>
+                    <time dateTime={item.occurredAtUtc}>{formatRelativeTimestamp(item.occurredAtUtc)}</time>
+                  </div>
+
+                  {item.kind === "hint" ? (
+                    <>
+                      <p>{item.hint.content}</p>
+                      <span className="field-hint">
+                        {item.stageName} · {item.hint.unlockReason} · {formatTimestamp(item.hint.releasedAtUtc)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="team-submission-header">
+                        <strong>{item.submission.submittedText ?? item.submission.submittedHash ?? "Evidence submitted"}</strong>
+                        <span
+                          className={
+                            item.submission.validationOutcome === "Accepted"
+                              ? "status-pill status-ok"
+                              : "status-pill status-error"
+                          }
+                        >
+                          {item.submission.validationOutcome}
+                        </span>
+                      </div>
+                      <span className="field-hint">
+                        {item.stageName} · {item.submission.difficulty} · {formatTimestamp(item.submission.submittedAtUtc)}
+                      </span>
+                      {item.submission.failureReason ? <p className="field-hint">{item.submission.failureReason}</p> : null}
+
+                      {item.submission.isTriviaCorrectionEligible ? (
+                        <div className="override-control">
+                          {overrideSubmissionId === item.submission.id ? (
+                            <form
+                              className="override-reason-panel"
+                              onSubmit={(event) => {
+                                event.preventDefault();
+                                if (!overrideReason.trim()) {
+                                  return;
+                                }
+
+                                onOverrideSubmission(item.submission.id, overrideReason.trim());
+                                setOverrideSubmissionId(null);
+                                setOverrideReason("");
+                              }}
+                              role="dialog"
+                              aria-label="Validation Override reason"
+                            >
+                              <label className="field">
+                                <span>Operator reason</span>
+                                <textarea
+                                  className="input textarea-input"
+                                  maxLength={500}
+                                  onChange={(event) => setOverrideReason(event.target.value)}
+                                  required
+                                  value={overrideReason}
+                                />
+                              </label>
+                              <div className="mission-action-row">
+                                <button
+                                  className="primary-button"
+                                  disabled={overridePendingSubmissionId === item.submission.id}
+                                  type="submit"
+                                >
+                                  {overridePendingSubmissionId === item.submission.id ? "Sending" : "Force acceptance"}
+                                </button>
+                                <button
+                                  className="ghost-button"
+                                  onClick={() => {
+                                    setOverrideSubmissionId(null);
+                                    setOverrideReason("");
+                                  }}
+                                  type="button"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <button
+                              className="ghost-button"
+                              disabled={overridePendingSubmissionId !== null}
+                              onClick={() => {
+                                setOverrideSubmissionId(item.submission.id);
+                                setOverrideReason("");
+                              }}
+                              type="button"
+                            >
+                              Forzar Aceptación (Override)
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="empty-state">
+            <strong>No matching team activity.</strong>
+            <p>Clear the filter or wait for hints and Evidence Submissions to arrive.</p>
+          </div>
+        )}
+      </section>
+    </aside>
+  );
+}
+
 function LiveSessionOverviewDashboard({
   liveSession,
   overview,
@@ -676,6 +1061,16 @@ function LiveSessionOverviewDashboard({
   isLoadingRanking,
   rankingError,
   eventLogError,
+  selectedSessionTeamId,
+  sessionTeamDetail,
+  sessionTeamDetailError,
+  inactivityThresholdMinutes,
+  isLoadingSessionTeamDetail,
+  overridePendingSubmissionId,
+  onSelectSessionTeam,
+  onRefreshSessionTeamDetail,
+  onInactivityThresholdChange,
+  onOverrideSubmission,
   onLifecycleAction,
   onRefreshEventLog,
   onRefreshOverview,
@@ -768,37 +1163,60 @@ function LiveSessionOverviewDashboard({
         </div>
 
         {teams.length > 0 ? (
-          <div className="session-team-grid">
-            {teams.map((team) => (
-              <article className="session-team-card" key={team.sessionTeamId}>
-                <div className="mission-list-item-top">
-                  <div>
-                    <strong>{team.teamName}</strong>
-                    <p className="field-hint">{team.participantCount} participant(s)</p>
-                  </div>
-                  <span className={getProgressPillClass(team.progressState)}>{team.progressState}</span>
-                </div>
+          <div className="session-team-inspection-layout">
+            <div className="session-team-grid">
+              {teams.map((team) => {
+                const isSelected = team.sessionTeamId === selectedSessionTeamId;
 
-                <dl className="definition-grid session-team-definition-grid">
-                  <div>
-                    <dt>Current Stage</dt>
-                    <dd>{getStageLabel(team.currentStage)}</dd>
-                  </div>
-                  <div>
-                    <dt>Difficulty</dt>
-                    <dd>{team.currentStage?.difficulty ?? "N/A"}</dd>
-                  </div>
-                  <div>
-                    <dt>Game Type</dt>
-                    <dd>{team.currentStage?.gameType ?? "N/A"}</dd>
-                  </div>
-                  <div>
-                    <dt>Visible hints</dt>
-                    <dd>{getReleasedHintsForTeam(team).length}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
+                return (
+                  <button
+                    className={isSelected ? "session-team-card session-team-card-button is-active" : "session-team-card session-team-card-button"}
+                    key={team.sessionTeamId}
+                    onClick={() => onSelectSessionTeam(team.sessionTeamId)}
+                    type="button"
+                  >
+                    <div className="mission-list-item-top">
+                      <div>
+                        <strong>{team.teamName}</strong>
+                        <p className="field-hint">{team.participantCount} participant(s)</p>
+                      </div>
+                      <span className={getProgressPillClass(team.progressState)}>{team.progressState}</span>
+                    </div>
+
+                    <dl className="definition-grid session-team-definition-grid">
+                      <div>
+                        <dt>Current Stage</dt>
+                        <dd>{getStageLabel(team.currentStage)}</dd>
+                      </div>
+                      <div>
+                        <dt>Difficulty</dt>
+                        <dd>{team.currentStage?.difficulty ?? "N/A"}</dd>
+                      </div>
+                      <div>
+                        <dt>Game Type</dt>
+                        <dd>{team.currentStage?.gameType ?? "N/A"}</dd>
+                      </div>
+                      <div>
+                        <dt>Visible hints</dt>
+                        <dd>{getReleasedHintsForTeam(team).length}</dd>
+                      </div>
+                    </dl>
+                  </button>
+                );
+              })}
+            </div>
+
+            <SessionTeamDetailPanel
+              detail={sessionTeamDetail}
+              error={sessionTeamDetailError}
+              inactivityThresholdMinutes={inactivityThresholdMinutes}
+              isLoading={isLoadingSessionTeamDetail}
+              key={selectedSessionTeamId ?? "empty-session-team-detail"}
+              onInactivityThresholdChange={onInactivityThresholdChange}
+              onOverrideSubmission={onOverrideSubmission}
+              onRefresh={onRefreshSessionTeamDetail}
+              overridePendingSubmissionId={overridePendingSubmissionId}
+            />
           </div>
         ) : (
           <div className="empty-state">
@@ -839,6 +1257,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [selectedLiveSessionOverview, setSelectedLiveSessionOverview] = useState<LiveSessionOverview | null>(null);
   const [selectedLiveSessionRanking, setSelectedLiveSessionRanking] = useState<RankingPayload | null>(null);
   const [selectedLiveSessionEventLog, setSelectedLiveSessionEventLog] = useState<SessionEventLogItem[]>([]);
+  const [selectedSessionTeamId, setSelectedSessionTeamId] = useState<string | null>(null);
+  const [selectedSessionTeamDetail, setSelectedSessionTeamDetail] = useState<SessionTeamDetailResponse | null>(null);
+  const [inactivityThresholdMinutes, setInactivityThresholdMinutes] = useState(10);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
   const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
     createEmptyOperationalHintDraft
@@ -847,10 +1268,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingMissionDetail, setIsLoadingMissionDetail] = useState(false);
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
   const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
+  const [isLoadingSessionTeamDetail, setIsLoadingSessionTeamDetail] = useState(false);
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isLoadingEventLog, setIsLoadingEventLog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
+  const [overridePendingSubmissionId, setOverridePendingSubmissionId] = useState<string | null>(null);
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
@@ -865,6 +1288,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   });
   const [rankingError, setRankingError] = useState<string | null>(null);
   const [eventLogError, setEventLogError] = useState<string | null>(null);
+  const [sessionTeamDetailError, setSessionTeamDetailError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -872,9 +1296,13 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/mission-design/api/mission-design/missions/eligible-for-live-session`,
     []
   );
-  const liveSessionsUrl = useMemo(
-    () => `${getClientConfig().edgeProxyPublicBaseUrl}/session-operations/api/session-operations/live-sessions`,
+  const sessionOperationsUrl = useMemo(
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/session-operations/api/session-operations`,
     []
+  );
+  const liveSessionsUrl = useMemo(
+    () => `${sessionOperationsUrl}/live-sessions`,
+    [sessionOperationsUrl]
   );
   const sessionHubUrl = useMemo(() => getClientConfig().sessionHubUrl, []);
   const scoringAuditSessionsUrl = useMemo(
@@ -1066,6 +1494,37 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [accessToken, liveSessionsUrl]
   );
 
+  const loadSessionTeamDetail = useCallback(
+    async (liveSessionId: string, sessionTeamId: string, thresholdMinutes: number) => {
+      const normalizedThreshold = normalizeInactivityThresholdMinutes(thresholdMinutes);
+
+      setIsLoadingSessionTeamDetail(true);
+      setSessionTeamDetailError(null);
+
+      try {
+        const response = await fetch(
+          `${liveSessionsUrl}/${liveSessionId}/teams/${sessionTeamId}/detail?inactivityThresholdMinutes=${normalizedThreshold}`,
+          {
+            headers: createAuthorizedHeaders(accessToken)
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(await readFailureDetail(response));
+        }
+
+        const payload = (await response.json()) as SessionTeamDetailResponse;
+        setSelectedSessionTeamDetail(payload);
+      } catch (error) {
+        setSessionTeamDetailError(error instanceof Error ? error.message : "Could not load Session Team detail.");
+        setSelectedSessionTeamDetail(null);
+      } finally {
+        setIsLoadingSessionTeamDetail(false);
+      }
+    },
+    [accessToken, liveSessionsUrl]
+  );
+
   const loadLiveSessionRanking = useCallback(
     async (liveSessionId: string) => {
       setIsLoadingRanking(true);
@@ -1171,6 +1630,24 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     void loadLiveSessions(selectedLiveSessionId);
     void loadLiveSessionOverview(selectedLiveSessionId);
   }, [loadLiveSessionOverview, loadLiveSessions, selectedLiveSessionId]);
+
+  const refreshSelectedSessionTeamDetail = useCallback(() => {
+    if (!selectedLiveSessionId || !selectedSessionTeamId) {
+      return;
+    }
+
+    void loadSessionTeamDetail(selectedLiveSessionId, selectedSessionTeamId, inactivityThresholdMinutes);
+  }, [inactivityThresholdMinutes, loadSessionTeamDetail, selectedLiveSessionId, selectedSessionTeamId]);
+
+  function handleSelectSessionTeam(sessionTeamId: string) {
+    setSelectedSessionTeamId(sessionTeamId);
+    setSelectedSessionTeamDetail(null);
+    setSessionTeamDetailError(null);
+  }
+
+  function handleInactivityThresholdChange(nextValue: number) {
+    setInactivityThresholdMinutes(normalizeInactivityThresholdMinutes(nextValue));
+  }
 
   const applySessionStateChanged = useCallback(
     (payload: SessionStateChangedPayload) => {
@@ -1417,6 +1894,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSelectedLiveSessionOverview(null);
         setSelectedLiveSessionRanking(null);
         setSelectedLiveSessionEventLog([]);
+        setSelectedSessionTeamId(null);
+        setSelectedSessionTeamDetail(null);
+        setSessionTeamDetailError(null);
         setRankingError(null);
         setEventLogError(null);
       });
@@ -1424,11 +1904,28 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
 
     queueMicrotask(() => {
+      setSelectedSessionTeamId(null);
+      setSelectedSessionTeamDetail(null);
+      setSessionTeamDetailError(null);
       void loadLiveSessionOverview(selectedLiveSessionId);
       void loadLiveSessionRanking(selectedLiveSessionId);
       void loadLiveSessionEventLog(selectedLiveSessionId);
     });
   }, [loadLiveSessionEventLog, loadLiveSessionOverview, loadLiveSessionRanking, selectedLiveSessionId]);
+
+  useEffect(() => {
+    if (!selectedLiveSessionId || !selectedSessionTeamId) {
+      queueMicrotask(() => {
+        setSelectedSessionTeamDetail(null);
+        setSessionTeamDetailError(null);
+      });
+      return;
+    }
+
+    queueMicrotask(() => {
+      void loadSessionTeamDetail(selectedLiveSessionId, selectedSessionTeamId, inactivityThresholdMinutes);
+    });
+  }, [inactivityThresholdMinutes, loadSessionTeamDetail, selectedLiveSessionId, selectedSessionTeamId]);
 
   useEffect(() => {
     let active = true;
@@ -1799,6 +2296,42 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
   }
 
+  async function handleOverrideSubmission(submissionId: string, reason: string) {
+    if (!selectedLiveSession || !selectedSessionTeamId) {
+      return;
+    }
+
+    setOverridePendingSubmissionId(submissionId);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${sessionOperationsUrl}/submissions/${submissionId}/override`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          isAccepted: true,
+          reason
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      await loadSessionTeamDetail(selectedLiveSession.id, selectedSessionTeamId, inactivityThresholdMinutes);
+      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback("Validation Override accepted the Trivia Evidence Submission.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not apply Validation Override.");
+    } finally {
+      setOverridePendingSubmissionId(null);
+    }
+  }
+
   return (
     <section className="panel stack-gap">
       <div className="section-heading">
@@ -2128,11 +2661,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     isLoadingEventLog={isLoadingEventLog}
                     isLoadingOverview={isLoadingLiveSessionOverview}
                     isLoadingRanking={isLoadingRanking}
+                    isLoadingSessionTeamDetail={isLoadingSessionTeamDetail}
                     lifecycleActionPending={lifecycleActionPending}
                     lifecycleActions={lifecycleActions}
                     liveSession={selectedLiveSession}
+                    inactivityThresholdMinutes={inactivityThresholdMinutes}
                     onLifecycleAction={(action) => {
                       void handleLifecycleAction(action);
+                    }}
+                    onInactivityThresholdChange={handleInactivityThresholdChange}
+                    onOverrideSubmission={(submissionId, reason) => {
+                      void handleOverrideSubmission(submissionId, reason);
                     }}
                     onRefreshEventLog={() => {
                       void loadLiveSessionEventLog(selectedLiveSession.id);
@@ -2141,10 +2680,16 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     onRefreshRanking={() => {
                       void loadLiveSessionRanking(selectedLiveSession.id);
                     }}
+                    onRefreshSessionTeamDetail={refreshSelectedSessionTeamDetail}
+                    onSelectSessionTeam={handleSelectSessionTeam}
+                    overridePendingSubmissionId={overridePendingSubmissionId}
                     overview={isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview : null}
                     rankingError={rankingError}
                     rankingItems={selectedRankingItems}
                     scoringConnectionState={scoringRealtimeConnection}
+                    selectedSessionTeamId={selectedSessionTeamId}
+                    sessionTeamDetail={selectedSessionTeamDetail}
+                    sessionTeamDetailError={sessionTeamDetailError}
                   />
                 ) : null}
 
