@@ -1,16 +1,45 @@
-import { useState } from "react";
-import { Text, View } from "react-native";
+import { CameraView } from "expo-camera";
+import { Redirect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
+import { LoadingScreen } from "../../src/components/loading-screen";
 import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
+import { StaticHintMap } from "../../src/components/static-hint-map";
 import { StatusChip } from "../../src/components/status-chip";
+import {
+  ApiClientError,
+  SnapshotRefreshPolicies,
+  createAuthorizedApiClient,
+  type HintUnlockedPayload,
+  type SessionStateChangedPayload,
+  type SessionTeamSnapshot,
+  type TeamProgressChangedPayload,
+  type VisibleHintSnapshot
+} from "../../src/lib/api-client";
 import { getClientConfig } from "../../src/lib/config";
 import {
-  type LiveSessionStateChangedEvent,
-  useSessionOperationsConnection
-} from "../../src/hooks/use-session-operations-connection";
+  loadStoredEnrollment,
+  type StoredEnrollment
+} from "../../src/lib/session-storage";
+import { useSessionOperationsConnection } from "../../src/hooks/use-session-operations-connection";
 import { useSession } from "../../src/providers/session-provider";
 
-function resolveTone(state: string | null) {
+type SubmissionFeedback =
+  | { tone: "success"; title: string; detail: string }
+  | { tone: "error"; title: string; detail: string }
+  | null;
+
+function resolveSessionTone(state: string | null) {
   switch (state) {
+    case "Running":
     case "Active":
       return "success";
     case "Paused":
@@ -23,59 +52,528 @@ function resolveTone(state: string | null) {
   }
 }
 
-const currentStagePreview = {
-  parentBlockName: "Ancient archive",
-  name: "Decode the seal",
-  prompt: "Trivia prompt: identify the symbol that completes the archivist's sequence before sending evidence."
-};
+function resolveConnectionTone(kind: string) {
+  switch (kind) {
+    case "connected":
+      return "success";
+    case "reconnecting":
+      return "warn";
+    case "error":
+      return "error";
+    default:
+      return "info";
+  }
+}
+
+function readErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Participant board request failed.";
+}
+
+function formatCountdown(remainingSeconds: number | null) {
+  if (remainingSeconds === null) {
+    return null;
+  }
+
+  const safeSeconds = Math.max(0, remainingSeconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function mergeVisibleHints(
+  currentHints: VisibleHintSnapshot[],
+  nextHint: VisibleHintSnapshot
+) {
+  const alreadyPresent = currentHints.some((hint) => hint.hintId === nextHint.hintId);
+  if (alreadyPresent) {
+    return currentHints;
+  }
+
+  return [...currentHints, nextHint].sort((left, right) =>
+    left.unlockedAtUtc.localeCompare(right.unlockedAtUtc)
+  );
+}
+
+function isStaticMapReady(hint: VisibleHintSnapshot) {
+  return typeof hint.latitude === "number" && typeof hint.longitude === "number";
+}
 
 export default function BoardPage() {
   const { session } = useSession();
-  const config = getClientConfig();
-  const [lastStateChange, setLastStateChange] = useState<LiveSessionStateChangedEvent | null>(null);
+  const config = useMemo(() => getClientConfig(), []);
+  const apiClient = useMemo(
+    () => (session ? createAuthorizedApiClient(session.accessToken) : null),
+    [session]
+  );
+  const [loadingEnrollment, setLoadingEnrollment] = useState(true);
+  const [storedEnrollment, setStoredEnrollment] = useState<StoredEnrollment | null>(null);
+  const [snapshot, setSnapshot] = useState<SessionTeamSnapshot | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [triviaAnswer, setTriviaAnswer] = useState("");
+  const [feedback, setFeedback] = useState<SubmissionFeedback>(null);
 
-  useSessionOperationsConnection({
+  const refreshSnapshot = useCallback(async () => {
+    if (!apiClient || !storedEnrollment) {
+      return;
+    }
+
+    setSnapshotError(null);
+
+    try {
+      const nextSnapshot = await apiClient.getSessionTeamSnapshot(storedEnrollment.teamId);
+      setSnapshot(nextSnapshot);
+    } catch (error) {
+      setSnapshotError(readErrorMessage(error));
+    }
+  }, [apiClient, storedEnrollment]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function hydrateEnrollment() {
+      const enrollment = await loadStoredEnrollment();
+      if (!active) {
+        return;
+      }
+
+      setStoredEnrollment(enrollment);
+      setLoadingEnrollment(false);
+    }
+
+    void hydrateEnrollment();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!storedEnrollment) {
+      return;
+    }
+
+    void refreshSnapshot();
+  }, [refreshSnapshot, storedEnrollment]);
+
+  const connectionState = useSessionOperationsConnection({
     accessToken: session?.accessToken ?? "",
     hubUrl: config.sessionHubUrl,
-    onLiveSessionStateChanged: setLastStateChange
+    onResync: () => {
+      void refreshSnapshot();
+    }
   });
 
-  const currentState = lastStateChange?.state ?? null;
-  const actionBlocked = currentState !== "Active";
+  useEffect(() => {
+    const connection = connectionState.connection;
+    if (!connection) {
+      return;
+    }
+
+    const handleHintUnlocked = (payload: HintUnlockedPayload) => {
+      setSnapshot((currentSnapshot) => {
+        if (
+          !currentSnapshot
+          || payload.sessionTeamId !== currentSnapshot.sessionTeamId
+          || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+        ) {
+          return currentSnapshot;
+        }
+
+        if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          void refreshSnapshot();
+          return currentSnapshot;
+        }
+
+        return {
+          ...currentSnapshot,
+          visibleHints: mergeVisibleHints(currentSnapshot.visibleHints, payload.hint),
+          sync: {
+            ...currentSnapshot.sync,
+            sequenceNumber: Math.max(
+              currentSnapshot.sync.sequenceNumber,
+              payload.metadata.sequenceNumber
+            ),
+            lastUpdatedUtc: payload.metadata.occurredAtUtc
+          }
+        };
+      });
+    };
+
+    const handleSessionStateChanged = (payload: SessionStateChangedPayload) => {
+      setRemainingSeconds(payload.remainingSeconds ?? null);
+      setSnapshot((currentSnapshot) => {
+        if (
+          !currentSnapshot
+          || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+        ) {
+          return currentSnapshot;
+        }
+
+        if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          void refreshSnapshot();
+          return currentSnapshot;
+        }
+
+        return {
+          ...currentSnapshot,
+          sessionState: payload.currentState,
+          sync: {
+            ...currentSnapshot.sync,
+            sequenceNumber: Math.max(
+              currentSnapshot.sync.sequenceNumber,
+              payload.metadata.sequenceNumber
+            ),
+            lastUpdatedUtc: payload.metadata.occurredAtUtc
+          }
+        };
+      });
+    };
+
+    const handleTeamProgressChanged = (payload: TeamProgressChangedPayload) => {
+      setSnapshot((currentSnapshot) => {
+        if (
+          !currentSnapshot
+          || payload.sessionTeamId !== currentSnapshot.sessionTeamId
+          || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+        ) {
+          return currentSnapshot;
+        }
+
+        if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          void refreshSnapshot();
+          return currentSnapshot;
+        }
+
+        return {
+          ...currentSnapshot,
+          currentStage: payload.currentStage,
+          progressState: payload.progressState,
+          sync: {
+            ...currentSnapshot.sync,
+            sequenceNumber: Math.max(
+              currentSnapshot.sync.sequenceNumber,
+              payload.metadata.sequenceNumber
+            ),
+            lastUpdatedUtc: payload.metadata.occurredAtUtc
+          }
+        };
+      });
+    };
+
+    connection.on("ReceiveHintUnlocked", handleHintUnlocked);
+    connection.on("ReceiveSessionStateChanged", handleSessionStateChanged);
+    connection.on("ReceiveTeamProgressChanged", handleTeamProgressChanged);
+
+    return () => {
+      connection.off("ReceiveHintUnlocked", handleHintUnlocked);
+      connection.off("ReceiveSessionStateChanged", handleSessionStateChanged);
+      connection.off("ReceiveTeamProgressChanged", handleTeamProgressChanged);
+    };
+  }, [connectionState.connection, refreshSnapshot]);
+
+  const currentStage = snapshot?.currentStage;
+  const completedStages = currentStage ? Math.max(0, currentStage.sessionStageOrder - 1) : 0;
+  const currentSessionState = snapshot?.sessionState ?? null;
+  const actionBlocked = currentSessionState !== "Running" && currentSessionState !== "Active";
+  const countdown = formatCountdown(remainingSeconds);
+
+  async function submitQrEvidence(qrHash: string) {
+    if (!apiClient || !storedEnrollment) {
+      return;
+    }
+
+    const normalizedHash = qrHash.trim();
+    if (!normalizedHash) {
+      return;
+    }
+
+    setSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const result = await apiClient.submitEvidence({
+        sessionTeamId: storedEnrollment.teamId,
+        qrHash: normalizedHash
+      });
+
+      setFeedback(
+        result.validationOutcome === "Accepted"
+          ? {
+              tone: "success",
+              title: "Evidencia Aceptada",
+              detail: "Código correcto. Tu Session Team avanzó a la siguiente etapa."
+            }
+          : {
+              tone: "error",
+              title: "Evidencia Rechazada",
+              detail: "Código incorrecto, inténtalo de nuevo."
+            }
+      );
+      setScannerVisible(false);
+      await refreshSnapshot();
+    } catch (error) {
+      const detail =
+        error instanceof ApiClientError
+          ? error.message
+          : "No pudimos enviar la evidencia QR.";
+      setFeedback({
+        tone: "error",
+        title: "Evidencia Rechazada",
+        detail
+      });
+      setScannerVisible(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitTriviaEvidence() {
+    if (!apiClient || !storedEnrollment) {
+      return;
+    }
+
+    const normalizedAnswer = triviaAnswer.trim();
+    if (!normalizedAnswer) {
+      return;
+    }
+
+    setSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const result = await apiClient.submitTriviaAnswer({
+        sessionTeamId: storedEnrollment.teamId,
+        answerText: normalizedAnswer
+      });
+
+      setFeedback(
+        result.validationOutcome === "Accepted"
+          ? {
+              tone: "success",
+              title: "Respuesta correcta",
+              detail: "Validation Outcome aceptado. Sigue con la siguiente hoja."
+            }
+          : {
+              tone: "error",
+              title: "Respuesta incorrecta",
+              detail: "Respuesta incorrecta, intenta de nuevo."
+            }
+      );
+      if (result.validationOutcome === "Accepted") {
+        setTriviaAnswer("");
+      }
+      await refreshSnapshot();
+    } catch (error) {
+      const detail =
+        error instanceof ApiClientError
+          ? error.message
+          : "No pudimos enviar la respuesta Trivia.";
+      setFeedback({
+        tone: "error",
+        title: "Respuesta incorrecta",
+        detail
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!session) {
+    return <LoadingScreen message="Checking participant session..." />;
+  }
+
+  if (loadingEnrollment) {
+    return <LoadingScreen message="Checking Session Team enrollment..." />;
+  }
+
+  if (!storedEnrollment) {
+    return <Redirect href="/join" />;
+  }
+
+  if (!snapshot) {
+    return <LoadingScreen message="Loading Session Team snapshot..." />;
+  }
 
   return (
     <ScreenShell
       eyebrow="Participant Stage View"
-      title={snapshot ? `${snapshot.teamName} board` : "Session Team board"}
-      description="Live board consumes Session Operations snapshot and SignalR events without redefining backend contracts."
+      title={`${snapshot.teamName} board`}
+      description="Current stage, progress, Hint Release and Evidence Submission stay aligned with Session Operations and realtime updates."
     >
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Current stage placeholder</Text>
-        <StatusChip
-          label={currentState ? `Session ${currentState}` : "Awaiting lifecycle event"}
-          tone={resolveTone(currentState)}
-        />
-        <Text style={shellStyles.cardText}>Parent block: {currentStagePreview.parentBlockName}</Text>
-        <Text style={shellStyles.cardText}>Current playable stage: {currentStagePreview.name}</Text>
-        <Text style={shellStyles.cardText}>Prompt: {currentStagePreview.prompt}</Text>
-        <Text style={shellStyles.cardText}>
-          Primary action stays blocked unless Session State is Active.
-        </Text>
-        <Text style={shellStyles.cardText}>
-          {actionBlocked
-            ? "Evidence CTA disabled by lifecycle guard."
-            : "Evidence CTA can unlock when Session Progression arrives."}
-        </Text>
+        <View style={shellStyles.row}>
+          <StatusChip
+            label={currentSessionState ?? "Awaiting lifecycle event"}
+            tone={resolveSessionTone(currentSessionState)}
+          />
+          <StatusChip label={connectionState.kind === "reconnecting" ? "Reconectando" : connectionState.kind} tone={resolveConnectionTone(connectionState.kind)} />
+          <StatusChip label={snapshot.progressState} tone="info" />
+        </View>
+        <Text style={shellStyles.cardText}>{connectionState.detail}</Text>
+        {snapshotError ? <Text style={styles.error}>{snapshotError}</Text> : null}
       </View>
+
+      <View style={shellStyles.card}>
+        <Text style={shellStyles.cardTitle}>Session progression</Text>
+        <View style={shellStyles.row}>
+          <StatusChip label={`${completedStages} completed`} tone="success" />
+          <StatusChip
+            label={currentStage ? `Current ${currentStage.sessionStageOrder}` : "No active stage"}
+            tone="info"
+          />
+          {countdown ? <StatusChip label={countdown} tone="warn" /> : null}
+        </View>
+        {currentStage ? (
+          <>
+            <Text style={styles.stageTitle}>{currentStage.name}</Text>
+            <Text style={shellStyles.cardText}>
+              Stage order {currentStage.sessionStageOrder} | Difficulty {currentStage.difficulty} | Game type {currentStage.gameType}
+            </Text>
+          </>
+        ) : (
+          <Text style={shellStyles.cardText}>No current playable stage is visible for this Session Team yet.</Text>
+        )}
+      </View>
+
+      {feedback ? (
+        <View style={feedback.tone === "success" ? styles.feedbackSuccess : styles.feedbackError}>
+          <Text style={styles.feedbackText}>{feedback.title}</Text>
+          <Text style={shellStyles.cardText}>{feedback.detail}</Text>
+        </View>
+      ) : null}
+
+      <View style={shellStyles.card}>
+        <Text style={shellStyles.cardTitle}>Evidence Submission</Text>
+        <Text style={shellStyles.cardText}>
+          Session Operations accepts evidence only while Session State stays Running.
+        </Text>
+        {actionBlocked ? (
+          <Text style={styles.warning}>Evidence CTA disabled by lifecycle guard.</Text>
+        ) : null}
+        {currentStage?.gameType === "TreasureHunt" ? (
+          <Pressable
+            disabled={actionBlocked || submitting}
+            onPress={() => {
+              setScannerVisible(true);
+            }}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              (actionBlocked || submitting) && styles.disabledButton,
+              pressed && styles.buttonPressed
+            ]}
+          >
+            <Text style={styles.primaryButtonLabel}>
+              {submitting ? "Enviando QR..." : "Escanear QR"}
+            </Text>
+          </Pressable>
+        ) : (
+          <>
+            <TextInput
+              editable={!actionBlocked && !submitting}
+              onChangeText={setTriviaAnswer}
+              placeholder="Escribe tu respuesta..."
+              placeholderTextColor="#70868d"
+              style={styles.triviaInput}
+              value={triviaAnswer}
+            />
+            <Pressable
+              disabled={actionBlocked || submitting || triviaAnswer.trim().length === 0}
+              onPress={() => {
+                void submitTriviaEvidence();
+              }}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                (actionBlocked || submitting || triviaAnswer.trim().length === 0)
+                  && styles.disabledButton,
+                pressed && styles.buttonPressed
+              ]}
+            >
+              <Text style={styles.primaryButtonLabel}>
+                {submitting ? "Enviando..." : "Enviar"}
+              </Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+
+      <View style={shellStyles.section}>
+        <Text style={shellStyles.cardTitle}>Visible hints</Text>
+        {snapshot.visibleHints.length ? (
+          snapshot.visibleHints.map((hint) => (
+            <View key={hint.hintId} style={styles.hintItem}>
+              <View style={shellStyles.row}>
+                <StatusChip label={hint.isSolution ? "Solution" : "Hint"} tone={hint.isSolution ? "warn" : "info"} />
+                <StatusChip label={hint.unlockReason} tone="neutral" />
+              </View>
+              <Text style={shellStyles.cardText}>{hint.content}</Text>
+              {isStaticMapReady(hint) ? (
+                <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+              ) : (
+                <Text style={shellStyles.cardText}>
+                  This Hint has no coordinates, so the mobile client keeps the map hidden instead of rendering a broken state.
+                </Text>
+              )}
+            </View>
+          ))
+        ) : (
+          <View style={shellStyles.card}>
+            <StatusChip label="No hints yet" tone="warn" />
+            <Text style={shellStyles.cardText}>
+              Hint Release will surface here after Session Operations unlocks content for this Session Team.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <Modal animationType="slide" transparent={false} visible={scannerVisible}>
+        <View style={styles.scannerModal}>
+          <CameraView
+            onBarcodeScanned={({ data }) => {
+              void submitQrEvidence(data);
+            }}
+            style={styles.cameraPreview}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerFrame} />
+            <View style={styles.scannerInstructions}>
+              <Text style={styles.scannerTitle}>Scan stage QR</Text>
+              <Text style={styles.scannerText}>
+                Keep the code inside the frame. Session Operations will validate the hash for the current stage only.
+              </Text>
+              {submitting ? (
+                <View style={styles.inlineStatus}>
+                  <ActivityIndicator color="#f7fbfc" />
+                  <Text style={styles.inlineStatusText}>Sending scanned evidence...</Text>
+                </View>
+              ) : null}
+              <Pressable
+                onPress={() => {
+                  setScannerVisible(false);
+                }}
+                style={({ pressed }) => [
+                  styles.scannerCancelButton,
+                  pressed && styles.buttonPressed
+                ]}
+              >
+                <Text style={styles.scannerCancelLabel}>Cancelar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   primaryButton: {
+    alignItems: "center",
     backgroundColor: "#2d6a4f",
     borderRadius: 18,
-    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14
   },
@@ -93,7 +591,7 @@ const styles = StyleSheet.create({
     gap: 10
   },
   inlineStatusText: {
-    color: "#17313b",
+    color: "#f7fbfc",
     fontSize: 14,
     fontWeight: "700"
   },
@@ -102,6 +600,7 @@ const styles = StyleSheet.create({
     borderColor: "#74c69d",
     borderRadius: 16,
     borderWidth: 1,
+    gap: 8,
     padding: 12
   },
   feedbackError: {
@@ -109,6 +608,7 @@ const styles = StyleSheet.create({
     borderColor: "#ef9a9a",
     borderRadius: 16,
     borderWidth: 1,
+    gap: 8,
     padding: 12
   },
   feedbackText: {
@@ -181,18 +681,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800"
   },
-  secondaryButton: {
-    backgroundColor: "#17313b",
-    borderRadius: 18,
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  secondaryButtonLabel: {
-    color: "#f7fbfc",
-    fontSize: 15,
-    fontWeight: "700"
-  },
   buttonPressed: {
     opacity: 0.85
   },
@@ -201,12 +689,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  clock: {
-    color: "#17313b",
-    fontSize: 48,
-    fontWeight: "800",
-    letterSpacing: 1.5
-  },
   stageTitle: {
     color: "#17313b",
     fontSize: 24,
@@ -214,7 +696,7 @@ const styles = StyleSheet.create({
     lineHeight: 30
   },
   hintItem: {
-    backgroundColor: "#f6efe6",
+    backgroundColor: "#fffaf5",
     borderColor: "#eadcc8",
     borderRadius: 18,
     borderWidth: 1,
