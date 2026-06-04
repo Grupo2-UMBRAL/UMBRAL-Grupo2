@@ -1,8 +1,12 @@
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
+using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
+using Umbral.SessionOperations.Api.Hubs;
+using Umbral.SessionOperations.Api.Hubs.Contracts;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.SessionLifecycle;
@@ -26,7 +30,8 @@ public sealed record TransitionLiveSessionStateCommand(
 public sealed class TransitionLiveSessionStateCommandHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
-    ILiveSessionStateNotifier stateNotifier)
+    ILiveSessionStateNotifier stateNotifier,
+    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
     : IRequestHandler<TransitionLiveSessionStateCommand, LiveSessionStateResponse>
 {
     public async Task<LiveSessionStateResponse> Handle(
@@ -37,6 +42,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
 
         var liveSession = await dbContext.LiveSessions
             .Include(existingLiveSession => existingLiveSession.SessionTeams)
+            .Include(existingLiveSession => existingLiveSession.ReleasedHints)
             .SingleOrDefaultAsync(
                 existingLiveSession => existingLiveSession.Id == request.LiveSessionId,
                 cancellationToken);
@@ -51,7 +57,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
         var previousState = liveSession.State;
         var occurredAtUtc = timeProvider.GetUtcNow();
 
-        ApplyTransition(liveSession, request.Action, occurredAtUtc);
+        var newlyReleasedHints = ApplyTransition(liveSession, request.Action, occurredAtUtc);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -66,10 +72,15 @@ public sealed class TransitionLiveSessionStateCommandHandler(
                 occurredAtUtc),
             cancellationToken);
 
+        foreach (var releasedHint in newlyReleasedHints)
+        {
+            await PublishHintUnlockedAsync(liveSession, releasedHint, occurredAtUtc, cancellationToken);
+        }
+
         return response;
     }
 
-    private static void ApplyTransition(
+    private static IReadOnlyList<ReleasedHint> ApplyTransition(
         LiveSession liveSession,
         LiveSessionLifecycleAction action,
         DateTimeOffset occurredAtUtc)
@@ -78,24 +89,59 @@ public sealed class TransitionLiveSessionStateCommandHandler(
         {
             case LiveSessionLifecycleAction.Start:
                 liveSession.Start(occurredAtUtc);
-                return;
+                return Array.Empty<ReleasedHint>();
             case LiveSessionLifecycleAction.Pause:
                 liveSession.Pause();
-                return;
+                return Array.Empty<ReleasedHint>();
             case LiveSessionLifecycleAction.Resume:
                 liveSession.Resume();
-                return;
+                return Array.Empty<ReleasedHint>();
             case LiveSessionLifecycleAction.Finalize:
-                liveSession.FinalizeSession();
-                return;
+                return liveSession.FinalizeAndRevealAllHints(occurredAtUtc);
             case LiveSessionLifecycleAction.Cancel:
                 liveSession.Cancel();
-                return;
+                return Array.Empty<ReleasedHint>();
             default:
                 throw new UmbralDomainException(
                     "live_session_lifecycle_action_invalid",
                     $"Unsupported lifecycle action '{action}'.",
                     UmbralFailureCategory.Validation);
         }
+    }
+
+    private async Task PublishHintUnlockedAsync(
+        LiveSession liveSession,
+        ReleasedHint releasedHint,
+        DateTimeOffset occurredAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var payload = new HintUnlockedPayload(
+            new RealtimeEventMetadata(
+                liveSession.Id,
+                liveSession.SequenceNumber,
+                occurredAtUtc,
+                SnapshotRefreshPolicy.RefreshSnapshot,
+                "LiveSession finalized; all Hints and solutions revealed."),
+            releasedHint.SessionTeamId,
+            MapVisibleHint(liveSession, releasedHint));
+
+        await hubContext.Clients.All.ReceiveHintUnlocked(payload).WaitAsync(cancellationToken);
+    }
+
+    private static VisibleHintSnapshot MapVisibleHint(LiveSession liveSession, ReleasedHint releasedHint)
+    {
+        var sessionStage = liveSession.SessionStageFlow.Single(stage =>
+            stage.MissionStageId == releasedHint.MissionStageId);
+        var hint = sessionStage.Hints.Single(stageHint => stageHint.Id == releasedHint.HintId);
+
+        return new VisibleHintSnapshot(
+            hint.Id,
+            sessionStage.MissionStageId,
+            hint.Content,
+            hint.IsSolution,
+            hint.Latitude,
+            hint.Longitude,
+            releasedHint.ReleasedAtUtc,
+            releasedHint.UnlockReason);
     }
 }

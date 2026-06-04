@@ -99,6 +99,17 @@ function isStaticMapReady(hint: VisibleHintSnapshot) {
   return typeof hint.latitude === "number" && typeof hint.longitude === "number";
 }
 
+function groupHintsByStage(hints: VisibleHintSnapshot[]) {
+  return hints.reduce<Record<string, VisibleHintSnapshot[]>>((groups, hint) => {
+    const stageHints = groups[hint.missionStageId] ?? [];
+
+    return {
+      ...groups,
+      [hint.missionStageId]: [...stageHints, hint]
+    };
+  }, {});
+}
+
 export default function BoardPage() {
   const { session } = useSession();
   const config = useMemo(() => getClientConfig(), []);
@@ -278,8 +289,17 @@ export default function BoardPage() {
   const currentStage = snapshot?.currentStage;
   const completedStages = currentStage ? Math.max(0, currentStage.sessionStageOrder - 1) : 0;
   const currentSessionState = snapshot?.sessionState ?? null;
+  const isFinalized = currentSessionState === "Finalized";
   const actionBlocked = currentSessionState !== "Running" && currentSessionState !== "Active";
   const countdown = formatCountdown(remainingSeconds);
+  const visibleGameplayHints = useMemo(
+    () => snapshot?.visibleHints.filter((hint) => !hint.isSolution) ?? [],
+    [snapshot?.visibleHints]
+  );
+  const resolutionHintsByStage = useMemo(
+    () => groupHintsByStage(snapshot?.visibleHints ?? []),
+    [snapshot?.visibleHints]
+  );
 
   async function submitQrEvidence(qrHash: string) {
     if (!apiClient || !storedEnrollment) {
@@ -454,7 +474,12 @@ export default function BoardPage() {
         {actionBlocked ? (
           <Text style={styles.warning}>Evidence CTA disabled by lifecycle guard.</Text>
         ) : null}
-        {currentStage?.gameType === "TreasureHunt" ? (
+        {isFinalized ? (
+          <View style={styles.finalizedEvidenceNotice}>
+            <StatusChip label="Finalized" tone="error" />
+            <Text style={shellStyles.cardText}>Evidence Submission closed.</Text>
+          </View>
+        ) : currentStage?.gameType === "TreasureHunt" ? (
           <Pressable
             disabled={actionBlocked || submitting}
             onPress={() => {
@@ -500,34 +525,86 @@ export default function BoardPage() {
         )}
       </View>
 
-      <View style={shellStyles.section}>
-        <Text style={shellStyles.cardTitle}>Visible hints</Text>
-        {snapshot.visibleHints.length ? (
-          snapshot.visibleHints.map((hint) => (
-            <View key={hint.hintId} style={styles.hintItem}>
-              <View style={shellStyles.row}>
-                <StatusChip label={hint.isSolution ? "Solution" : "Hint"} tone={hint.isSolution ? "warn" : "info"} />
-                <StatusChip label={hint.unlockReason} tone="neutral" />
-              </View>
-              <Text style={shellStyles.cardText}>{hint.content}</Text>
-              {isStaticMapReady(hint) ? (
-                <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
-              ) : (
-                <Text style={shellStyles.cardText}>
-                  This Hint has no coordinates, so the mobile client keeps the map hidden instead of rendering a broken state.
-                </Text>
-              )}
+      {isFinalized ? (
+        <View style={styles.resolutionsSection}>
+          <Text style={styles.resolutionsTitle}>Resoluciones de la Misión</Text>
+          {(snapshot.allStages ?? []).length ? (
+            snapshot.allStages?.map((stage) => {
+              const stageHints = resolutionHintsByStage[stage.missionStageId] ?? [];
+
+              return (
+                <View key={stage.missionStageId} style={styles.resolutionStageCard}>
+                  <View style={styles.resolutionStageHeader}>
+                    <Text style={styles.resolutionStageTitle}>{stage.name}</Text>
+                    <StatusChip label={`Stage ${stage.sessionStageOrder}`} tone="neutral" />
+                  </View>
+                  <View style={shellStyles.row}>
+                    <StatusChip label={stage.difficulty} tone="info" />
+                    <StatusChip label={stage.gameType} tone="success" />
+                  </View>
+                  <Text style={shellStyles.cardText}>{stage.prompt}</Text>
+                  {stageHints.length ? (
+                    stageHints.map((hint) => (
+                      <View
+                        key={hint.hintId}
+                        style={hint.isSolution ? styles.solutionItem : styles.resolutionHintItem}
+                      >
+                        <View style={shellStyles.row}>
+                          <StatusChip
+                            label={hint.isSolution ? "Solution" : "Hint"}
+                            tone={hint.isSolution ? "warn" : "info"}
+                          />
+                          <StatusChip label={hint.unlockReason} tone="neutral" />
+                        </View>
+                        <Text style={styles.resolutionHintText}>{hint.content}</Text>
+                        {isStaticMapReady(hint) ? (
+                          <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                        ) : null}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={shellStyles.cardText}>No Hints registered for this stage.</Text>
+                  )}
+                </View>
+              );
+            })
+          ) : (
+            <View style={shellStyles.card}>
+              <StatusChip label="Awaiting resolutions" tone="warn" />
+              <Text style={shellStyles.cardText}>Session snapshot has no final stage list yet.</Text>
             </View>
-          ))
-        ) : (
-          <View style={shellStyles.card}>
-            <StatusChip label="No hints yet" tone="warn" />
-            <Text style={shellStyles.cardText}>
-              Hint Release will surface here after Session Operations unlocks content for this Session Team.
-            </Text>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
+      ) : (
+        <View style={shellStyles.section}>
+          <Text style={shellStyles.cardTitle}>Visible hints</Text>
+          {visibleGameplayHints.length ? (
+            visibleGameplayHints.map((hint) => (
+              <View key={hint.hintId} style={styles.hintItem}>
+                <View style={shellStyles.row}>
+                  <StatusChip label="Hint" tone="info" />
+                  <StatusChip label={hint.unlockReason} tone="neutral" />
+                </View>
+                <Text style={shellStyles.cardText}>{hint.content}</Text>
+                {isStaticMapReady(hint) ? (
+                  <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                ) : (
+                  <Text style={shellStyles.cardText}>
+                    This Hint has no coordinates, so the mobile client keeps the map hidden instead of rendering a broken state.
+                  </Text>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={shellStyles.card}>
+              <StatusChip label="No hints yet" tone="warn" />
+              <Text style={shellStyles.cardText}>
+                Hint Release will surface here after Session Operations unlocks content for this Session Team.
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <Modal animationType="slide" transparent={false} visible={scannerVisible}>
         <View style={styles.scannerModal}>
@@ -632,6 +709,68 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 14,
     paddingVertical: 12
+  },
+  finalizedEvidenceNotice: {
+    backgroundColor: "#f2e7de",
+    borderColor: "#d1ab89",
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  resolutionsSection: {
+    backgroundColor: "#eef5f1",
+    borderColor: "#bed8c9",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 14,
+    padding: 14
+  },
+  resolutionsTitle: {
+    color: "#17313b",
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 28
+  },
+  resolutionStageCard: {
+    backgroundColor: "#f7fbfc",
+    borderColor: "#c8d7dc",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14
+  },
+  resolutionStageHeader: {
+    alignItems: "flex-start",
+    gap: 10
+  },
+  resolutionStageTitle: {
+    color: "#17313b",
+    fontSize: 19,
+    fontWeight: "900",
+    lineHeight: 25
+  },
+  resolutionHintItem: {
+    backgroundColor: "#fffaf5",
+    borderColor: "#eadcc8",
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  solutionItem: {
+    backgroundColor: "#fff1df",
+    borderColor: "#d28b39",
+    borderRadius: 16,
+    borderWidth: 2,
+    gap: 10,
+    padding: 12
+  },
+  resolutionHintText: {
+    color: "#17313b",
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 21
   },
   scannerModal: {
     backgroundColor: "#000",

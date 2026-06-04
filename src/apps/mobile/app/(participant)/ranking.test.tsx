@@ -93,7 +93,8 @@ test("loads ranking and highlights the participant team", async () => {
           sourceOrder: 10,
           resolvedTimeBudgetMinutes: 15,
           difficulty: "Medium",
-          gameType: "Trivia"
+          gameType: "Trivia",
+          prompt: "Decode the message hidden in the seal."
         },
         visibleHints: [],
         sync: {
@@ -146,7 +147,8 @@ test("applies realtime ranking updates from SignalR", async () => {
           sourceOrder: 10,
           resolvedTimeBudgetMinutes: 15,
           difficulty: "Medium",
-          gameType: "Trivia"
+          gameType: "Trivia",
+          prompt: "Decode the message hidden in the seal."
         },
         visibleHints: [],
         sync: {

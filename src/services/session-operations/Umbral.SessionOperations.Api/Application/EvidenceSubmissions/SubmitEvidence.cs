@@ -192,7 +192,8 @@ public sealed class SubmitEvidenceHandler(
             currentStage.SourceOrder,
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
-            currentStage.GameType);
+            currentStage.GameType,
+            currentStage.Prompt);
     }
 
     private static RecordStageCreditRequest CreateStageCreditRequest(
