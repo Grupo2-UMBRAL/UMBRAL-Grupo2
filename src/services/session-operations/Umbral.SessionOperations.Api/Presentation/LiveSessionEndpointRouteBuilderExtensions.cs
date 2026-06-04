@@ -6,7 +6,6 @@ using Umbral.SessionOperations.Api.Application.Hints;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Application.SessionLifecycle;
-using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
 namespace Umbral.SessionOperations.Api.Presentation;
 
