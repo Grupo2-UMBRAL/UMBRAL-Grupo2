@@ -187,6 +187,14 @@ type RankingPayload = {
   items: RankingItem[];
 };
 
+type SessionEventLogItem = {
+  id: string;
+  liveSessionId: string;
+  eventType: string;
+  description: string;
+  timestamp: string;
+};
+
 type LiveSessionDraft = {
   name: string;
   scheduledStartAtLocal: string;
@@ -216,13 +224,20 @@ type LiveSessionOverviewDashboardProps = {
   liveSession: LiveSession;
   overview: LiveSessionOverview | null;
   connectionState: RealtimeConnectionState;
+  scoringConnectionState: RealtimeConnectionState;
   isLoadingOverview: boolean;
+  isLoadingEventLog: boolean;
   lifecycleActions: LifecycleActionViewModel[];
   lifecycleActionPending: LiveSessionLifecycleAction | null;
-  rankingItemCount: number;
+  rankingItems: RankingItem[];
+  eventLogItems: SessionEventLogItem[];
   isLoadingRanking: boolean;
+  rankingError: string | null;
+  eventLogError: string | null;
   onLifecycleAction: (action: LiveSessionLifecycleAction) => void;
+  onRefreshEventLog: () => void;
   onRefreshOverview: () => void;
+  onRefreshRanking: () => void;
 };
 
 function createAuthorizedHeaders(accessToken: string) {
@@ -308,6 +323,36 @@ function formatShortTimestamp(value: string | null | undefined) {
     minute: "2-digit",
     second: "2-digit"
   });
+}
+
+function formatRelativeTimestamp(value: string) {
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) {
+    return value;
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp.getTime()) / 1000));
+
+  if (elapsedSeconds < 10) {
+    return "Now";
+  }
+
+  if (elapsedSeconds < 60) {
+    return `${elapsedSeconds}s ago`;
+  }
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) {
+    return `${elapsedMinutes}m ago`;
+  }
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) {
+    return `${elapsedHours}h ago`;
+  }
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays}d ago`;
 }
 
 function formatRemainingSeconds(value: number | null | undefined) {
@@ -451,17 +496,190 @@ function countTeamsAtOrBeyondSessionStage(sessionStage: LiveSessionStage, sessio
   ).length;
 }
 
+function sortSessionEventLogItems(items: SessionEventLogItem[]) {
+  return [...items].sort((left, right) => {
+    const leftTime = new Date(left.timestamp).getTime();
+    const rightTime = new Date(right.timestamp).getTime();
+
+    if (Number.isNaN(leftTime) || Number.isNaN(rightTime) || leftTime === rightTime) {
+      return right.id.localeCompare(left.id);
+    }
+
+    return rightTime - leftTime;
+  });
+}
+
+function upsertSessionEventLogItem(items: SessionEventLogItem[], nextItem: SessionEventLogItem) {
+  return sortSessionEventLogItems([nextItem, ...items.filter((item) => item.id !== nextItem.id)]);
+}
+
+type ScoringRankingWidgetProps = {
+  rankingItems: RankingItem[];
+  teams: LiveSessionOverviewTeam[];
+  isLoading: boolean;
+  error: string | null;
+  connectionState: RealtimeConnectionState;
+  onRefresh: () => void;
+};
+
+function ScoringRankingWidget({
+  rankingItems,
+  teams,
+  isLoading,
+  error,
+  connectionState,
+  onRefresh
+}: ScoringRankingWidgetProps) {
+  return (
+    <section className="overview-slot scoring-widget">
+      <div className="widget-header">
+        <div>
+          <p className="eyebrow">Scoring and Audit</p>
+          <h4>Ranking</h4>
+        </div>
+        <div className="widget-header-actions">
+          <span className={getConnectionSignalClass(connectionState)}>Scoring: {connectionState.label}</span>
+          <button className="ghost-button compact-button" disabled={isLoading} onClick={onRefresh} type="button">
+            {isLoading ? "Syncing" : "Refresh"}
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="empty-state degraded-state">
+          <strong>Ranking unavailable.</strong>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
+      {!error && rankingItems.length > 0 ? (
+        <div className="ranking-table-wrap">
+          <table className="ranking-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Team</th>
+                <th>Points</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rankingItems.map((entry, index) => {
+                const previousEntry = rankingItems[index - 1];
+                const isSharedRank = previousEntry?.rank === entry.rank;
+
+                return (
+                  <tr key={entry.sessionTeamId}>
+                    <td>
+                      <span className="status-pill status-ok">#{entry.rank}</span>
+                    </td>
+                    <td>
+                      <strong>{findRankingTeamName(entry.sessionTeamId, teams)}</strong>
+                      {isSharedRank ? <p className="field-hint">Shared rank</p> : null}
+                    </td>
+                    <td>{entry.visibleScore} pts</td>
+                    <td>{formatResolutionTime(entry.resolutionTime)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {!error && !isLoading && rankingItems.length === 0 ? (
+        <div className="empty-state">
+          <strong>No Score Entries yet.</strong>
+          <p>Ranking appears when Scoring and Audit records Stage Credit for a Session Team.</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+type SessionEventTimelineProps = {
+  eventLogItems: SessionEventLogItem[];
+  isLoading: boolean;
+  error: string | null;
+  connectionState: RealtimeConnectionState;
+  onRefresh: () => void;
+};
+
+function SessionEventTimeline({
+  eventLogItems,
+  isLoading,
+  error,
+  connectionState,
+  onRefresh
+}: SessionEventTimelineProps) {
+  return (
+    <section className="overview-slot scoring-widget">
+      <div className="widget-header">
+        <div>
+          <p className="eyebrow">Audit Log</p>
+          <h4>Timeline</h4>
+        </div>
+        <div className="widget-header-actions">
+          <span className={getConnectionSignalClass(connectionState)}>Events: {connectionState.label}</span>
+          <button className="ghost-button compact-button" disabled={isLoading} onClick={onRefresh} type="button">
+            {isLoading ? "Syncing" : "Refresh"}
+          </button>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="empty-state degraded-state">
+          <strong>Timeline unavailable.</strong>
+          <p>{error}</p>
+        </div>
+      ) : null}
+
+      {!error && eventLogItems.length > 0 ? (
+        <ol className="timeline-list">
+          {eventLogItems.map((eventLog) => (
+            <li className="timeline-item" key={eventLog.id}>
+              <span className="timeline-marker" aria-hidden="true" />
+              <div className="timeline-content">
+                <div className="timeline-meta">
+                  <span className="node-chip">{eventLog.eventType}</span>
+                  <time dateTime={eventLog.timestamp}>{formatRelativeTimestamp(eventLog.timestamp)}</time>
+                </div>
+                <p>{eventLog.description}</p>
+                <span className="field-hint">{formatTimestamp(eventLog.timestamp)}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      {!error && !isLoading && eventLogItems.length === 0 ? (
+        <div className="empty-state">
+          <strong>No auditable events yet.</strong>
+          <p>The timeline remains ready while the Session Event Log waits for scoring or operator events.</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function LiveSessionOverviewDashboard({
   liveSession,
   overview,
   connectionState,
+  scoringConnectionState,
   isLoadingOverview,
+  isLoadingEventLog,
   lifecycleActions,
   lifecycleActionPending,
-  rankingItemCount,
+  rankingItems,
+  eventLogItems,
   isLoadingRanking,
+  rankingError,
+  eventLogError,
   onLifecycleAction,
-  onRefreshOverview
+  onRefreshEventLog,
+  onRefreshOverview,
+  onRefreshRanking
 }: LiveSessionOverviewDashboardProps) {
   const sessionState = overview?.sessionState ?? liveSession.state;
   const teams = overview ? sortOverviewTeams(overview.sessionTeams) : [];
@@ -591,26 +809,21 @@ function LiveSessionOverviewDashboard({
       </section>
 
       <div className="overview-secondary-grid">
-        <section className="overview-slot">
-          <div>
-            <p className="eyebrow">Scoring and Audit</p>
-            <h4>Ranking widget</h4>
-          </div>
-          <p className="muted-copy">
-            {isLoadingRanking
-              ? "Ranking sync is running in background."
-              : `${rankingItemCount} ranking item(s) available. Widget remains out of this slice.`}
-          </p>
-        </section>
-        <section className="overview-slot">
-          <div>
-            <p className="eyebrow">Audit Log</p>
-            <h4>Timeline</h4>
-          </div>
-          <p className="muted-copy">
-            Event timeline is intentionally absent for UMB-25. Overview keeps rendering without it.
-          </p>
-        </section>
+        <ScoringRankingWidget
+          connectionState={scoringConnectionState}
+          error={rankingError}
+          isLoading={isLoadingRanking}
+          onRefresh={onRefreshRanking}
+          rankingItems={rankingItems}
+          teams={teams}
+        />
+        <SessionEventTimeline
+          connectionState={scoringConnectionState}
+          error={eventLogError}
+          eventLogItems={eventLogItems}
+          isLoading={isLoadingEventLog}
+          onRefresh={onRefreshEventLog}
+        />
       </div>
     </div>
   );
@@ -625,6 +838,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [selectedLiveSessionId, setSelectedLiveSessionId] = useState<string | null>(null);
   const [selectedLiveSessionOverview, setSelectedLiveSessionOverview] = useState<LiveSessionOverview | null>(null);
   const [selectedLiveSessionRanking, setSelectedLiveSessionRanking] = useState<RankingPayload | null>(null);
+  const [selectedLiveSessionEventLog, setSelectedLiveSessionEventLog] = useState<SessionEventLogItem[]>([]);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
   const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
     createEmptyOperationalHintDraft
@@ -634,6 +848,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
   const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
+  const [isLoadingEventLog, setIsLoadingEventLog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
@@ -643,6 +858,13 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     label: "Desconectado",
     detail: "SignalR waiting for selected LiveSession."
   });
+  const [scoringRealtimeConnection, setScoringRealtimeConnection] = useState<RealtimeConnectionState>({
+    kind: "disconnected",
+    label: "Desconectado",
+    detail: "SignalR waiting for selected LiveSession."
+  });
+  const [rankingError, setRankingError] = useState<string | null>(null);
+  const [eventLogError, setEventLogError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -747,6 +969,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     selectedLiveSessionRanking?.liveSessionId === selectedLiveSession?.id
       ? selectedLiveSessionRanking.items
       : [];
+  const selectedEventLogItems = selectedLiveSession
+    ? selectedLiveSessionEventLog.filter((eventLog) => eventLog.liveSessionId === selectedLiveSession.id)
+    : [];
   const pendingLiveSessionStageCount = selectedLiveSessionStages.filter(
     (sessionStage) => getSessionStageOperationalStatus(sessionStage, selectedLiveSessionOverviewTeams) === "Pending"
   ).length;
@@ -844,6 +1069,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const loadLiveSessionRanking = useCallback(
     async (liveSessionId: string) => {
       setIsLoadingRanking(true);
+      setRankingError(null);
 
       try {
         const response = await fetch(`${scoringAuditSessionsUrl}/${liveSessionId}/ranking`, {
@@ -865,10 +1091,42 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
         const payload = (await response.json()) as RankingPayload;
         setSelectedLiveSessionRanking(payload);
-      } catch {
+      } catch (error) {
         setSelectedLiveSessionRanking(null);
+        setRankingError(error instanceof Error ? error.message : "Could not load Ranking.");
       } finally {
         setIsLoadingRanking(false);
+      }
+    },
+    [accessToken, scoringAuditSessionsUrl]
+  );
+
+  const loadLiveSessionEventLog = useCallback(
+    async (liveSessionId: string) => {
+      setIsLoadingEventLog(true);
+      setEventLogError(null);
+
+      try {
+        const response = await fetch(`${scoringAuditSessionsUrl}/${liveSessionId}/event-log`, {
+          headers: createAuthorizedHeaders(accessToken)
+        });
+
+        if (response.status === 404) {
+          setSelectedLiveSessionEventLog([]);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(await readFailureDetail(response));
+        }
+
+        const payload = (await response.json()) as SessionEventLogItem[];
+        setSelectedLiveSessionEventLog(sortSessionEventLogItems(payload));
+      } catch (error) {
+        setSelectedLiveSessionEventLog([]);
+        setEventLogError(error instanceof Error ? error.message : "Could not load Session Event Log.");
+      } finally {
+        setIsLoadingEventLog(false);
       }
     },
     [accessToken, scoringAuditSessionsUrl]
@@ -1158,6 +1416,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       queueMicrotask(() => {
         setSelectedLiveSessionOverview(null);
         setSelectedLiveSessionRanking(null);
+        setSelectedLiveSessionEventLog([]);
+        setRankingError(null);
+        setEventLogError(null);
       });
       return;
     }
@@ -1165,15 +1426,29 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     queueMicrotask(() => {
       void loadLiveSessionOverview(selectedLiveSessionId);
       void loadLiveSessionRanking(selectedLiveSessionId);
+      void loadLiveSessionEventLog(selectedLiveSessionId);
     });
-  }, [loadLiveSessionOverview, loadLiveSessionRanking, selectedLiveSessionId]);
+  }, [loadLiveSessionEventLog, loadLiveSessionOverview, loadLiveSessionRanking, selectedLiveSessionId]);
 
   useEffect(() => {
-    if (!selectedLiveSessionId) {
-      return;
+    let active = true;
+
+    if (!selectedLiveSessionId || !accessToken.trim() || !scoringAuditHubUrl.trim()) {
+      queueMicrotask(() => {
+        if (active) {
+          setScoringRealtimeConnection({
+            kind: "disconnected",
+            label: "Desconectado",
+            detail: "SignalR waiting for selected LiveSession."
+          });
+        }
+      });
+
+      return () => {
+        active = false;
+      };
     }
 
-    let active = true;
     const connection = new HubConnectionBuilder()
       .withUrl(scoringAuditHubUrl, {
         accessTokenFactory: () => accessToken,
@@ -1185,36 +1460,100 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       .build();
 
     connection.on("ReceiveRankingUpdated", (payload: RankingPayload) => {
-      if (payload.liveSessionId !== selectedLiveSessionId) {
+      if (!active || payload.liveSessionId !== selectedLiveSessionId) {
         return;
       }
 
       setSelectedLiveSessionRanking(payload);
+      setRankingError(null);
+    });
+
+    connection.on("ReceiveEventLogUpdated", (payload: SessionEventLogItem) => {
+      if (!active || payload.liveSessionId !== selectedLiveSessionId) {
+        return;
+      }
+
+      setSelectedLiveSessionEventLog((current) => upsertSessionEventLogItem(current, payload));
+      setEventLogError(null);
+    });
+
+    connection.onreconnecting(() => {
+      if (!active) {
+        return;
+      }
+
+      setScoringRealtimeConnection({
+        kind: "reconnecting",
+        label: "Reconectando",
+        detail: "Scoring Audit stream dropped. Widgets keep the latest snapshot."
+      });
     });
 
     connection.onreconnected(() => {
       if (active) {
+        setScoringRealtimeConnection({
+          kind: "connected",
+          label: "Conectado",
+          detail: "Scoring Audit stream restored."
+        });
         void loadLiveSessionRanking(selectedLiveSessionId);
+        void loadLiveSessionEventLog(selectedLiveSessionId);
       }
     });
 
     connection.onclose((error) => {
-      if (active && error) {
-        setErrorMessage(`Scoring Audit realtime closed: ${error.message}`);
+      if (!active) {
+        return;
+      }
+
+      setScoringRealtimeConnection({
+        kind: error ? "error" : "disconnected",
+        label: "Desconectado",
+        detail: error ? `Scoring Audit closed: ${error.message}` : "Scoring Audit stream closed."
+      });
+    });
+
+    queueMicrotask(() => {
+      if (active) {
+        setScoringRealtimeConnection({
+          kind: "connecting",
+          label: "Reconectando",
+          detail: "Opening Scoring Audit stream."
+        });
       }
     });
 
-    void connection.start().catch((error: unknown) => {
-      if (active) {
-        setErrorMessage(error instanceof Error ? error.message : "Could not connect to Scoring Audit realtime.");
+    void connection.start().then(
+      () => {
+        if (!active) {
+          void connection.stop();
+          return;
+        }
+
+        setScoringRealtimeConnection({
+          kind: "connected",
+          label: "Conectado",
+          detail: "Scoring Audit stream connected."
+        });
+      },
+      (error: unknown) => {
+        if (!active) {
+          return;
+        }
+
+        setScoringRealtimeConnection({
+          kind: "error",
+          label: "Desconectado",
+          detail: error instanceof Error ? error.message : "Could not connect to Scoring Audit realtime."
+        });
       }
-    });
+    );
 
     return () => {
       active = false;
       void connection.stop();
     };
-  }, [accessToken, loadLiveSessionRanking, scoringAuditHubUrl, selectedLiveSessionId]);
+  }, [accessToken, loadLiveSessionEventLog, loadLiveSessionRanking, scoringAuditHubUrl, selectedLiveSessionId]);
 
   useEffect(() => {
     if (!selectedLiveSession || operationalHintDraft.missionStageId) {
@@ -1784,6 +2123,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                 {selectedLiveSession.state !== "Scheduled" ? (
                   <LiveSessionOverviewDashboard
                     connectionState={sessionRealtimeConnection}
+                    eventLogError={eventLogError}
+                    eventLogItems={selectedEventLogItems}
+                    isLoadingEventLog={isLoadingEventLog}
                     isLoadingOverview={isLoadingLiveSessionOverview}
                     isLoadingRanking={isLoadingRanking}
                     lifecycleActionPending={lifecycleActionPending}
@@ -1792,9 +2134,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     onLifecycleAction={(action) => {
                       void handleLifecycleAction(action);
                     }}
+                    onRefreshEventLog={() => {
+                      void loadLiveSessionEventLog(selectedLiveSession.id);
+                    }}
                     onRefreshOverview={refreshSelectedOverview}
+                    onRefreshRanking={() => {
+                      void loadLiveSessionRanking(selectedLiveSession.id);
+                    }}
                     overview={isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview : null}
-                    rankingItemCount={selectedRankingItems.length}
+                    rankingError={rankingError}
+                    rankingItems={selectedRankingItems}
+                    scoringConnectionState={scoringRealtimeConnection}
                   />
                 ) : null}
 
@@ -1909,58 +2259,6 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                       })}
                     </div>
                   </>
-                ) : null}
-
-                {isSelectedLiveSessionActive ? (
-                  <section className="operator-detail-card">
-                    <div className="mission-list-header">
-                      <div>
-                        <p className="eyebrow">Scoring and Audit</p>
-                        <h3>Ranking de Equipos</h3>
-                      </div>
-                      {isLoadingRanking ? <span className="status-pill status-loading">Syncing</span> : null}
-                    </div>
-
-                    {selectedRankingItems.length > 0 ? (
-                      <div className="ranking-table-wrap">
-                        <table className="ranking-table">
-                          <thead>
-                            <tr>
-                              <th>Rank</th>
-                              <th>Equipo</th>
-                              <th>Puntaje</th>
-                              <th>Resolution Time</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedRankingItems.map((entry, index) => {
-                              const previousEntry = selectedRankingItems[index - 1];
-                              const isSharedRank = previousEntry?.rank === entry.rank;
-
-                              return (
-                                <tr key={entry.sessionTeamId}>
-                                  <td>
-                                    <span className="status-pill status-ok">#{entry.rank}</span>
-                                  </td>
-                                  <td>
-                                    <strong>{findRankingTeamName(entry.sessionTeamId, selectedLiveSessionOverviewTeams)}</strong>
-                                    {isSharedRank ? <p className="field-hint">Empate conservado</p> : null}
-                                  </td>
-                                  <td>{entry.visibleScore} pts</td>
-                                  <td>{formatResolutionTime(entry.resolutionTime)}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="empty-state">
-                        <strong>Sin Score Entries todavia.</strong>
-                        <p>El Ranking aparecera cuando Scoring and Audit registre credito de etapa.</p>
-                      </div>
-                    )}
-                  </section>
                 ) : null}
 
                 {isSelectedLiveSessionActive ? (

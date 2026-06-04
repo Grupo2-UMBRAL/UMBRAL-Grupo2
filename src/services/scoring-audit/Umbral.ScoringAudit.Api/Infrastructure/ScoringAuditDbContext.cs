@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
 
 namespace Umbral.ScoringAudit.Api.Infrastructure;
@@ -8,6 +9,8 @@ public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext
     public DbSet<Scoreboard> Scoreboards => Set<Scoreboard>();
 
     public DbSet<ScoreEntry> ScoreEntries => Set<ScoreEntry>();
+
+    public DbSet<SessionEventLog> SessionEventLogs => Set<SessionEventLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +95,33 @@ public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext
                 .IsUnique()
                 .HasDatabaseName("ux_score_entries_single_stage_credit")
                 .HasFilter("mission_stage_id IS NOT NULL AND entry_type IN ('StageCredit', 'ValidationOverrideCredit')");
+        });
+
+        modelBuilder.Entity<SessionEventLog>(sessionEventLog =>
+        {
+            sessionEventLog.ToTable("session_event_logs");
+            sessionEventLog.HasKey(entity => entity.Id);
+
+            sessionEventLog.Property(entity => entity.Id)
+                .HasColumnName("id")
+                .ValueGeneratedNever();
+            sessionEventLog.Property(entity => entity.LiveSessionId)
+                .HasColumnName("live_session_id")
+                .IsRequired();
+            sessionEventLog.Property(entity => entity.EventType)
+                .HasColumnName("event_type")
+                .HasMaxLength(SessionEventLog.EventTypeMaxLength)
+                .IsRequired();
+            sessionEventLog.Property(entity => entity.Description)
+                .HasColumnName("description")
+                .HasMaxLength(SessionEventLog.DescriptionMaxLength)
+                .IsRequired();
+            sessionEventLog.Property(entity => entity.Timestamp)
+                .HasColumnName("timestamp")
+                .IsRequired();
+
+            sessionEventLog.HasIndex(entity => new { entity.LiveSessionId, entity.Timestamp })
+                .HasDatabaseName("ix_session_event_logs_live_session_id_timestamp");
         });
     }
 }

@@ -1,11 +1,60 @@
 using Umbral.ScoringAudit.Api.Domain.Penalties;
 using Umbral.ScoringAudit.Api.Domain.Rankings;
+using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
 using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ServiceDefaults;
 using Xunit;
 
 namespace Umbral.ScoringAudit.Api.Tests;
+
+public sealed class SessionEventLogTests
+{
+    [Fact]
+    public void Constructor_CreatesAuditableSessionEvent()
+    {
+        var liveSessionId = Guid.NewGuid();
+        var timestamp = DateTimeOffset.UtcNow;
+
+        var eventLog = new SessionEventLog(
+            Guid.NewGuid(),
+            liveSessionId,
+            " StageCredit ",
+            " Session Team completed a stage. ",
+            timestamp);
+
+        Assert.Equal(liveSessionId, eventLog.LiveSessionId);
+        Assert.Equal("StageCredit", eventLog.EventType);
+        Assert.Equal("Session Team completed a stage.", eventLog.Description);
+        Assert.Equal(timestamp, eventLog.Timestamp);
+    }
+
+    [Fact]
+    public void Constructor_RejectsMissingEventType()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => new SessionEventLog(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            " ",
+            "Session Team completed a stage.",
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("session_event_log.empty_event_type", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsMissingDescription()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => new SessionEventLog(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "StageCredit",
+            " ",
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("session_event_log.empty_description", exception.Code);
+    }
+}
 
 public sealed class PenaltySeverityTests
 {
