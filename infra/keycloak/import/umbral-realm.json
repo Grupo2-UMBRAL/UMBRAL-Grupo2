@@ -20,6 +20,7 @@
       "defaultClientScopes": [
         "web-origins",
         "acr",
+        "basic",
         "profile",
         "roles",
         "email",
@@ -44,6 +45,7 @@
       "defaultClientScopes": [
         "web-origins",
         "acr",
+        "basic",
         "profile",
         "roles",
         "email",
@@ -69,6 +71,7 @@
       "defaultClientScopes": [
         "web-origins",
         "acr",
+        "basic",
         "profile",
         "roles",
         "email",
@@ -140,6 +143,28 @@
     }
   ],
   "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Restores subject claims for lightweight access tokens used by local clients.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "true"
+          }
+        }
+      ]
+    },
     {
       "name": "umbral-api-audiences",
       "description": "Adds the API audiences required by local login tokens.",

@@ -261,6 +261,27 @@ type SessionEventLogItem = {
   timestamp: string;
 };
 
+type PenaltySeverity = "Minor" | "Major" | "Critical";
+
+type PenaltyDraft = {
+  sessionTeamId: string;
+  severity: PenaltySeverity;
+  reason: string;
+  commandId: string;
+};
+
+type ApplyPenaltyResponse = {
+  liveSessionId: string;
+  sessionTeamId: string;
+  commandId: string;
+  penaltyId: string | null;
+  scoreEntryId: string | null;
+  penaltyApplied: boolean;
+  visibleScore: number;
+  ranking: RankingPayload;
+  recordedAtUtc: string;
+};
+
 type LiveSessionDraft = {
   name: string;
   scheduledStartAtLocal: string;
@@ -335,6 +356,23 @@ function createEmptyOperationalHintDraft(): OperationalHintDraft {
     content: "",
     latitude: "",
     longitude: ""
+  };
+}
+
+function createPenaltyCommandId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `penalty-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createEmptyPenaltyDraft(sessionTeamId = ""): PenaltyDraft {
+  return {
+    sessionTeamId,
+    severity: "Minor",
+    reason: "",
+    commandId: createPenaltyCommandId()
   };
 }
 
@@ -1261,6 +1299,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [selectedSessionTeamDetail, setSelectedSessionTeamDetail] = useState<SessionTeamDetailResponse | null>(null);
   const [inactivityThresholdMinutes, setInactivityThresholdMinutes] = useState(10);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
+  const [penaltyDraft, setPenaltyDraft] = useState<PenaltyDraft>(createEmptyPenaltyDraft);
   const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
     createEmptyOperationalHintDraft
   );
@@ -1272,6 +1311,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isLoadingEventLog, setIsLoadingEventLog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingPenalty, setIsSubmittingPenalty] = useState(false);
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
   const [overridePendingSubmissionId, setOverridePendingSubmissionId] = useState<string | null>(null);
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
@@ -1390,9 +1430,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const hasSingleSelectedLiveSessionStage = selectedLiveSessionStages.length <= 1;
   const isSelectedLiveSessionOverviewCurrent =
     selectedLiveSession !== null && selectedLiveSessionOverview?.liveSessionId === selectedLiveSession.id;
-  const selectedLiveSessionOverviewTeams = isSelectedLiveSessionOverviewCurrent
-    ? selectedLiveSessionOverview.sessionTeams
-    : [];
+  const selectedLiveSessionOverviewTeams = useMemo(
+    () => (isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview.sessionTeams : []),
+    [isSelectedLiveSessionOverviewCurrent, selectedLiveSessionOverview]
+  );
   const selectedRankingItems =
     selectedLiveSessionRanking?.liveSessionId === selectedLiveSession?.id
       ? selectedLiveSessionRanking.items
@@ -1405,6 +1446,16 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   ).length;
   const operationalHintStageId =
     operationalHintDraft.missionStageId || selectedLiveSessionStages[0]?.missionStageId || "";
+  const effectivePenaltySessionTeamId = useMemo(() => {
+    if (
+      penaltyDraft.sessionTeamId &&
+      selectedLiveSessionOverviewTeams.some((team) => team.sessionTeamId === penaltyDraft.sessionTeamId)
+    ) {
+      return penaltyDraft.sessionTeamId;
+    }
+
+    return selectedLiveSessionOverviewTeams[0]?.sessionTeamId ?? "";
+  }, [penaltyDraft.sessionTeamId, selectedLiveSessionOverviewTeams]);
 
   const loadMissions = useCallback(
     async (preferredMissionId?: string) => {
@@ -2219,6 +2270,61 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
   }
 
+  async function handleApplyPenalty(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    if (!effectivePenaltySessionTeamId) {
+      setErrorMessage("Select a Session Team for the Penalty.");
+      return;
+    }
+
+    if (!penaltyDraft.reason.trim()) {
+      setErrorMessage("Penalty reason is required.");
+      return;
+    }
+
+    setIsSubmittingPenalty(true);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/penalties`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          sessionTeamId: effectivePenaltySessionTeamId,
+          commandId: penaltyDraft.commandId,
+          severity: penaltyDraft.severity,
+          reason: penaltyDraft.reason.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      const payload = (await response.json()) as ApplyPenaltyResponse;
+      setSelectedLiveSessionRanking(payload.ranking);
+      setPenaltyDraft(createEmptyPenaltyDraft(payload.sessionTeamId));
+      setFeedback(
+        payload.penaltyApplied
+          ? `Penalty applied with severity ${penaltyDraft.severity}.`
+          : "Duplicate penalty command ignored. Ranking unchanged."
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not apply Penalty.");
+    } finally {
+      setIsSubmittingPenalty(false);
+    }
+  }
+
   async function handleReleaseHint(hintId: string, sessionTeamId: string | null) {
     if (!selectedLiveSession) {
       return;
@@ -2804,6 +2910,144 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                       })}
                     </div>
                   </>
+                ) : null}
+
+                {isSelectedLiveSessionActive ? (
+                  <section className="operator-detail-card">
+                    <div className="mission-list-header">
+                      <div>
+                        <p className="eyebrow">Scoring and Audit</p>
+                        <h3>Ranking de Equipos</h3>
+                      </div>
+                      {isLoadingRanking ? <span className="status-pill status-loading">Syncing</span> : null}
+                    </div>
+
+                    {selectedRankingItems.length > 0 ? (
+                      <div className="ranking-table-wrap">
+                        <table className="ranking-table">
+                          <thead>
+                            <tr>
+                              <th>Rank</th>
+                              <th>Equipo</th>
+                              <th>Puntaje</th>
+                              <th>Resolution Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedRankingItems.map((entry, index) => {
+                              const previousEntry = selectedRankingItems[index - 1];
+                              const isSharedRank = previousEntry?.rank === entry.rank;
+
+                              return (
+                                <tr key={entry.sessionTeamId}>
+                                  <td>
+                                    <span className="status-pill status-ok">#{entry.rank}</span>
+                                  </td>
+                                  <td>
+                                    <strong>{findRankingTeamName(entry.sessionTeamId, selectedLiveSessionOverviewTeams)}</strong>
+                                    {isSharedRank ? <p className="field-hint">Empate conservado</p> : null}
+                                  </td>
+                                  <td>{entry.visibleScore} pts</td>
+                                  <td>{formatResolutionTime(entry.resolutionTime)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <strong>Sin Score Entries todavia.</strong>
+                        <p>El Ranking aparecera cuando Scoring and Audit registre credito de etapa.</p>
+                      </div>
+                    )}
+                  </section>
+                ) : null}
+
+                {isSelectedLiveSessionActive ? (
+                  <section className="operator-detail-card">
+                    <div className="mission-list-header">
+                      <div>
+                        <p className="eyebrow">Penalty Application</p>
+                        <h3>Penalizar Session Team</h3>
+                      </div>
+                      <span className="status-pill status-loading">Ranking sync</span>
+                    </div>
+
+                    <form className="auth-form" onSubmit={handleApplyPenalty}>
+                      <label className="field">
+                        <span>Session Team</span>
+                        <select
+                          className="input"
+                          onChange={(event) =>
+                            setPenaltyDraft((current) => ({
+                              ...current,
+                              sessionTeamId: event.target.value
+                            }))
+                          }
+                          required
+                          value={effectivePenaltySessionTeamId}
+                        >
+                          <option value="" disabled>
+                            Select Session Team
+                          </option>
+                          {selectedLiveSessionOverviewTeams.map((team) => (
+                            <option key={team.sessionTeamId} value={team.sessionTeamId}>
+                              {team.teamName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="field">
+                        <span>Severity</span>
+                        <select
+                          className="input"
+                          onChange={(event) =>
+                            setPenaltyDraft((current) => ({
+                              ...current,
+                              severity: event.target.value as PenaltySeverity
+                            }))
+                          }
+                          value={penaltyDraft.severity}
+                        >
+                          <option value="Minor">Minor (-50)</option>
+                          <option value="Major">Major (-100)</option>
+                          <option value="Critical">Critical (-200)</option>
+                        </select>
+                      </label>
+
+                      <label className="field">
+                        <span>Motivo obligatorio</span>
+                        <textarea
+                          className="input"
+                          maxLength={500}
+                          onChange={(event) =>
+                            setPenaltyDraft((current) => ({
+                              ...current,
+                              reason: event.target.value
+                            }))
+                          }
+                          required
+                          value={penaltyDraft.reason}
+                        />
+                      </label>
+
+                      <p className="field-hint">
+                        Penalty command id: <code>{penaltyDraft.commandId}</code>
+                      </p>
+
+                      <div className="mission-action-row">
+                        <button
+                          className="ghost-button danger-button"
+                          disabled={isSubmittingPenalty || !isSelectedLiveSessionOverviewCurrent}
+                          type="submit"
+                        >
+                          {isSubmittingPenalty ? "Aplicando..." : "Aplicar Penalty"}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
                 ) : null}
 
                 {isSelectedLiveSessionActive ? (

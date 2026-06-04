@@ -11,11 +11,15 @@ public enum PenaltySeverity
 
 public sealed class Penalty
 {
+    public const int ReasonMaximumLength = 500;
+    public const int AppliedByOperatorUserIdMaximumLength = 120;
+
     public Penalty(
         Guid penaltyId,
         Guid commandId,
         Guid sessionTeamId,
         PenaltySeverity severity,
+        string appliedByOperatorUserId,
         string reason,
         DateTimeOffset recordedAt)
     {
@@ -39,13 +43,38 @@ public sealed class Penalty
             throw new UmbralDomainException("penalty.unknown_severity", "Penalty Severity is not supported.");
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        if (string.IsNullOrWhiteSpace(appliedByOperatorUserId))
+        {
+            throw new UmbralDomainException("penalty.operator_user_id_required", "Operator user id is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new UmbralDomainException("penalty.reason_required", "Penalty reason is required.");
+        }
+
+        var normalizedAppliedByOperatorUserId = appliedByOperatorUserId.Trim();
+        if (normalizedAppliedByOperatorUserId.Length > AppliedByOperatorUserIdMaximumLength)
+        {
+            throw new UmbralDomainException(
+                "penalty.operator_user_id_too_long",
+                $"Operator user id cannot exceed {AppliedByOperatorUserIdMaximumLength} characters.");
+        }
+
+        var normalizedReason = reason.Trim();
+        if (normalizedReason.Length > ReasonMaximumLength)
+        {
+            throw new UmbralDomainException(
+                "penalty.reason_too_long",
+                $"Penalty reason cannot exceed {ReasonMaximumLength} characters.");
+        }
 
         PenaltyId = penaltyId;
         CommandId = commandId;
         SessionTeamId = sessionTeamId;
         Severity = severity;
-        Reason = reason.Trim();
+        AppliedByOperatorUserId = normalizedAppliedByOperatorUserId;
+        Reason = normalizedReason;
         RecordedAt = recordedAt;
     }
 
@@ -56,6 +85,8 @@ public sealed class Penalty
     public Guid SessionTeamId { get; }
 
     public PenaltySeverity Severity { get; }
+
+    public string AppliedByOperatorUserId { get; }
 
     public string Reason { get; }
 
