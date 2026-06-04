@@ -10,6 +10,10 @@ public sealed class Scoreboard
     private readonly HashSet<Guid> processedPenaltyCommandIds = [];
     private readonly List<ScoreEntry> scoreEntries = [];
 
+    private Scoreboard()
+    {
+    }
+
     public Scoreboard(Guid liveSessionId)
     {
         if (liveSessionId == Guid.Empty)
@@ -20,11 +24,37 @@ public sealed class Scoreboard
         LiveSessionId = liveSessionId;
     }
 
-    public Guid LiveSessionId { get; }
+    public Guid LiveSessionId { get; private set; }
 
     public IReadOnlyCollection<TeamScore> TeamScores => teamScores.Values.ToArray();
 
     public IReadOnlyCollection<ScoreEntry> ScoreEntries => scoreEntries.AsReadOnly();
+
+    public void RebuildState()
+    {
+        teamScores.Clear();
+        creditedStages.Clear();
+        processedPenaltyCommandIds.Clear();
+
+        foreach (var scoreEntry in scoreEntries.OrderBy(entry => entry.RecordedAt).ThenBy(entry => entry.ScoreEntryId))
+        {
+            var teamScore = GetOrCreateTeamScore(scoreEntry.SessionTeamId);
+            teamScore.Apply(scoreEntry.Delta);
+
+            if (scoreEntry.MissionStageId is not null
+                && (scoreEntry.EntryType == ScoreEntryType.StageCredit
+                    || scoreEntry.EntryType == ScoreEntryType.ValidationOverrideCredit))
+            {
+                creditedStages.Add(new StageCreditKey(scoreEntry.SessionTeamId, scoreEntry.MissionStageId.Value));
+            }
+
+            if (scoreEntry.EntryType == ScoreEntryType.Penalty
+                && scoreEntry.PenaltyCommandId is not null)
+            {
+                processedPenaltyCommandIds.Add(scoreEntry.PenaltyCommandId.Value);
+            }
+        }
+    }
 
     public ScoreEntry? GrantStageCredit(
         Guid sessionTeamId,
@@ -62,6 +92,7 @@ public sealed class Scoreboard
             entryType,
             recordedAt,
             missionStageId,
+            penaltyCommandId: null,
             penaltyId: null,
             penaltySeverity: null,
             resolutionTime);
@@ -84,6 +115,7 @@ public sealed class Scoreboard
             ScoreEntryType.Penalty,
             penalty.RecordedAt,
             missionStageId: null,
+            penalty.CommandId,
             penalty.PenaltyId,
             penalty.Severity,
             resolutionTime: null);
@@ -101,6 +133,7 @@ public sealed class Scoreboard
         ScoreEntryType entryType,
         DateTimeOffset recordedAt,
         Guid? missionStageId,
+        Guid? penaltyCommandId,
         Guid? penaltyId,
         PenaltySeverity? penaltySeverity,
         TimeSpan? resolutionTime)
@@ -123,6 +156,7 @@ public sealed class Scoreboard
             teamScore.VisibleScore,
             recordedAt,
             missionStageId,
+            penaltyCommandId,
             penaltyId,
             penaltySeverity,
             resolutionTime);

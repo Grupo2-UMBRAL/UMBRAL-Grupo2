@@ -3,6 +3,7 @@ const defaults = {
   edgeProxyPublicBaseUrl: "http://localhost:7000",
   keycloakPublicBaseUrl: "http://localhost:7000/auth",
   sessionHubPath: "/session-hub/hubs/session",
+  scoringHubPath: "/scoring-audit/hub/scoring",
   keycloakRealm: "umbral",
   keycloakClientId: "umbral-web"
 };
@@ -21,7 +22,8 @@ export function getServerConfig() {
     keycloakInternalBaseUrl: process.env.KEYCLOAK_INTERNAL_BASE_URL ?? keycloakPublicBaseUrl,
     keycloakRealm: process.env.KEYCLOAK_REALM ?? defaults.keycloakRealm,
     keycloakClientId: process.env.KEYCLOAK_WEB_CLIENT_ID ?? defaults.keycloakClientId,
-    sessionHubPath: process.env.NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH ?? defaults.sessionHubPath
+    sessionHubPath: process.env.NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH ?? defaults.sessionHubPath,
+    scoringHubPath: process.env.NEXT_PUBLIC_SCORING_AUDIT_HUB_PATH ?? defaults.scoringHubPath
   };
 }
 
@@ -32,6 +34,7 @@ export function getClientConfig() {
     edgeProxyPublicBaseUrl: config.edgeProxyPublicBaseUrl,
     keycloakPublicBaseUrl: config.keycloakPublicBaseUrl,
     keycloakRealm: config.keycloakRealm,
-    sessionHubUrl: `${config.edgeProxyPublicBaseUrl}${config.sessionHubPath}`
+    sessionHubUrl: `${config.edgeProxyPublicBaseUrl}${config.sessionHubPath}`,
+    scoringHubUrl: `${config.edgeProxyPublicBaseUrl}${config.scoringHubPath}`
   };
 }

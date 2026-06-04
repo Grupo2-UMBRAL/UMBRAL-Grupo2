@@ -1,6 +1,11 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  HubConnectionBuilder,
+  HttpTransportType,
+  LogLevel
+} from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
 import { useSessionOperationsConnection } from "@/hooks/use-session-operations-connection";
 
@@ -81,6 +86,65 @@ type LiveSession = {
 };
 
 type LiveSessionLifecycleAction = "start" | "pause" | "resume" | "finalize" | "cancel";
+type CurrentSessionStageSnapshot = {
+  missionStageId: string;
+  name: string;
+  sessionStageOrder: number;
+  sourceOrder: number;
+  resolvedTimeBudgetMinutes: number;
+  difficulty: string;
+  gameType: string;
+};
+
+type VisibleHintSnapshot = {
+  hintId: string;
+  missionStageId: string;
+  content: string;
+  isSolution: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  unlockedAtUtc: string;
+  unlockReason: string;
+};
+
+type LiveSessionOverviewTeam = {
+  sessionTeamId: string;
+  teamName: string;
+  participantCount: number;
+  progressState: string;
+  currentStage: CurrentSessionStageSnapshot | null;
+  releasedHints: VisibleHintSnapshot[];
+};
+
+type LiveSessionOverview = {
+  liveSessionId: string;
+  name: string;
+  missionId: string;
+  missionName: string;
+  sessionState: string;
+  scheduledStartAtUtc: string | null;
+  remainingSeconds?: number;
+  serverTimeUtc: string;
+  sync: {
+    sequenceNumber: number;
+    lastUpdatedUtc: string;
+    serverTimeUtc: string;
+  };
+  sessionTeams: LiveSessionOverviewTeam[];
+};
+
+type RankingItem = {
+  rank: number;
+  sessionTeamId: string;
+  visibleScore: number;
+  resolutionTime: string;
+};
+
+type RankingPayload = {
+  liveSessionId: string;
+  generatedAtUtc: string;
+  items: RankingItem[];
+};
 
 type LiveSessionDraft = {
   name: string;
@@ -168,6 +232,19 @@ function formatTimestamp(value: string | null) {
   return timestamp.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
 }
 
+function formatResolutionTime(value: string) {
+  const [hours = "00", minutes = "00", seconds = "00"] = value.split(":");
+  const secondParts = seconds.split(".");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}:${secondParts[0].padStart(2, "0")}`;
+}
+
+function findRankingTeamName(sessionTeamId: string, teams: LiveSessionOverviewTeam[]) {
+  return (
+    teams.find((team) => team.sessionTeamId === sessionTeamId)?.teamName ??
+    `Session Team ${sessionTeamId.slice(0, 8)}`
+  );
+}
+
 function parseOptionalCoordinate(value: string) {
   if (!value.trim()) {
     return null;
@@ -214,6 +291,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [selectedLiveSessionId, setSelectedLiveSessionId] = useState<string | null>(null);
   const [selectedLiveSessionOverview, setSelectedLiveSessionOverview] = useState<LiveSessionOverview | null>(null);
+  const [selectedLiveSessionRanking, setSelectedLiveSessionRanking] = useState<RankingPayload | null>(null);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
   const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
     createEmptyOperationalHintDraft
@@ -222,7 +300,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingMissionDetail, setIsLoadingMissionDetail] = useState(false);
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
   const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
+  const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingHint, setIsSubmittingHint] = useState(false);
+  const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -236,13 +317,21 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     []
   );
   const sessionHubUrl = useMemo(() => getClientConfig().sessionHubUrl, []);
+  const scoringAuditSessionsUrl = useMemo(
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/scoring-audit/api/scoring-audit/sessions`,
+    []
+  );
+  const scoringAuditHubUrl = useMemo(
+    () => getClientConfig().scoringHubUrl,
+    []
+  );
 
   const selectedLiveSession =
     liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? liveSessions[0] ?? null;
   const isSelectedLiveSessionActive =
-    selectedLiveSession !== null && ["Running", "Paused"].includes(selectedLiveSession.state);
+    selectedLiveSession !== null && ["Active", "Paused"].includes(selectedLiveSession.state);
   const isSelectedLiveSessionStageDeactivationAllowed =
-    selectedLiveSession !== null && ["Scheduled", "Running", "Paused"].includes(selectedLiveSession.state);
+    selectedLiveSession !== null && ["Scheduled", "Active", "Paused"].includes(selectedLiveSession.state);
 
   const lifecycleActions = useMemo(() => {
     if (!selectedLiveSession) {
@@ -321,6 +410,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const selectedLiveSessionOverviewTeams = isSelectedLiveSessionOverviewCurrent
     ? selectedLiveSessionOverview.sessionTeams
     : [];
+  const selectedRankingItems =
+    selectedLiveSessionRanking?.liveSessionId === selectedLiveSession?.id
+      ? selectedLiveSessionRanking.items
+      : [];
   const pendingLiveSessionStageCount = selectedLiveSessionStages.filter(
     (sessionStage) => getSessionStageOperationalStatus(sessionStage, selectedLiveSessionOverviewTeams) === "Pending"
   ).length;
@@ -415,6 +508,40 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     [accessToken, liveSessionsUrl]
   );
 
+  const loadLiveSessionRanking = useCallback(
+    async (liveSessionId: string) => {
+      setIsLoadingRanking(true);
+
+      try {
+        const response = await fetch(`${scoringAuditSessionsUrl}/${liveSessionId}/ranking`, {
+          headers: createAuthorizedHeaders(accessToken)
+        });
+
+        if (response.status === 404) {
+          setSelectedLiveSessionRanking({
+            liveSessionId,
+            generatedAtUtc: new Date().toISOString(),
+            items: []
+          });
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(await readFailureDetail(response));
+        }
+
+        const payload = (await response.json()) as RankingPayload;
+        setSelectedLiveSessionRanking(payload);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Could not load LiveSession ranking.");
+        setSelectedLiveSessionRanking(null);
+      } finally {
+        setIsLoadingRanking(false);
+      }
+    },
+    [accessToken, scoringAuditSessionsUrl]
+  );
+
   const loadMissionDetail = useCallback(
     async (missionId: string) => {
       setIsLoadingMissionDetail(true);
@@ -479,14 +606,64 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     if (!selectedLiveSessionId) {
       queueMicrotask(() => {
         setSelectedLiveSessionOverview(null);
+        setSelectedLiveSessionRanking(null);
       });
       return;
     }
 
     queueMicrotask(() => {
       void loadLiveSessionOverview(selectedLiveSessionId);
+      void loadLiveSessionRanking(selectedLiveSessionId);
     });
-  }, [loadLiveSessionOverview, selectedLiveSessionId]);
+  }, [loadLiveSessionOverview, loadLiveSessionRanking, selectedLiveSessionId]);
+
+  useEffect(() => {
+    if (!selectedLiveSessionId) {
+      return;
+    }
+
+    let active = true;
+    const connection = new HubConnectionBuilder()
+      .withUrl(scoringAuditHubUrl, {
+        accessTokenFactory: () => accessToken,
+        skipNegotiation: false,
+        transport: HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on("ReceiveRankingUpdated", (payload: RankingPayload) => {
+      if (payload.liveSessionId !== selectedLiveSessionId) {
+        return;
+      }
+
+      setSelectedLiveSessionRanking(payload);
+    });
+
+    connection.onreconnected(() => {
+      if (active) {
+        void loadLiveSessionRanking(selectedLiveSessionId);
+      }
+    });
+
+    connection.onclose((error) => {
+      if (active && error) {
+        setErrorMessage(`Scoring Audit realtime closed: ${error.message}`);
+      }
+    });
+
+    void connection.start().catch((error: unknown) => {
+      if (active) {
+        setErrorMessage(error instanceof Error ? error.message : "Could not connect to Scoring Audit realtime.");
+      }
+    });
+
+    return () => {
+      active = false;
+      void connection.stop();
+    };
+  }, [accessToken, loadLiveSessionRanking, scoringAuditHubUrl, selectedLiveSessionId]);
 
   useEffect(() => {
     if (!selectedLiveSession || operationalHintDraft.missionStageId) {
@@ -622,6 +799,112 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setErrorMessage(error instanceof Error ? error.message : "Could not update Session Lifecycle.");
     } finally {
       setLifecycleActionPending(null);
+    }
+  }
+
+  async function handleDeactivateStage(missionStageId: string) {
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    setDeactivatingStageId(missionStageId);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${missionStageId}/deactivate`, {
+        method: "POST",
+        headers: createAuthorizedHeaders(accessToken)
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      await loadLiveSessions(selectedLiveSession.id);
+      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback("Session Stage deactivated for this LiveSession.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not deactivate Session Stage.");
+    } finally {
+      setDeactivatingStageId(null);
+    }
+  }
+
+  async function handleReleaseHint(hintId: string, sessionTeamId: string | null) {
+    if (!selectedLiveSession) {
+      return;
+    }
+
+    setIsSubmittingHint(true);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/hints/${hintId}/release`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ sessionTeamId })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback("Hint released for eligible Session Team(s).");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not release Hint.");
+    } finally {
+      setIsSubmittingHint(false);
+    }
+  }
+
+  async function handleCreateOperationalHint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedLiveSession || !operationalHintStageId) {
+      return;
+    }
+
+    if (!operationalHintDraft.content.trim()) {
+      setErrorMessage("Hint content is required.");
+      return;
+    }
+
+    setIsSubmittingHint(true);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/stages/${operationalHintStageId}/hints`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content: operationalHintDraft.content.trim(),
+          latitude: parseOptionalCoordinate(operationalHintDraft.latitude),
+          longitude: parseOptionalCoordinate(operationalHintDraft.longitude)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setOperationalHintDraft(createEmptyOperationalHintDraft());
+      await loadLiveSessions(selectedLiveSession.id);
+      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback("Operational Hint added to the LiveSession snapshot.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Could not create operational Hint.");
+    } finally {
+      setIsSubmittingHint(false);
     }
   }
 
@@ -1051,6 +1334,58 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     );
                   })}
                 </div>
+
+                {isSelectedLiveSessionActive ? (
+                  <section className="operator-detail-card">
+                    <div className="mission-list-header">
+                      <div>
+                        <p className="eyebrow">Scoring and Audit</p>
+                        <h3>Ranking de Equipos</h3>
+                      </div>
+                      {isLoadingRanking ? <span className="status-pill status-loading">Syncing</span> : null}
+                    </div>
+
+                    {selectedRankingItems.length > 0 ? (
+                      <div className="ranking-table-wrap">
+                        <table className="ranking-table">
+                          <thead>
+                            <tr>
+                              <th>Rank</th>
+                              <th>Equipo</th>
+                              <th>Puntaje</th>
+                              <th>Resolution Time</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedRankingItems.map((entry, index) => {
+                              const previousEntry = selectedRankingItems[index - 1];
+                              const isSharedRank = previousEntry?.rank === entry.rank;
+
+                              return (
+                                <tr key={entry.sessionTeamId}>
+                                  <td>
+                                    <span className="status-pill status-ok">#{entry.rank}</span>
+                                  </td>
+                                  <td>
+                                    <strong>{findRankingTeamName(entry.sessionTeamId, selectedLiveSessionOverviewTeams)}</strong>
+                                    {isSharedRank ? <p className="field-hint">Empate conservado</p> : null}
+                                  </td>
+                                  <td>{entry.visibleScore} pts</td>
+                                  <td>{formatResolutionTime(entry.resolutionTime)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <strong>Sin Score Entries todavia.</strong>
+                        <p>El Ranking aparecera cuando Scoring and Audit registre credito de etapa.</p>
+                      </div>
+                    )}
+                  </section>
+                ) : null}
 
                 {isSelectedLiveSessionActive ? (
                   <section className="operator-detail-card">

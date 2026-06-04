@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using System.Reflection;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
@@ -42,7 +42,7 @@ public sealed class EvidenceSubmissionQaTests
 
     [Theory]
     [InlineData(LiveSessionStates.Paused)]
-    [InlineData(LiveSessionStates.Cancelled)]
+    [InlineData(LiveSessionStates.Canceled)]
     [InlineData(LiveSessionStates.Finalized)]
     public void SubmitEvidence_ThrowsBusinessError_WhenLiveSessionDoesNotAcceptEvidence(string blockedState)
     {

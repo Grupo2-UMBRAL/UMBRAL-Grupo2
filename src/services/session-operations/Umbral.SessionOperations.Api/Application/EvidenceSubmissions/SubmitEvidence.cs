@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
@@ -29,7 +30,8 @@ public sealed class SubmitEvidenceHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
+    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    IScoringAuditClient scoringAuditClient)
     : IRequestHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>
 {
     public async Task<SubmitEvidenceResponse> Handle(
@@ -60,6 +62,7 @@ public sealed class SubmitEvidenceHandler(
         var submittedAtUtc = timeProvider.GetUtcNow();
         var previousLiveSessionState = liveSession.State;
         var previousStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
+        var stageStartedAtUtc = GetCurrentStageStartedAtUtc(liveSession, request.SessionTeamId);
         var evidenceSubmission = liveSession.SubmitEvidence(
             request.SessionTeamId,
             request.QrHash,
@@ -71,6 +74,16 @@ public sealed class SubmitEvidenceHandler(
 
         if (evidenceSubmission.Outcome == ValidationOutcome.Accepted)
         {
+            await scoringAuditClient.RecordStageCreditAsync(
+                CreateStageCreditRequest(
+                    liveSession.Id,
+                    request.SessionTeamId,
+                    previousStage,
+                    stageStartedAtUtc,
+                    submittedAtUtc,
+                    validationOverride: false),
+                cancellationToken);
+
             await PublishTeamProgressChangedAsync(
                 liveSession,
                 request.SessionTeamId,
@@ -181,4 +194,42 @@ public sealed class SubmitEvidenceHandler(
             currentStage.Difficulty,
             currentStage.GameType);
     }
+
+    private static RecordStageCreditRequest CreateStageCreditRequest(
+        Guid liveSessionId,
+        Guid sessionTeamId,
+        LiveSessionStage? acceptedStage,
+        DateTimeOffset stageStartedAtUtc,
+        DateTimeOffset recordedAtUtc,
+        bool validationOverride)
+    {
+        if (acceptedStage is null)
+        {
+            throw new UmbralDomainException(
+                "score_stage_credit_stage_required",
+                "Accepted Evidence Submission must have a Session Stage to record Stage Credit.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        return new RecordStageCreditRequest(
+            liveSessionId,
+            sessionTeamId,
+            acceptedStage.MissionStageId,
+            acceptedStage.Difficulty,
+            CalculateResolutionTime(stageStartedAtUtc, recordedAtUtc),
+            recordedAtUtc,
+            validationOverride);
+    }
+
+    private static DateTimeOffset GetCurrentStageStartedAtUtc(LiveSession liveSession, Guid sessionTeamId)
+        => liveSession.TeamProgressions
+            .FirstOrDefault(progress => progress.SessionTeamId == sessionTeamId)
+            ?.UpdatedAtUtc
+            ?? liveSession.ScheduledStartAtUtc
+            ?? liveSession.CreatedAtUtc;
+
+    private static TimeSpan CalculateResolutionTime(DateTimeOffset stageStartedAtUtc, DateTimeOffset recordedAtUtc)
+        => recordedAtUtc >= stageStartedAtUtc
+            ? recordedAtUtc - stageStartedAtUtc
+            : TimeSpan.Zero;
 }

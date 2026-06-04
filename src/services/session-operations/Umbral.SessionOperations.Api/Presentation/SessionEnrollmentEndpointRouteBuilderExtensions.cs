@@ -1,7 +1,8 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
+using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 
 namespace Umbral.SessionOperations.Api.Presentation;
 
@@ -66,6 +67,14 @@ public static class SessionEnrollmentEndpointRouteBuilderExtensions
                 Results.Ok(await sender.Send(
                     new JoinSessionTeamCommand(request.JoinCode, request.SessionTeamId),
                     cancellationToken)));
+        var participantSessionTeamRoutes = authorizedApi
+            .MapGroup("/session-teams")
+            .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Participant));
+
+        participantSessionTeamRoutes.MapGet(
+            "/{sessionTeamId:guid}/snapshot",
+            async (Guid sessionTeamId, ISender sender, CancellationToken cancellationToken) =>
+                Results.Ok(await sender.Send(new GetSessionTeamSnapshotQuery(sessionTeamId), cancellationToken)));
 
         return authorizedApi;
     }

@@ -564,6 +564,77 @@ public sealed class LiveSession
         return progress?.State ?? SessionTeamProgressStates.NotStarted;
     }
 
+    public bool IsStagePending(Guid missionStageId)
+    {
+        var orderedStages = GetOrderedStages();
+        var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (stageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_in_flow",
+                "Session Stage is not part of this LiveSession flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        return !TeamProgressions.Any(progress =>
+            string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal)
+            || progress.CurrentStageIndex > stageIndex);
+    }
+
+    public void DeactivateStage(Guid missionStageId, DateTimeOffset updatedAtUtc)
+    {
+        EnsureStageDeactivationAllowed();
+
+        var orderedStages = GetOrderedStages();
+        if (orderedStages.Length <= 1)
+        {
+            throw new UmbralDomainException(
+                "session_stage_flow_last_pending_stage",
+                "Session Stage Flow must keep at least one pending Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var removedStageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
+        if (removedStageIndex < 0)
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_in_flow",
+                "Session Stage is not part of this LiveSession flow.",
+                UmbralFailureCategory.NotFound);
+        }
+
+        if (!IsStagePending(missionStageId))
+        {
+            throw new UmbralDomainException(
+                "session_stage_not_pending",
+                "Only pending Session Stages can be deactivated.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var remainingStages = orderedStages
+            .Where(stage => stage.MissionStageId != missionStageId)
+            .Select((stage, index) => stage with { SessionStageOrder = index + 1 })
+            .ToArray();
+        var hasRemainingPendingStage = remainingStages.Any(stage =>
+        {
+            var originalStageIndex = Array.FindIndex(orderedStages, orderedStage => orderedStage.MissionStageId == stage.MissionStageId);
+            return !TeamProgressions.Any(progress =>
+                string.Equals(progress.State, SessionTeamProgressStates.Completed, StringComparison.Ordinal)
+                || progress.CurrentStageIndex > originalStageIndex);
+        });
+        if (!hasRemainingPendingStage)
+        {
+            throw new UmbralDomainException(
+                "session_stage_flow_last_pending_stage",
+                "Session Stage Flow must keep at least one pending Session Stage.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        ReplaceSessionStageFlow(remainingStages);
+        RecalculateTeamProgressionsAfterStageDeactivation(removedStageIndex, remainingStages.Length, updatedAtUtc);
+        SequenceNumber++;
+    }
+
     private LiveSessionStage[] GetOrderedStages()
     {
         var orderedStages = SessionStageFlow.OrderBy(stage => stage.SessionStageOrder).ToArray();
@@ -703,7 +774,7 @@ public sealed class LiveSession
     {
         if (string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal)
             || string.Equals(State, LiveSessionStates.Finalized, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Cancelled, StringComparison.Ordinal))
+            || string.Equals(State, LiveSessionStates.Canceled, StringComparison.Ordinal))
         {
             throw new UmbralDomainException(
                 "live_session_not_accepting_evidence",
@@ -714,7 +785,7 @@ public sealed class LiveSession
 
     private void EnsureHintReleaseAllowed()
     {
-        if (string.Equals(State, LiveSessionStates.Running, StringComparison.Ordinal)
+        if (string.Equals(State, LiveSessionStates.Active, StringComparison.Ordinal)
             || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
         {
             return;
@@ -722,14 +793,14 @@ public sealed class LiveSession
 
         throw new UmbralDomainException(
             "live_session_not_accepting_hint_release",
-            "LiveSession must be Running or Paused to release or create Hints.",
+            "LiveSession must be Active or Paused to release or create Hints.",
             UmbralFailureCategory.Conflict);
     }
 
     private void EnsureStageDeactivationAllowed()
     {
         if (string.Equals(State, LiveSessionStates.Scheduled, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Running, StringComparison.Ordinal)
+            || string.Equals(State, LiveSessionStates.Active, StringComparison.Ordinal)
             || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
         {
             return;
@@ -737,7 +808,7 @@ public sealed class LiveSession
 
         throw new UmbralDomainException(
             "live_session_stage_deactivation_not_allowed_for_state",
-            "LiveSession must be Scheduled, Running or Paused to deactivate a pending Session Stage.",
+            "LiveSession must be Scheduled, Active or Paused to deactivate a pending Session Stage.",
             UmbralFailureCategory.Conflict);
     }
 

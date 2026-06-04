@@ -5,6 +5,10 @@ namespace Umbral.ScoringAudit.Api.Domain.Scoreboards;
 
 public sealed class ScoreEntry
 {
+    private ScoreEntry()
+    {
+    }
+
     public ScoreEntry(
         Guid scoreEntryId,
         Guid liveSessionId,
@@ -17,6 +21,7 @@ public sealed class ScoreEntry
         int visibleScoreAfter,
         DateTimeOffset recordedAt,
         Guid? missionStageId = null,
+        Guid? penaltyCommandId = null,
         Guid? penaltyId = null,
         PenaltySeverity? penaltySeverity = null,
         TimeSpan? resolutionTime = null)
@@ -52,36 +57,39 @@ public sealed class ScoreEntry
         VisibleScoreAfter = visibleScoreAfter;
         RecordedAt = recordedAt;
         MissionStageId = missionStageId;
+        PenaltyCommandId = penaltyCommandId;
         PenaltyId = penaltyId;
         PenaltySeverity = penaltySeverity;
         ResolutionTime = resolutionTime;
     }
 
-    public Guid ScoreEntryId { get; }
+    public Guid ScoreEntryId { get; private set; }
 
-    public Guid LiveSessionId { get; }
+    public Guid LiveSessionId { get; private set; }
 
-    public Guid SessionTeamId { get; }
+    public Guid SessionTeamId { get; private set; }
 
-    public ScoreEntryType EntryType { get; }
+    public ScoreEntryType EntryType { get; private set; }
 
-    public int Delta { get; }
+    public int Delta { get; private set; }
 
-    public int AccumulatedScoreBefore { get; }
+    public int AccumulatedScoreBefore { get; private set; }
 
-    public int AccumulatedScoreAfter { get; }
+    public int AccumulatedScoreAfter { get; private set; }
 
-    public int VisibleScoreBefore { get; }
+    public int VisibleScoreBefore { get; private set; }
 
-    public int VisibleScoreAfter { get; }
+    public int VisibleScoreAfter { get; private set; }
 
-    public DateTimeOffset RecordedAt { get; }
+    public DateTimeOffset RecordedAt { get; private set; }
 
-    public Guid? MissionStageId { get; }
+    public Guid? MissionStageId { get; private set; }
 
-    public Guid? PenaltyId { get; }
+    public Guid? PenaltyCommandId { get; private set; }
 
-    public PenaltySeverity? PenaltySeverity { get; }
+    public Guid? PenaltyId { get; private set; }
 
-    public TimeSpan? ResolutionTime { get; }
+    public PenaltySeverity? PenaltySeverity { get; private set; }
+
+    public TimeSpan? ResolutionTime { get; private set; }
 }
