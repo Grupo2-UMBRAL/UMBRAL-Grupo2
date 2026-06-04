@@ -1,4 +1,5 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Umbral.SessionOperations.Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(SessionOperationsDbContext))]
+    [Migration("20260602001000_AddLiveSessions")]
     public partial class AddLiveSessions : Migration
     {
         /// <inheritdoc />

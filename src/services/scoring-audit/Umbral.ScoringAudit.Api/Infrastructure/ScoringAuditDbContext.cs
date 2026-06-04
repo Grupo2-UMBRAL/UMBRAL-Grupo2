@@ -83,6 +83,12 @@ public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext
                 .HasColumnName("penalty_severity")
                 .HasConversion<string>()
                 .HasMaxLength(40);
+            scoreEntry.Property(entity => entity.PenaltyReason)
+                .HasColumnName("penalty_reason")
+                .HasMaxLength(Domain.Penalties.Penalty.ReasonMaximumLength);
+            scoreEntry.Property(entity => entity.AppliedByOperatorUserId)
+                .HasColumnName("applied_by_operator_user_id")
+                .HasMaxLength(Domain.Penalties.Penalty.AppliedByOperatorUserIdMaximumLength);
             scoreEntry.Property(entity => entity.ResolutionTime)
                 .HasColumnName("resolution_time")
                 .HasColumnType("interval");
@@ -95,6 +101,10 @@ public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext
                 .IsUnique()
                 .HasDatabaseName("ux_score_entries_single_stage_credit")
                 .HasFilter("mission_stage_id IS NOT NULL AND entry_type IN ('StageCredit', 'ValidationOverrideCredit')");
+            scoreEntry.HasIndex(entity => new { entity.LiveSessionId, entity.PenaltyCommandId })
+                .IsUnique()
+                .HasDatabaseName("ux_score_entries_penalty_command")
+                .HasFilter("penalty_command_id IS NOT NULL");
         });
 
         modelBuilder.Entity<SessionEventLog>(sessionEventLog =>
