@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   HubConnectionBuilder,
   HttpTransportType,
@@ -14,12 +14,13 @@ export type LiveSessionStateChangedEvent = {
   occurredAtUtc: string;
 };
 
-type ConnectionState =
-  | { kind: "connecting"; detail: string }
-  | { kind: "connected"; detail: string }
-  | { kind: "reconnecting"; detail: string }
-  | { kind: "disconnected"; detail: string }
-  | { kind: "error"; detail: string };
+type ConnectionKind = "connecting" | "connected" | "reconnecting" | "disconnected" | "error";
+
+export type SessionOperationsConnectionState = {
+  kind: ConnectionKind;
+  detail: string;
+  connection: HubConnection | null;
+};
 
 type ConnectionOptions = {
   accessToken: string;
@@ -29,21 +30,30 @@ type ConnectionOptions = {
   onLiveSessionStateChanged?: (stateChangedEvent: LiveSessionStateChangedEvent) => void;
 };
 
+function createState(
+  kind: ConnectionKind,
+  detail: string,
+  connection: HubConnection | null
+): SessionOperationsConnectionState {
+  return {
+    kind,
+    detail,
+    connection
+  };
+}
+
 export function useSessionOperationsConnection({
   accessToken,
   hubUrl,
+  enabled = true,
   onResync,
   onLiveSessionStateChanged
 }: ConnectionOptions) {
-  const waitingState: ConnectionState = {
-    kind: "disconnected",
-    detail: "SignalR waiting for authenticated session."
-  };
-  const [state, setState] = useState<ConnectionState>({
-    kind: "connecting",
-    detail: "Opening participant stream."
-  });
-  const shouldConnect = accessToken.trim().length > 0 && hubUrl.trim().length > 0;
+  const [state, setState] = useState<SessionOperationsConnectionState>(
+    createState("connecting", "Opening participant stream.", null)
+  );
+  const shouldConnect =
+    enabled && accessToken.trim().length > 0 && hubUrl.trim().length > 0;
   const resyncRef = useRef(onResync);
   const liveSessionStateChangedRef = useRef(onLiveSessionStateChanged);
 
@@ -60,14 +70,14 @@ export function useSessionOperationsConnection({
     let connection: HubConnection | null = null;
 
     if (!shouldConnect) {
+      setState(
+        createState("disconnected", "SignalR waiting for authenticated session.", null)
+      );
       return;
     }
 
     async function startConnection() {
-      setState({
-        kind: "connecting",
-        detail: "Opening participant stream."
-      });
+      setState(createState("connecting", "Opening participant stream.", null));
 
       connection = new HubConnectionBuilder()
         .withUrl(hubUrl, {
@@ -93,10 +103,13 @@ export function useSessionOperationsConnection({
           return;
         }
 
-        setState({
-          kind: "reconnecting",
-          detail: "Connection dropped. Waiting for SignalR reconnect."
-        });
+        setState(
+          createState(
+            "reconnecting",
+            "Connection dropped. Waiting for SignalR reconnect.",
+            connection
+          )
+        );
       });
 
       connection.onreconnected(() => {
@@ -104,10 +117,9 @@ export function useSessionOperationsConnection({
           return;
         }
 
-        setState({
-          kind: "connected",
-          detail: "Realtime participant stream restored."
-        });
+        setState(
+          createState("connected", "Realtime participant stream restored.", connection)
+        );
         resyncRef.current?.();
       });
 
@@ -116,13 +128,13 @@ export function useSessionOperationsConnection({
           return;
         }
 
-        setConnectionInstance(null);
-        setState({
-          kind: error ? "error" : "disconnected",
-          detail: error
-            ? `SignalR closed: ${error.message}`
-            : "SignalR closed before session resumed."
-        });
+        setState(
+          createState(
+            error ? "error" : "disconnected",
+            error ? `SignalR closed: ${error.message}` : "SignalR closed before session resumed.",
+            null
+          )
+        );
       });
 
       try {
@@ -132,20 +144,21 @@ export function useSessionOperationsConnection({
           return;
         }
 
-        setState({
-          kind: "connected",
-          detail: "Realtime participant stream connected."
-        });
+        setState(
+          createState("connected", "Realtime participant stream connected.", connection)
+        );
       } catch (error) {
         if (!active) {
           return;
         }
 
-        setConnectionInstance(null);
-        setState({
-          kind: "error",
-          detail: error instanceof Error ? error.message : "SignalR startup failed."
-        });
+        setState(
+          createState(
+            "error",
+            error instanceof Error ? error.message : "SignalR startup failed.",
+            null
+          )
+        );
       }
     }
 
@@ -153,12 +166,13 @@ export function useSessionOperationsConnection({
 
     return () => {
       active = false;
-      setConnectionInstance(null);
       if (connection) {
         void connection.stop();
       }
     };
-  }, [accessToken, hubUrl, shouldConnect]);
+  }, [accessToken, enabled, hubUrl, shouldConnect]);
 
-  return shouldConnect ? state : waitingState;
+  return shouldConnect
+    ? state
+    : createState("disconnected", "SignalR waiting for authenticated session.", null);
 }

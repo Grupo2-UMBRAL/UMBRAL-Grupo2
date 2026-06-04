@@ -231,6 +231,45 @@ test("applies incremental SignalR hint unlocks to the visible hints list", async
   expect(screen.getByText("The second symbol points north.")).toBeTruthy();
 });
 
+test("renders a static map only when the unlocked hint includes coordinates", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(
+    createSnapshot({
+      visibleHints: [
+        {
+          hintId: "hint-1",
+          missionStageId: "stage-1",
+          content: "Meet beside the plaza fountain.",
+          isSolution: false,
+          latitude: 10.50001,
+          longitude: -66.90001,
+          unlockedAtUtc: "2026-06-03T08:00:00Z",
+          unlockReason: "Manual"
+        },
+        {
+          hintId: "hint-2",
+          missionStageId: "stage-1",
+          content: "Fallback text-only hint.",
+          isSolution: false,
+          unlockedAtUtc: "2026-06-03T08:02:00Z",
+          unlockReason: "Rule"
+        }
+      ]
+    })
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Static map")).toBeTruthy();
+  });
+
+  expect(screen.getByText(/Lat 10.50001 \| Lon -66.90001/)).toBeTruthy();
+  expect(
+    screen.getByText(/keeps the map hidden instead of rendering a broken state/i)
+  ).toBeTruthy();
+});
+
 test("does not duplicate a hint when ReceiveHintUnlocked repeats an existing snapshot hint", async () => {
   const apiClient = createMockApiClient();
   apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
