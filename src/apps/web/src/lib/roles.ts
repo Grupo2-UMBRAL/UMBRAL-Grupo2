@@ -17,5 +17,5 @@ export function uniqueRoles(roles: string[]): UmbralRole[] {
 }
 
 export function roleLabel(role: WebShellRole) {
-  return role === "Administrator" ? "Administrator workspace" : "Operator workspace";
+  return role === "Administrator" ? "Espacio de trabajo del Administrador" : "Espacio de trabajo del Operador";
 }

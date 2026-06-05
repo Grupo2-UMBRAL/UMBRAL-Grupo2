@@ -9,12 +9,12 @@ export default async function AdministratorPage() {
   return (
     <DashboardShell
       focus={[
-        "Protect administrator route with server-side cookie guard and role-based redirects.",
-        "Manage Operator Users through the identity-access facade over edge-proxy with the current bearer token.",
-        "Rotate Operator User passwords through the same identity-access boundary instead of direct Keycloak administration.",
-        "Drive Mission CRUD directly against the protected mission-design API boundary.",
-        "Expose realtime connection state and smoke checks beside control-plane workflows.",
-        "Leave role edits and Mission Stage follow-ups outside this slice."
+        "Proteger la ruta del administrador con protección de cookies del lado del servidor y redirecciones basadas en roles.",
+        "Administrar Usuarios Operadores a través de la fachada de identity-access sobre edge-proxy con el token de portador actual.",
+        "Rotar contraseñas de Usuarios Operadores a través del mismo límite de identity-access en lugar de la administración directa de Keycloak.",
+        "Realizar el CRUD de Misiones directamente contra el límite de API protegido de mission-design.",
+        "Exponer el estado de conexión en tiempo real y pruebas de humo junto a los flujos de trabajo del panel de control.",
+        "Dejar las ediciones de roles y el seguimiento de las etapas de la misión fuera de este alcance."
       ]}
       mainContent={
         <>
@@ -24,8 +24,8 @@ export default async function AdministratorPage() {
       }
       role="Administrator"
       session={session}
-      summary="Administration shell now covers Operator User provisioning and Mission catalog control while retaining identity, connectivity, and service verification."
-      title="Administrator control plane"
+      summary="La consola de administración ahora abarca el aprovisionamiento de Usuarios Operadores y el control del catálogo de Misiones, manteniendo la verificación de identidad, conectividad y servicios."
+      title="Panel de control del Administrador"
     />
   );
 }

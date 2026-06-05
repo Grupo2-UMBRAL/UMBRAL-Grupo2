@@ -12,26 +12,26 @@ export default async function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-copy">
-        <p className="eyebrow">UMBRAL web shell</p>
-        <h1>Calm operations. Fast auth. Real transport.</h1>
+        <p className="eyebrow">Consola web de UMBRAL</p>
+        <h1>Operaciones tranquilas. Autenticación rápida. Transporte real.</h1>
         <p>
-          Administrator and Operator enter through Keycloak, then shell proves protected routes,
-          JWT-backed API calls, and SignalR reconnect flow without pretending business features exist.
+          El Administrador y el Operador ingresan a través de Keycloak, luego la consola valida rutas protegidas,
+          llamadas API respaldadas por JWT y el flujo de reconexión de SignalR sin simular que existen características comerciales.
         </p>
         <ul className="hint-list">
-          <li>`admin / admin123!` routes to Administrator workspace.</li>
-          <li>`operator / operator123!` routes to Operator workspace.</li>
-          <li>`participant / participant123!` is rejected from web shell by role.</li>
+          <li>`admin / admin123!` dirige al espacio de trabajo del Administrador.</li>
+          <li>`operator / operator123!` dirige al espacio de trabajo del Operador.</li>
+          <li>`participant / participant123!` es rechazado de la consola web por rol.</li>
         </ul>
       </section>
 
       <section className="auth-panel">
         <div className="auth-card">
           <div>
-            <p className="eyebrow">Sign in</p>
-            <h2>Enter local operator shell</h2>
+            <p className="eyebrow">Iniciar sesión</p>
+            <h2>Ingresar a la consola local de operaciones</h2>
           </div>
-          <Suspense fallback={<p>Loading auth form...</p>}>
+          <Suspense fallback={<p>Cargando formulario de autenticación...</p>}>
             <LoginForm />
           </Suspense>
         </div>

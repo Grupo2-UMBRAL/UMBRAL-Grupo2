@@ -191,7 +191,7 @@ async function readFailureDetail(response: Response) {
 
 function formatTimestamp(value: string | null) {
   if (!value) {
-    return "Not reported by facade";
+    return "No reportado por la fachada";
   }
 
   const timestamp = new Date(value);
@@ -262,7 +262,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
 
         setSelectedOperatorId(nextSelectedOperator);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Could not load Operator Users.");
+        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los Usuarios Operadores.");
       } finally {
         setIsLoading(false);
       }
@@ -287,7 +287,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
           return;
         }
 
-        setErrorMessage(error instanceof Error ? error.message : "Could not load Operator Users.");
+        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los Usuarios Operadores.");
       } finally {
         if (!isCancelled) {
           setIsLoading(false);
@@ -315,7 +315,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     const password = draft.password.trim();
 
     if (!username || !firstName || !lastName || !email || !password) {
-      setErrorMessage("Username, first name, last name, email, and password are required.");
+      setErrorMessage("El nombre de usuario, nombre, apellido, correo electrónico y contraseña son obligatorios.");
       setIsSubmitting(false);
       return;
     }
@@ -350,10 +350,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
 
       setIsLoading(true);
       setDraft(createEmptyDraft());
-      setFeedback("Operator User created through the identity-access facade.");
+      setFeedback("Usuario Operador creado a través de la fachada identity-access.");
       await syncOperators(createdOperatorId);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not create Operator User.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el Usuario Operador.");
     } finally {
       setIsSubmitting(false);
     }
@@ -379,10 +379,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       }
 
       setIsLoading(true);
-      setFeedback(`Operator User ${selectedOperator.username} deactivated through the identity-access facade.`);
+      setFeedback(`Usuario Operador ${selectedOperator.username} desactivado a través de la fachada identity-access.`);
       await syncOperators(selectedOperator.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not deactivate Operator User.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo desactivar el Usuario Operador.");
     } finally {
       setIsDeactivating(false);
     }
@@ -398,7 +398,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     const password = passwordRotationDraft.password.trim();
 
     if (!password) {
-      setErrorMessage("New password is required.");
+      setErrorMessage("Se requiere la nueva contraseña.");
       return;
     }
 
@@ -423,10 +423,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       }
 
       setPasswordRotationDraft(createEmptyPasswordRotationDraft());
-      setFeedback(`Password rotated for Operator User ${selectedOperator.username}.`);
+      setFeedback(`Contraseña rotada para el Usuario Operador ${selectedOperator.username}.`);
       await syncOperators(selectedOperator.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Could not rotate Operator User password.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo rotar la contraseña del Usuario Operador.");
     } finally {
       setIsRotatingPassword(false);
     }
@@ -436,26 +436,26 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     <section className="panel stack-gap">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Identity and access</p>
-          <h2>Operator Users workspace</h2>
+          <p className="eyebrow">Identidad y acceso</p>
+          <h2>Espacio de trabajo de Operadores</h2>
         </div>
         <p className="section-copy">
-          Administrator browser calls go through the edge-proxy facade with the current bearer token.
-          No direct Keycloak admin traffic from the shell.
+          Las llamadas del navegador del administrador pasan a través de la fachada de edge-proxy con el token de portador actual.
+          No hay tráfico directo de administración de Keycloak desde la consola.
         </p>
       </div>
 
       <div className="mission-summary-grid">
         <article className="signal-card">
-          <strong>Total Operator Users</strong>
+          <strong>Total de Operadores</strong>
           <p className="metric-value">{summary.total}</p>
         </article>
         <article className="signal-card">
-          <strong>Active</strong>
+          <strong>Activos</strong>
           <p className="metric-value metric-success">{summary.active}</p>
         </article>
         <article className="signal-card">
-          <strong>Inactive</strong>
+          <strong>Inactivos</strong>
           <p className="metric-value metric-danger">{summary.inactive}</p>
         </article>
       </div>
@@ -467,8 +467,8 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
         <section className="operator-list-panel">
           <div className="mission-list-header">
             <div>
-              <p className="eyebrow">Roster</p>
-              <h3>Operator Users</h3>
+              <p className="eyebrow">Lista</p>
+              <h3>Usuarios Operadores</h3>
             </div>
             <button
               className="ghost-button"
@@ -478,16 +478,16 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
               }}
               type="button"
             >
-              Refresh
+              Actualizar
             </button>
           </div>
 
-          {isLoading ? <p className="muted-copy">Loading Operator Users.</p> : null}
+          {isLoading ? <p className="muted-copy">Cargando Usuarios Operadores.</p> : null}
 
           {!isLoading && operators.length === 0 ? (
             <div className="empty-state">
-              <strong>No Operator Users returned yet.</strong>
-              <p>The facade is reachable, but it has not returned a roster for this administrator view.</p>
+              <strong>Aún no se han devuelto Usuarios Operadores.</strong>
+              <p>La fachada es accesible, pero no ha devuelto una lista para esta vista de administrador.</p>
             </div>
           ) : null}
 
@@ -508,14 +508,14 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                 <div className="mission-list-item-top">
                   <strong>{operator.displayName}</strong>
                   <span className={operator.isActive ? "status-pill status-ok" : "status-pill status-error"}>
-                    {operator.isActive ? "active" : "inactive"}
+                    {operator.isActive ? "activo" : "inactivo"}
                   </span>
                 </div>
                 <p>@{operator.username}</p>
                 <dl className="mission-meta-grid">
                   <div>
                     <dt>Email</dt>
-                    <dd>{operator.email ?? "Not reported"}</dd>
+                    <dd>{operator.email ?? "No reportado"}</dd>
                   </div>
                   <div>
                     <dt>Roles</dt>
@@ -530,15 +530,15 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
         <section className="operator-form-panel">
           <div className="mission-list-header">
             <div>
-              <p className="eyebrow">Provision</p>
-              <h3>Create Operator User</h3>
+              <p className="eyebrow">Provisión</p>
+              <h3>Crear Usuario Operador</h3>
             </div>
           </div>
 
           <form className="auth-form" onSubmit={handleCreateOperator}>
             <div className="form-grid-two">
               <label className="field">
-                <span>Username</span>
+                <span>Nombre de usuario</span>
                 <input
                   className="input"
                   maxLength={100}
@@ -573,7 +573,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
 
             <div className="form-grid-two">
               <label className="field">
-                <span>First name</span>
+                <span>Nombre</span>
                 <input
                   className="input"
                   maxLength={80}
@@ -589,7 +589,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
               </label>
 
               <label className="field">
-                <span>Last name</span>
+                <span>Apellido</span>
                 <input
                   className="input"
                   maxLength={80}
@@ -607,7 +607,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
 
             <div className="form-grid-two">
               <label className="field">
-                <span>Password</span>
+                <span>Contraseña</span>
                 <input
                   className="input"
                   minLength={8}
@@ -625,16 +625,16 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
             </div>
 
             <label className="field">
-              <span>Route contract</span>
+              <span>Contrato de ruta</span>
               <input className="input" disabled value={operatorsUrl} />
               <span className="field-hint">
-                This slice uses GET, POST, POST /{"{userId}"}/deactivate, and POST /{"{userId}"}/reset-password.
+                Esta sección utiliza GET, POST, POST /{"{userId}"}/deactivate y POST /{"{userId}"}/reset-password.
               </span>
             </label>
 
             <div className="mission-action-row">
               <button className="primary-button" disabled={isSubmitting} type="submit">
-                Create Operator User
+                Crear Usuario Operador
               </button>
             </div>
           </form>
@@ -642,56 +642,56 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
           <section className="operator-detail-card">
             <div className="mission-list-header">
               <div>
-                <p className="eyebrow">Selected User</p>
-                <h3>{selectedOperator?.displayName ?? "No Operator User selected"}</h3>
+                <p className="eyebrow">Usuario seleccionado</p>
+                <h3>{selectedOperator?.displayName ?? "Ningún Usuario Operador seleccionado"}</h3>
               </div>
             </div>
 
             {selectedOperator ? (
               <dl className="definition-grid">
                 <div>
-                  <dt>User ID</dt>
+                  <dt>ID de usuario</dt>
                   <dd>{selectedOperator.id}</dd>
                 </div>
                 <div>
-                  <dt>Username</dt>
+                  <dt>Nombre de usuario</dt>
                   <dd>{selectedOperator.username}</dd>
                 </div>
                 <div>
                   <dt>Email</dt>
-                  <dd>{selectedOperator.email ?? "Not reported by facade"}</dd>
+                  <dd>{selectedOperator.email ?? "No reportado por la fachada"}</dd>
                 </div>
                 <div>
-                  <dt>First name</dt>
-                  <dd>{selectedOperator.firstName ?? "Not reported by facade"}</dd>
+                  <dt>Nombre</dt>
+                  <dd>{selectedOperator.firstName ?? "No reportado por la fachada"}</dd>
                 </div>
                 <div>
-                  <dt>Last name</dt>
-                  <dd>{selectedOperator.lastName ?? "Not reported by facade"}</dd>
+                  <dt>Apellido</dt>
+                  <dd>{selectedOperator.lastName ?? "No reportado por la fachada"}</dd>
                 </div>
                 <div>
                   <dt>Roles</dt>
                   <dd>{selectedOperator.roles.join(", ")}</dd>
                 </div>
                 <div>
-                  <dt>Status</dt>
-                  <dd>{selectedOperator.isActive ? "Active" : "Inactive"}</dd>
+                  <dt>Estado</dt>
+                  <dd>{selectedOperator.isActive ? "Activo" : "Inactivo"}</dd>
                 </div>
                 <div>
-                  <dt>Last update</dt>
+                  <dt>Última actualización</dt>
                   <dd>{formatTimestamp(selectedOperator.lastUpdatedAt)}</dd>
                 </div>
               </dl>
             ) : (
               <div className="empty-state">
-                <strong>No Operator User selected.</strong>
-                <p>Select a roster entry after the facade returns data.</p>
+                <strong>Ningún Usuario Operador seleccionado.</strong>
+                <p>Seleccione una entrada de la lista después de que la fachada devuelva datos.</p>
               </div>
             )}
 
             <form className="stack-gap" onSubmit={handleRotateSelectedOperatorPassword}>
               <label className="field">
-                <span>Rotate password</span>
+                <span>Rotar contraseña</span>
                 <input
                   className="input"
                   disabled={!selectedOperator || isRotatingPassword}
@@ -706,13 +706,13 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                   value={passwordRotationDraft.password}
                 />
                 <span className="field-hint">
-                  New secret goes to `identity-access`. Shell never receives Keycloak admin credentials.
+                  El nuevo secreto va a `identity-access`. La consola nunca recibe credenciales de administrador de Keycloak.
                 </span>
               </label>
 
               <div className="mission-action-row">
                 <button className="primary-button" disabled={!selectedOperator || isRotatingPassword} type="submit">
-                  {isRotatingPassword ? "Rotating..." : "Rotate password"}
+                  {isRotatingPassword ? "Rotando..." : "Rotar contraseña"}
                 </button>
               </div>
             </form>
@@ -724,7 +724,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                 onClick={() => void handleDeactivateSelectedOperator()}
                 type="button"
               >
-                {isDeactivating ? "Deactivating..." : "Deactivate Operator User"}
+                {isDeactivating ? "Desactivando..." : "Desactivar Usuario Operador"}
               </button>
             </div>
           </section>
