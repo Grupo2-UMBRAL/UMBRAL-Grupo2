@@ -224,11 +224,14 @@ services:
       - -lc
       - >
           npm install &&
-          npm run web:compose -- --port ${MOBILE_WEB_PORT}
+          npm run web:compose
     environment:
       CI: "1"
       NODE_ENV: development
       EXPO_NO_TELEMETRY: "1"
+      EXPO_OFFLINE: "1"
+      EXPO_NO_DEV_CLIENT: "1"
+      EXPO_PORT: "${MOBILE_WEB_PORT}"
       EXPO_PUBLIC_EDGE_PROXY_BASE_URL: ${MOBILE_EDGE_PROXY_BASE_URL}
       EXPO_PUBLIC_KEYCLOAK_BASE_URL: ${MOBILE_KEYCLOAK_BASE_URL}
       EXPO_PUBLIC_KEYCLOAK_REALM: ${MOBILE_KEYCLOAK_REALM}

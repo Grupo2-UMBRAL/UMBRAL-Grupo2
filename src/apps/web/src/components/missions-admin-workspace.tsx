@@ -36,6 +36,7 @@ type MissionNode = {
   isActive: boolean;
   defaultTimeBudgetMinutes: number | null;
   timeBudgetMinutes: number | null;
+  difficulty: string | null;
   resolvedTimeBudgetMinutes: number | null;
   gameType: string | null;
   prompt: string | null;
@@ -69,6 +70,7 @@ type MissionNodeDraft = {
   isActive: boolean;
   defaultTimeBudgetMinutes: string;
   timeBudgetMinutes: string;
+  difficulty: string;
   gameType: string;
   prompt: string;
   expectedQrHash: string;
@@ -109,6 +111,7 @@ type MissionNodePayload = {
   isActive: boolean;
   defaultTimeBudgetMinutes: number | null;
   timeBudgetMinutes: number | null;
+  difficulty: string | null;
   gameType: string | null;
   prompt: string | null;
   expectedQrHash: string | null;
@@ -145,6 +148,22 @@ type MissionNodeEditorProps = {
 };
 
 const gameTypeOptions = ["Treasure Hunt", "Trivia"] as const;
+const difficultyOptions = ["Easy", "Medium", "Hard"] as const;
+const defaultDifficulty = "Medium";
+
+function normalizeDifficulty(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase();
+
+  return (
+    difficultyOptions.find(
+      (difficulty) => difficulty.toLowerCase() === normalized,
+    ) ?? defaultDifficulty
+  );
+}
+
+function isSupportedDifficulty(value: string) {
+  return difficultyOptions.some((difficulty) => difficulty === value);
+}
 
 function createClientId() {
   if (
@@ -178,6 +197,7 @@ function createEmptyNodeDraft(
     isActive: true,
     defaultTimeBudgetMinutes: "",
     timeBudgetMinutes: "",
+    difficulty: defaultDifficulty,
     gameType: gameTypeOptions[0],
     prompt: "",
     expectedQrHash: "",
@@ -192,7 +212,7 @@ function createEmptyMissionDraft(): MissionDraft {
   return {
     name: "",
     description: "",
-    difficulty: "",
+    difficulty: defaultDifficulty,
     maximumDurationMinutes: "60",
     gameType: gameTypeOptions[0],
     nodes: [],
@@ -274,6 +294,7 @@ function toNodeDraft(node: MissionNode): MissionNodeDraft {
     isActive: node.isActive,
     defaultTimeBudgetMinutes: node.defaultTimeBudgetMinutes?.toString() ?? "",
     timeBudgetMinutes: node.timeBudgetMinutes?.toString() ?? "",
+    difficulty: normalizeDifficulty(node.difficulty),
     gameType: node.gameType ?? gameTypeOptions[0],
     prompt: node.prompt ?? "",
     expectedQrHash: node.expectedQrHash ?? "",
@@ -289,7 +310,7 @@ function toDraft(mission: MissionDetail): MissionDraft {
   return {
     name: mission.name,
     description: mission.description,
-    difficulty: mission.difficulty,
+    difficulty: normalizeDifficulty(mission.difficulty),
     maximumDurationMinutes: String(mission.maximumDurationMinutes),
     gameType: mission.gameType,
     nodes: mission.nodes.map(toNodeDraft),
@@ -426,6 +447,7 @@ function serializeNodeDraft(node: MissionNodeDraft): MissionNodePayload {
     timeBudgetMinutes: isLeaf
       ? parseOptionalInteger(node.timeBudgetMinutes)
       : null,
+    difficulty: isLeaf ? normalizeDifficulty(node.difficulty) : null,
     gameType: isLeaf ? node.gameType : null,
     prompt: isLeaf ? trimToNull(node.prompt) : null,
     expectedQrHash:
@@ -493,6 +515,10 @@ function findValidationIssue(
 
       if (!node.gameType) {
         return `${label}: leaf stage needs a game type.`;
+      }
+
+      if (!isSupportedDifficulty(node.difficulty)) {
+        return `${label}: leaf stage needs a valid difficulty.`;
       }
 
       if (!trimToNull(node.prompt)) {
@@ -706,6 +732,24 @@ function MissionNodeEditor({
               <span className="field-hint">
                 Leave empty to inherit the mission or parent block budget.
               </span>
+            </label>
+
+            <label className="field">
+              <span>Dificultad</span>
+              <select
+                className="input"
+                onChange={(event) =>
+                  onUpdateNode(node.clientId, "difficulty", event.target.value)
+                }
+                required
+                value={node.difficulty}
+              >
+                {difficultyOptions.map((difficulty) => (
+                  <option key={difficulty} value={difficulty}>
+                    {difficulty}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="field">
@@ -1133,6 +1177,7 @@ export function MissionsAdminWorkspace({
         ...node,
         children: [],
         defaultTimeBudgetMinutes: "",
+        difficulty: normalizeDifficulty(node.difficulty),
         gameType: node.gameType || gameTypeOptions[0],
       })),
     }));
@@ -1173,12 +1218,13 @@ export function MissionsAdminWorkspace({
     }
 
     const serializedNodes = draft.nodes.map(serializeNodeDraft);
+    const difficulty = normalizeDifficulty(draft.difficulty);
     const body =
       editorMode === "create"
         ? {
             name: draft.name,
             description: draft.description,
-            difficulty: draft.difficulty,
+            difficulty,
             maximumDurationMinutes,
             gameType: draft.gameType,
             nodes: serializedNodes,
@@ -1186,7 +1232,7 @@ export function MissionsAdminWorkspace({
         : {
             name: draft.name,
             description: draft.description,
-            difficulty: draft.difficulty,
+            difficulty,
             maximumDurationMinutes,
             gameType: draft.gameType,
             nodes: serializedNodes,
@@ -1460,15 +1506,20 @@ export function MissionsAdminWorkspace({
             <div className="form-grid-two">
               <label className="field">
                 <span>Dificultad</span>
-                <input
+                <select
                   className="input"
-                  maxLength={60}
                   onChange={(event) =>
                     updateDraftField("difficulty", event.target.value)
                   }
                   required
                   value={draft.difficulty}
-                />
+                >
+                  {difficultyOptions.map((difficulty) => (
+                    <option key={difficulty} value={difficulty}>
+                      {difficulty}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="field">
