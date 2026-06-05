@@ -74,7 +74,7 @@ export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps)
                 Quitar ubicación
               </button>
             </div>
-            <div className="node-grid">
+            <div className="form-grid-two">
               <label className="field">
                 <span>Latitud</span>
                 <input

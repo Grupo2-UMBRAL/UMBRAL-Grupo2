@@ -479,7 +479,7 @@ export default function BoardPage() {
             <StatusChip label="Finalized" tone="error" />
             <Text style={shellStyles.cardText}>Evidence Submission closed.</Text>
           </View>
-        ) : currentStage?.gameType === "TreasureHunt" ? (
+        ) : (currentStage?.gameType === "TreasureHunt" || currentStage?.gameType === "Treasure Hunt") ? (
           <Pressable
             disabled={actionBlocked || submitting}
             onPress={() => {

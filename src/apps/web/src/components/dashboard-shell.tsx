@@ -37,10 +37,34 @@ export function DashboardShell({
   sideContent
 }: DashboardShellProps) {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRailCollapsed, setIsRailCollapsed] = useState(false);
 
   return (
-    <main className="shell-page">
+    <main className={`shell-page ${isRailCollapsed ? "is-rail-collapsed" : ""}`}>
+      {isRailCollapsed && (
+        <button
+          className="rail-toggle-tab"
+          onClick={() => setIsRailCollapsed(false)}
+          type="button"
+          aria-label="Expandir menú"
+          title="Expandir menú"
+        >
+          ➡️
+        </button>
+      )}
+
       <aside className="shell-rail">
+        <div className="rail-collapse-header">
+          <button
+            className="ghost-button compact-button collapse-btn"
+            onClick={() => setIsRailCollapsed(true)}
+            type="button"
+            title="Colapsar menú"
+          >
+            ⬅️ Ocultar menú
+          </button>
+        </div>
+
         <div className="brand-block">
           <p className="eyebrow">UMBRAL web</p>
           <h1>{roleLabel(role)}</h1>
