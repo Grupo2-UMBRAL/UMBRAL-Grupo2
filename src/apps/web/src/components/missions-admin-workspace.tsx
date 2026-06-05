@@ -932,7 +932,7 @@ export function MissionsAdminWorkspace({
         }
 
         setErrorMessage(
-          error instanceof Error ? error.message : "Could not load Missions.",
+          error instanceof Error ? error.message : "No se pudieron cargar las Misiones.",
         );
       } finally {
         if (requestSequence === listRequestSequenceRef.current) {
@@ -977,7 +977,7 @@ export function MissionsAdminWorkspace({
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Could not load Mission detail.",
+            : "No se pudieron cargar los detalles de la Misión.",
         );
       } finally {
         if (requestSequence === detailRequestSequenceRef.current) {
@@ -1223,12 +1223,12 @@ export function MissionsAdminWorkspace({
       setDraft(toDraft(mission));
       setEditorMode("edit");
       setFeedback(
-        editorMode === "create" ? "Mission created." : "Mission updated.",
+        editorMode === "create" ? "Misión creada." : "Misión actualizada.",
       );
       await loadMissions(mission.id);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Could not save Mission.",
+        error instanceof Error ? error.message : "No se pudo guardar la Misión.",
       );
     } finally {
       setIsSubmitting(false);
@@ -1260,13 +1260,13 @@ export function MissionsAdminWorkspace({
       const mission = (await response.json()) as MissionDetail;
       setSelectedMission(mission);
       setDraft(toDraft(mission));
-      setFeedback("Mission deactivated.");
+      setFeedback("Misión desactivada.");
       await loadMissions(mission.id);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not deactivate Mission.",
+          : "No se pudo desactivar la Misión.",
       );
     } finally {
       setIsSubmitting(false);
@@ -1277,29 +1277,29 @@ export function MissionsAdminWorkspace({
     <section className="panel stack-gap">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Mission design</p>
-          <h2>Missions workspace</h2>
+          <p className="eyebrow">Diseño de misiones</p>
+          <h2>Espacio de trabajo de Misiones</h2>
         </div>
         <p className="section-copy">
-          Reading this as: administrator control surface for mission authors,
-          with a calm operational language, leaning toward the existing warm
-          shell plus denser nested editing blocks.
+          Superficie de control del administrador para autores de misiones,
+          con un lenguaje operativo tranquilo, orientado hacia la consola cálida
+          existente más bloques de edición anidados más densos.
         </p>
       </div>
 
       <div className="mission-summary-grid">
         <article className="signal-card">
-          <strong>Total Missions</strong>
+          <strong>Total de Misiones</strong>
           <p className="metric-value">{selectionSummary.total}</p>
         </article>
         <article className="signal-card">
-          <strong>Active</strong>
+          <strong>Activas</strong>
           <p className="metric-value metric-success">
             {selectionSummary.active}
           </p>
         </article>
         <article className="signal-card">
-          <strong>Inactive</strong>
+          <strong>Inactivas</strong>
           <p className="metric-value metric-danger">
             {selectionSummary.inactive}
           </p>
@@ -1313,27 +1313,27 @@ export function MissionsAdminWorkspace({
         <section className="mission-list-panel">
           <div className="mission-list-header">
             <div>
-              <p className="eyebrow">Catalog</p>
-              <h3>Missions</h3>
+              <p className="eyebrow">Catálogo</p>
+              <h3>Misiones</h3>
             </div>
             <button
               className="ghost-button"
               onClick={handleCreateMode}
               type="button"
             >
-              New Mission
+              Nueva Misión
             </button>
           </div>
 
           {isLoadingList ? (
-            <p className="muted-copy">Loading Missions.</p>
+            <p className="muted-copy">Cargando Misiones.</p>
           ) : null}
 
           {!isLoadingList && missions.length === 0 ? (
             <div className="empty-state">
-              <strong>No Missions yet.</strong>
+              <strong>Aún no hay Misiones.</strong>
               <p>
-                Create the first reusable Mission for the administrator catalog.
+                Cree la primera Misión reutilizable para el catálogo del administrador.
               </p>
             </div>
           ) : null}
@@ -1362,17 +1362,17 @@ export function MissionsAdminWorkspace({
                         : "status-pill status-error"
                     }
                   >
-                    {mission.isActive ? "active" : "inactive"}
+                    {mission.isActive ? "activa" : "inactiva"}
                   </span>
                 </div>
                 <p>{mission.difficulty}</p>
                 <dl className="mission-meta-grid">
                   <div>
-                    <dt>Catalog type</dt>
+                    <dt>Tipo de catálogo</dt>
                     <dd>{mission.gameType}</dd>
                   </div>
                   <div>
-                    <dt>Mission budget</dt>
+                    <dt>Duración máxima</dt>
                     <dd>{mission.maximumDurationMinutes} min</dd>
                   </div>
                 </dl>
@@ -1385,12 +1385,12 @@ export function MissionsAdminWorkspace({
           <div className="mission-list-header">
             <div>
               <p className="eyebrow">
-                {editorMode === "create" ? "Create" : "Selected Mission"}
+                {editorMode === "create" ? "Crear" : "Misión seleccionada"}
               </p>
               <h3>
                 {editorMode === "create"
-                  ? "New Mission"
-                  : (selectedMission?.name ?? "Mission detail")}
+                  ? "Nueva Misión"
+                  : (selectedMission?.name ?? "Detalles de la misión")}
               </h3>
             </div>
             {selectedMission ? (
@@ -1401,39 +1401,39 @@ export function MissionsAdminWorkspace({
                     : "status-pill status-error"
                 }
               >
-                {selectedMission.isActive ? "active" : "inactive"}
+                {selectedMission.isActive ? "activa" : "inactiva"}
               </span>
             ) : null}
           </div>
 
           {isLoadingDetail ? (
-            <p className="muted-copy">Loading Mission detail.</p>
+            <p className="muted-copy">Cargando detalles de la misión.</p>
           ) : null}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="tree-stat-grid">
               <article className="signal-card">
-                <strong>Total nodes</strong>
+                <strong>Total de nodos</strong>
                 <p className="metric-value">{missionTreeStats.totalNodes}</p>
               </article>
               <article className="signal-card">
-                <strong>Leaf stages</strong>
+                <strong>Etapas hoja</strong>
                 <p className="metric-value">{missionTreeStats.leafStages}</p>
               </article>
               <article className="signal-card">
-                <strong>Blocks</strong>
+                <strong>Bloques</strong>
                 <p className="metric-value">
                   {missionTreeStats.compositeBlocks}
                 </p>
               </article>
               <article className="signal-card">
-                <strong>Hints</strong>
+                <strong>Pistas</strong>
                 <p className="metric-value">{missionTreeStats.hints}</p>
               </article>
             </div>
 
             <label className="field">
-              <span>Name</span>
+              <span>Nombre</span>
               <input
                 className="input"
                 maxLength={120}
@@ -1446,7 +1446,7 @@ export function MissionsAdminWorkspace({
             </label>
 
             <label className="field">
-              <span>Description</span>
+              <span>Descripción</span>
               <textarea
                 className="input textarea-input"
                 maxLength={1024}
@@ -1461,7 +1461,7 @@ export function MissionsAdminWorkspace({
 
             <div className="form-grid-two">
               <label className="field">
-                <span>Difficulty</span>
+                <span>Dificultad</span>
                 <input
                   className="input"
                   maxLength={60}
@@ -1474,7 +1474,7 @@ export function MissionsAdminWorkspace({
               </label>
 
               <label className="field">
-                <span>Mission budget minutes</span>
+                <span>Duración máxima (minutos)</span>
                 <input
                   className="input"
                   max={1440}
@@ -1493,7 +1493,7 @@ export function MissionsAdminWorkspace({
             </div>
 
             <label className="field">
-              <span>Catalog Game Type</span>
+              <span>Tipo de juego del catálogo</span>
               <select
                 className="input"
                 onChange={(event) =>
@@ -1508,17 +1508,16 @@ export function MissionsAdminWorkspace({
                 ))}
               </select>
               <span className="field-hint">
-                Mission stages can mix game types now. Keep this catalog label
-                aligned with how the Mission should be listed in current backend
-                summaries.
+                Las etapas de la misión ahora pueden mezclar tipos de juego. Mantenga esta etiqueta del catálogo
+                alineada con cómo debe aparecer la Misión en los resúmenes del backend actual.
               </span>
             </label>
 
             <section className="node-subsection">
               <div className="mission-list-header">
                 <div>
-                  <p className="eyebrow">Structure</p>
-                  <h4>Mission node tree</h4>
+                  <p className="eyebrow">Estructura</p>
+                  <h4>Árbol de nodos de la misión</h4>
                 </div>
                 <div className="node-actions">
                   <button
@@ -1526,24 +1525,24 @@ export function MissionsAdminWorkspace({
                     onClick={() => addRootNode("leaf")}
                     type="button"
                   >
-                    Add root stage
+                    Agregar etapa raíz
                   </button>
                   <button
                     className="ghost-button"
                     onClick={() => addRootNode("composite")}
                     type="button"
                   >
-                    Add root block
+                    Agregar bloque raíz
                   </button>
                 </div>
               </div>
 
               {draft.nodes.length === 0 ? (
                 <div className="tree-empty-state">
-                  <strong>No nodes yet.</strong>
+                  <strong>Aún no hay nodos.</strong>
                   <p>
-                    Start with a playable stage or a composite block that nests
-                    a deeper flow.
+                    Comience con una etapa jugable o un bloque compuesto que anide
+                    un flujo más profundo.
                   </p>
                 </div>
               ) : (
@@ -1573,7 +1572,7 @@ export function MissionsAdminWorkspace({
                 disabled={isSubmitting}
                 type="submit"
               >
-                {editorMode === "create" ? "Create Mission" : "Save changes"}
+                {editorMode === "create" ? "Crear Misión" : "Guardar cambios"}
               </button>
 
               {selectedMission?.isActive ? (
@@ -1583,7 +1582,7 @@ export function MissionsAdminWorkspace({
                   onClick={handleDeactivate}
                   type="button"
                 >
-                  Deactivate
+                  Desactivar
                 </button>
               ) : null}
             </div>
@@ -1592,16 +1591,16 @@ export function MissionsAdminWorkspace({
           {selectedMission ? (
             <dl className="definition-grid mission-detail-grid">
               <div>
-                <dt>Mission ID</dt>
+                <dt>ID de la misión</dt>
                 <dd>{selectedMission.id}</dd>
               </div>
               <div>
-                <dt>Catalog label</dt>
+                <dt>Etiqueta del catálogo</dt>
                 <dd>{selectedMission.gameType}</dd>
               </div>
               <div>
-                <dt>Current status</dt>
-                <dd>{selectedMission.isActive ? "Active" : "Inactive"}</dd>
+                <dt>Estado actual</dt>
+                <dd>{selectedMission.isActive ? "Activa" : "Inactiva"}</dd>
               </div>
             </dl>
           ) : null}

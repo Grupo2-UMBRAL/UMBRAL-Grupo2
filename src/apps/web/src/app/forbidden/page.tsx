@@ -2,14 +2,14 @@ export default function ForbiddenPage() {
   return (
     <main className="forbidden-page">
       <section className="panel forbidden-card stack-gap">
-        <p className="eyebrow">Forbidden</p>
-        <h1>Role cannot enter this surface.</h1>
+        <p className="eyebrow">Acceso Denegado</p>
+        <h1>Su rol no tiene acceso a esta sección.</h1>
         <p>
-          Web shell only admits routes allowed for `Administrator` or `Operator`. Return to login
-          or switch to route your role owns.
+          La consola web solo admite rutas permitidas para `Administrator` (Administrador) u `Operator` (Operador). 
+          Regrese al inicio de sesión o cambie a una ruta correspondiente a su rol.
         </p>
         <a className="primary-button" href="/login">
-          Back to login
+          Volver al inicio de sesión
         </a>
       </section>
     </main>

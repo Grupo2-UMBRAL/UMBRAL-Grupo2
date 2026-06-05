@@ -22,7 +22,7 @@ export function LogoutButton() {
 
   return (
     <button className="ghost-button" disabled={pending} onClick={() => void handleLogout()} type="button">
-      {pending ? "Signing out..." : "Sign out"}
+      {pending ? "Cerrando sesión..." : "Cerrar sesión"}
     </button>
   );
 }

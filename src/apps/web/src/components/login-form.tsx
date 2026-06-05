@@ -43,7 +43,7 @@ export function LoginForm() {
         }).catch(() => null);
 
         setState({
-          error: payload?.message ?? "Login failed. Verify credentials and role.",
+          error: payload?.message ?? "Error al iniciar sesión. Verifique sus credenciales y su rol.",
           pending: false
         });
         return;
@@ -55,7 +55,7 @@ export function LoginForm() {
       });
     } catch {
       setState({
-        error: "Login request failed. Verify the local stack and try again.",
+        error: "Falló la solicitud de inicio de sesión. Verifique el stack local e inténtelo de nuevo.",
         pending: false
       });
     }
@@ -69,25 +69,25 @@ export function LoginForm() {
   return (
     <form className="auth-form" onSubmit={(event) => void handleFormSubmit(event)}>
       <label className="field">
-        <span>Username</span>
+        <span>Nombre de usuario</span>
         <input
           autoComplete="username"
           className="input"
           defaultValue="admin"
           name="username"
-          placeholder="admin or operator"
+          placeholder="admin u operator"
           required
         />
       </label>
 
       <label className="field">
-        <span>Password</span>
+        <span>Contraseña</span>
         <input
           autoComplete="current-password"
           className="input"
           defaultValue="admin123!"
           name="password"
-          placeholder="Password"
+          placeholder="Contraseña"
           required
           type="password"
         />
@@ -96,7 +96,7 @@ export function LoginForm() {
       {state.error ? <p className="form-error">{state.error}</p> : null}
 
       <button className="primary-button" disabled={state.pending} type="submit">
-        {state.pending ? "Signing in..." : "Sign in to shell"}
+        {state.pending ? "Iniciando sesión..." : "Iniciar sesión en la consola"}
       </button>
     </form>
   );

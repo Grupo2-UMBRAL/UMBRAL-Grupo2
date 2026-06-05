@@ -49,20 +49,20 @@ export function DashboardShell({
 
         <nav className="rail-nav">
           <a className={role === "Administrator" ? "rail-link is-active" : "rail-link"} href="/administrator">
-            Administrator
+            Administrador
           </a>
           <a className={role === "Operator" ? "rail-link is-active" : "rail-link"} href="/operator">
-            Operator
+            Operador
           </a>
         </nav>
 
         <div className="panel compact-panel">
-          <p className="eyebrow">Session</p>
+          <p className="eyebrow">Sesión</p>
           <strong>{session.displayName}</strong>
           <p>{session.username}</p>
           <p>{session.roles.join(", ")}</p>
           <p>
-            Expires <time dateTime={session.expiresAt}>{formatExpiryTimestamp(session.expiresAt)}</time>
+            Expira <time dateTime={session.expiresAt}>{formatExpiryTimestamp(session.expiresAt)}</time>
           </p>
           <LogoutButton />
         </div>
@@ -71,7 +71,7 @@ export function DashboardShell({
       <section className="shell-main">
         <header className="hero-panel">
           <div>
-            <p className="eyebrow">Operational shell</p>
+            <p className="eyebrow">Consola operativa</p>
             <h2>{title}</h2>
           </div>
           <p className="hero-copy">{summary}</p>
@@ -80,12 +80,11 @@ export function DashboardShell({
         <section className="panel stack-gap">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Scope now</p>
-              <h2>What this shell proves</h2>
+              <p className="eyebrow">Alcance actual</p>
+              <h2>Lo que esta consola demuestra</h2>
             </div>
             <p className="section-copy">
-              No fake business screens. Only auth, protected routing, live transport, config, and operational
-              framing.
+              Sin pantallas de negocio falsas. Solo autenticación, enrutamiento protegido, transporte en vivo, configuración y estructura operativa.
             </p>
           </div>
 
@@ -115,16 +114,16 @@ export function DashboardShell({
         <section className="panel stack-gap">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Verification</p>
-              <h2>Failure modes covered</h2>
+              <p className="eyebrow">Verificación</p>
+              <h2>Modos de falla cubiertos</h2>
             </div>
           </div>
 
           <ul className="plain-list">
-            <li>Participant login rejected from web shell.</li>
-            <li>Expired cookie redirects back to login.</li>
-            <li>SignalR reconnect calls resync callback.</li>
-            <li>Protected service checks surface live 401 or 403 failures.</li>
+            <li>El inicio de sesión del participante es rechazado de la consola web.</li>
+            <li>La cookie expirada redirige de vuelta al inicio de sesión.</li>
+            <li>La reconexión de SignalR invoca el callback de resincronización.</li>
+            <li>Las validaciones de servicios protegidos muestran fallas de error 401 o 403 en vivo.</li>
           </ul>
         </section>
 

@@ -33,12 +33,11 @@ export function LiveSessionConnection({
     <section className="panel stack-gap">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Realtime</p>
-          <h2>Session stream</h2>
+          <p className="eyebrow">Tiempo real</p>
+          <h2>Transmisión de sesión</h2>
         </div>
         <p className="section-copy">
-          Hook points to `/session-hub/hubs/session`, uses JWT query auth, reconnects automatically,
-          then asks shell to resync.
+          El hook apunta a `/session-hub/hubs/session`, utiliza autenticación por consulta JWT, se reconecta automáticamente y luego solicita la resincronización de la consola.
         </p>
       </div>
 
@@ -49,23 +48,23 @@ export function LiveSessionConnection({
 
       <dl className="definition-grid">
         <div>
-          <dt>Hub URL</dt>
+          <dt>URL del Hub</dt>
           <dd>{config.sessionHubUrl}</dd>
         </div>
         <div>
-          <dt>Resync count</dt>
+          <dt>Cantidad de resincronizaciones</dt>
           <dd>{resyncCount}</dd>
         </div>
       </dl>
 
       {lastStateChange ? (
         <div className="signal-card signal-connected">
-          <strong>Last lifecycle event</strong>
+          <strong>Último evento de ciclo de vida</strong>
           <p>
             {lastStateChange.previousState} -&gt; {lastStateChange.state}
           </p>
           <p>
-            Session {lastStateChange.liveSessionId} with {lastStateChange.registeredSessionTeamCount} team(s)
+            Sesión {lastStateChange.liveSessionId} con {lastStateChange.registeredSessionTeamCount} equipo(s)
           </p>
         </div>
       ) : null}

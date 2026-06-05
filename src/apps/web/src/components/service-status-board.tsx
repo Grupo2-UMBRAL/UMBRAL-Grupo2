@@ -66,7 +66,7 @@ export function ServiceStatusBoard({
       id: check.id,
       label: check.label,
       status: "loading",
-      detail: "Checking endpoint."
+      detail: "Verificando endpoint."
     })) satisfies ServiceCheckState[];
 
     async function runChecks() {
@@ -84,7 +84,7 @@ export function ServiceStatusBoard({
             });
 
             const detail = response.ok
-              ? "Endpoint accepted request."
+              ? "El endpoint aceptó la solicitud."
               : `${response.status} ${response.statusText}`;
 
             return {
@@ -98,7 +98,7 @@ export function ServiceStatusBoard({
               id: check.id,
               label: check.label,
               status: "error",
-              detail: error instanceof Error ? error.message : "Request failed."
+              detail: error instanceof Error ? error.message : "La solicitud falló."
             } satisfies ServiceCheckState;
           }
         })
@@ -120,11 +120,11 @@ export function ServiceStatusBoard({
     <section className="panel stack-gap">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Readiness</p>
-          <h2>Operational checks</h2>
+          <p className="eyebrow">Disponibilidad</p>
+          <h2>Verificaciones operativas</h2>
         </div>
         <p className="section-copy">
-          Browser client hits live identity and protected API endpoints with current JWT.
+          El cliente del navegador accede al servicio de identidad y a los endpoints de API protegidos con el JWT actual.
         </p>
       </div>
 
