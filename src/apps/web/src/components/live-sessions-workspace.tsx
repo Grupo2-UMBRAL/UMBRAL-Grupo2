@@ -513,8 +513,78 @@ function formatResolutionTime(value: string) {
 function findRankingTeamName(sessionTeamId: string, teams: LiveSessionOverviewTeam[]) {
   return (
     teams.find((team) => team.sessionTeamId === sessionTeamId)?.teamName ??
-    `Session Team ${sessionTeamId.slice(0, 8)}`
+    `Equipo de sesión ${sessionTeamId.slice(0, 8)}`
   );
+}
+
+function translateSessionState(sessionState: string): string {
+  switch (sessionState) {
+    case "Scheduled":
+      return "Programada";
+    case "Active":
+    case "Running":
+      return "Activa";
+    case "Paused":
+      return "Pausada";
+    case "Completed":
+      return "Completada";
+    case "Cancelled":
+    case "Canceled":
+      return "Cancelada";
+    default:
+      return sessionState;
+  }
+}
+
+function translateProgressState(progressState: string): string {
+  switch (progressState) {
+    case "NotStarted":
+      return "No iniciado";
+    case "Active":
+      return "Activo";
+    case "Completed":
+      return "Completado";
+    default:
+      return progressState;
+  }
+}
+
+function translateGameType(gameType: string): string {
+  const normalized = gameType.replace(/\s+/g, "").toLowerCase();
+  if (normalized === "treasurehunt") {
+    return "Búsqueda del tesoro";
+  }
+  if (normalized === "trivia") {
+    return "Trivia";
+  }
+  return gameType;
+}
+
+function translateDifficulty(difficulty: string): string {
+  const norm = difficulty.toLowerCase().trim();
+  switch (norm) {
+    case "easy":
+      return "Fácil";
+    case "medium":
+      return "Medio";
+    case "hard":
+      return "Difícil";
+    default:
+      return difficulty;
+  }
+}
+
+function translateValidationOutcome(outcome: string): string {
+  switch (outcome) {
+    case "Accepted":
+      return "Aceptado";
+    case "Rejected":
+      return "Rechazado";
+    case "Pending":
+      return "Pendiente";
+    default:
+      return outcome;
+  }
 }
 
 function parseOptionalCoordinate(value: string) {
@@ -711,20 +781,20 @@ function ScoringRankingWidget({
     <section className="overview-slot scoring-widget">
       <div className="widget-header">
         <div>
-          <p className="eyebrow">Scoring and Audit</p>
-          <h4>Ranking</h4>
+          <p className="eyebrow">Puntuación y Auditoría</p>
+          <h4>Clasificación</h4>
         </div>
         <div className="widget-header-actions">
-          <span className={getConnectionSignalClass(connectionState)}>Scoring: {connectionState.label}</span>
+          <span className={getConnectionSignalClass(connectionState)}>Puntuación: {connectionState.label}</span>
           <button className="ghost-button compact-button" disabled={isLoading} onClick={onRefresh} type="button">
-            {isLoading ? "Syncing" : "Refresh"}
+            {isLoading ? "Sincronizando..." : "Actualizar"}
           </button>
         </div>
       </div>
 
       {error ? (
         <div className="empty-state degraded-state">
-          <strong>Ranking unavailable.</strong>
+          <strong>Clasificación no disponible.</strong>
           <p>{error}</p>
         </div>
       ) : null}
@@ -734,10 +804,10 @@ function ScoringRankingWidget({
           <table className="ranking-table">
             <thead>
               <tr>
-                <th>Rank</th>
-                <th>Team</th>
-                <th>Points</th>
-                <th>Time</th>
+                <th>Puesto</th>
+                <th>Equipo</th>
+                <th>Puntos</th>
+                <th>Tiempo</th>
               </tr>
             </thead>
             <tbody>
@@ -752,7 +822,7 @@ function ScoringRankingWidget({
                     </td>
                     <td>
                       <strong>{findRankingTeamName(entry.sessionTeamId, teams)}</strong>
-                      {isSharedRank ? <p className="field-hint">Shared rank</p> : null}
+                      {isSharedRank ? <p className="field-hint">Empate conservado</p> : null}
                     </td>
                     <td>{entry.visibleScore} pts</td>
                     <td>{formatResolutionTime(entry.resolutionTime)}</td>
@@ -766,8 +836,8 @@ function ScoringRankingWidget({
 
       {!error && !isLoading && rankingItems.length === 0 ? (
         <div className="empty-state">
-          <strong>No Score Entries yet.</strong>
-          <p>Ranking appears when Scoring and Audit records Stage Credit for a Session Team.</p>
+          <strong>Aún no hay entradas de puntuación.</strong>
+          <p>La clasificación aparecerá cuando Puntuación y Auditoría registre crédito de etapa.</p>
         </div>
       ) : null}
     </section>
@@ -793,20 +863,20 @@ function SessionEventTimeline({
     <section className="overview-slot scoring-widget">
       <div className="widget-header">
         <div>
-          <p className="eyebrow">Audit Log</p>
-          <h4>Timeline</h4>
+          <p className="eyebrow">Bitácora de auditoría</p>
+          <h4>Línea de tiempo</h4>
         </div>
         <div className="widget-header-actions">
-          <span className={getConnectionSignalClass(connectionState)}>Events: {connectionState.label}</span>
+          <span className={getConnectionSignalClass(connectionState)}>Eventos: {connectionState.label}</span>
           <button className="ghost-button compact-button" disabled={isLoading} onClick={onRefresh} type="button">
-            {isLoading ? "Syncing" : "Refresh"}
+            {isLoading ? "Sincronizando..." : "Actualizar"}
           </button>
         </div>
       </div>
 
       {error ? (
         <div className="empty-state degraded-state">
-          <strong>Timeline unavailable.</strong>
+          <strong>Línea de tiempo no disponible.</strong>
           <p>{error}</p>
         </div>
       ) : null}
@@ -831,8 +901,8 @@ function SessionEventTimeline({
 
       {!error && !isLoading && eventLogItems.length === 0 ? (
         <div className="empty-state">
-          <strong>No auditable events yet.</strong>
-          <p>The timeline remains ready while the Session Event Log waits for scoring or operator events.</p>
+          <strong>Sin eventos auditables aún.</strong>
+          <p>La línea de tiempo se mantendrá lista mientras el registro de eventos de sesión espera eventos de puntuación u operador.</p>
         </div>
       ) : null}
     </section>
@@ -946,7 +1016,7 @@ function SessionTeamDetailPanel({
         </article>
         <article className="team-detail-stat">
           <strong>Progreso</strong>
-          <p className="team-detail-value">{detail.progressState}</p>
+          <p className="team-detail-value">{translateProgressState(detail.progressState)}</p>
         </article>
       </div>
 
@@ -974,7 +1044,7 @@ function SessionTeamDetailPanel({
                 <div className="timeline-content team-detail-timeline-content">
                   <div className="timeline-meta">
                     <span className={item.kind === "hint" ? "node-chip is-composite" : "node-chip is-leaf"}>
-                      {item.kind === "hint" ? "Pista" : item.submission.gameType}
+                      {item.kind === "hint" ? "Pista" : translateGameType(item.submission.gameType)}
                     </span>
                     <time dateTime={item.occurredAtUtc}>{formatRelativeTimestamp(item.occurredAtUtc)}</time>
                   </div>
@@ -997,11 +1067,11 @@ function SessionTeamDetailPanel({
                               : "status-pill status-error"
                           }
                         >
-                          {item.submission.validationOutcome}
+                          {translateValidationOutcome(item.submission.validationOutcome)}
                         </span>
                       </div>
                       <span className="field-hint">
-                        {item.stageName} · {item.submission.difficulty} · {formatTimestamp(item.submission.submittedAtUtc)}
+                        {item.stageName} · {translateDifficulty(item.submission.difficulty)} · {formatTimestamp(item.submission.submittedAtUtc)}
                       </span>
                       {item.submission.failureReason ? <p className="field-hint">{item.submission.failureReason}</p> : null}
 
@@ -1143,7 +1213,7 @@ function LiveSessionOverviewDashboard({
       <div className="overview-metric-grid">
         <article className="signal-card">
           <strong>Estado de la Sesión</strong>
-          <p className="metric-value overview-metric-value">{sessionState}</p>
+          <p className="metric-value overview-metric-value">{translateSessionState(sessionState)}</p>
         </article>
         <article className="signal-card">
           <strong>Tiempo restante</strong>
@@ -1165,7 +1235,7 @@ function LiveSessionOverviewDashboard({
             <p className="eyebrow">Ciclo de vida</p>
             <h4>Control de sesión</h4>
           </div>
-          <span className={getSessionStatePillClass(sessionState)}>{sessionState}</span>
+          <span className={getSessionStatePillClass(sessionState)}>{translateSessionState(sessionState)}</span>
         </div>
 
         <div className="mission-action-row">
@@ -1218,7 +1288,7 @@ function LiveSessionOverviewDashboard({
                         <strong>{team.teamName}</strong>
                         <p className="field-hint">{team.participantCount} participante(s)</p>
                       </div>
-                      <span className={getProgressPillClass(team.progressState)}>{team.progressState}</span>
+                      <span className={getProgressPillClass(team.progressState)}>{translateProgressState(team.progressState)}</span>
                     </div>
 
                     <dl className="definition-grid session-team-definition-grid">
@@ -1228,11 +1298,11 @@ function LiveSessionOverviewDashboard({
                       </div>
                       <div>
                         <dt>Dificultad</dt>
-                        <dd>{team.currentStage?.difficulty ?? "N/A"}</dd>
+                        <dd>{team.currentStage ? translateDifficulty(team.currentStage.difficulty) : "N/A"}</dd>
                       </div>
                       <div>
                         <dt>Tipo de juego</dt>
-                        <dd>{team.currentStage?.gameType ?? "N/A"}</dd>
+                        <dd>{team.currentStage ? translateGameType(team.currentStage.gameType) : "N/A"}</dd>
                       </div>
                       <div>
                         <dt>Pistas visibles</dt>
@@ -1258,8 +1328,8 @@ function LiveSessionOverviewDashboard({
           </div>
         ) : (
           <div className="empty-state">
-            <strong>No Session Teams loaded.</strong>
-            <p>Use manual refresh if enrollment changed while realtime was reconnecting.</p>
+            <strong>No se cargaron equipos de sesión.</strong>
+            <p>Use la actualización manual si el registro de participantes cambió mientras se reconectaba en tiempo real.</p>
           </div>
         )}
       </section>
@@ -1319,12 +1389,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
-    detail: "SignalR waiting for selected LiveSession."
+    detail: "SignalR esperando la selección de una LiveSession."
   });
   const [scoringRealtimeConnection, setScoringRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
-    detail: "SignalR waiting for selected LiveSession."
+    detail: "SignalR esperando la selección de una LiveSession."
   });
   const [rankingError, setRankingError] = useState<string | null>(null);
   const [eventLogError, setEventLogError] = useState<string | null>(null);
@@ -1782,7 +1852,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           setSessionRealtimeConnection({
             kind: "disconnected",
             label: "Desconectado",
-            detail: "SignalR waiting for selected LiveSession."
+            detail: "SignalR esperando la selección de una LiveSession."
           });
         }
       });
@@ -1841,7 +1911,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: "reconnecting",
         label: "Reconectando",
-        detail: "Realtime stream dropped. Snapshot remains visible."
+        detail: "Transmisión en tiempo real perdida. La captura permanece visible."
       });
     });
 
@@ -1853,7 +1923,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: "connected",
         label: "Conectado",
-        detail: "Realtime session stream restored."
+        detail: "Transmisión de sesión en tiempo real restaurada."
       });
       refreshSelectedOverview();
     });
@@ -1866,7 +1936,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: error ? "error" : "disconnected",
         label: "Desconectado",
-        detail: error ? `SignalR closed: ${error.message}` : "Realtime session stream closed."
+        detail: error ? `SignalR cerrado: ${error.message}` : "Transmisión de sesión en tiempo real cerrada."
       });
     });
 
@@ -1875,7 +1945,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSessionRealtimeConnection({
           kind: "connecting",
           label: "Reconectando",
-          detail: "Opening realtime session stream."
+          detail: "Abriendo la transmisión de sesión en tiempo real."
         });
       }
     });
@@ -1890,7 +1960,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSessionRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "Realtime session stream connected."
+          detail: "Transmisión de sesión en tiempo real conectada."
         });
       },
       (error: unknown) => {
@@ -1988,7 +2058,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           setScoringRealtimeConnection({
             kind: "disconnected",
             label: "Desconectado",
-            detail: "SignalR waiting for selected LiveSession."
+            detail: "SignalR esperando la selección de una LiveSession."
           });
         }
       });
@@ -2034,7 +2104,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setScoringRealtimeConnection({
         kind: "reconnecting",
         label: "Reconectando",
-        detail: "Scoring Audit stream dropped. Widgets keep the latest snapshot."
+        detail: "Transmisión de Scoring y Auditoría perdida. Los componentes mantienen la última captura."
       });
     });
 
@@ -2043,7 +2113,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "Scoring Audit stream restored."
+          detail: "Transmisión de Scoring y Auditoría restaurada."
         });
         void loadLiveSessionRanking(selectedLiveSessionId);
         void loadLiveSessionEventLog(selectedLiveSessionId);
@@ -2058,7 +2128,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setScoringRealtimeConnection({
         kind: error ? "error" : "disconnected",
         label: "Desconectado",
-        detail: error ? `Scoring Audit closed: ${error.message}` : "Scoring Audit stream closed."
+        detail: error ? `Scoring y Auditoría cerrado: ${error.message}` : "Transmisión de Scoring y Auditoría cerrada."
       });
     });
 
@@ -2067,7 +2137,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connecting",
           label: "Reconectando",
-          detail: "Opening Scoring Audit stream."
+          detail: "Abriendo la transmisión de Scoring y Auditoría."
         });
       }
     });
@@ -2082,7 +2152,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "Scoring Audit stream connected."
+          detail: "Transmisión de Scoring y Auditoría conectada."
         });
       },
       (error: unknown) => {
@@ -2513,11 +2583,11 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   <strong>{mission.name}</strong>
                   <span className="status-pill status-ok">{mission.activeMissionStageCount} etapas</span>
                 </div>
-                <p>{mission.difficulty}</p>
+                <p>{translateDifficulty(mission.difficulty)}</p>
                 <dl className="mission-meta-grid">
                   <div>
                     <dt>Tipo de catálogo</dt>
-                    <dd>{mission.gameType}</dd>
+                    <dd>{translateGameType(mission.gameType)}</dd>
                   </div>
                   <div>
                     <dt>Duración</dt>
@@ -2602,7 +2672,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           <div>
                             <strong>{missionStage.name}</strong>
                             <p className="muted-copy">
-                              Orden de origen {missionStage.sourceOrder}. {missionStage.gameType}.{" "}
+                              Orden de origen {missionStage.sourceOrder}. {translateGameType(missionStage.gameType)}.{" "}
                               {missionStage.resolvedTimeBudgetMinutes} min.
                             </p>
                             <p>{missionStage.prompt}</p>
@@ -2664,7 +2734,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           <strong>
                             #{missionStage.draftSessionStageOrder} {missionStage.name}
                           </strong>
-                          <span className="status-pill status-ok">{missionStage.gameType}</span>
+                          <span className="status-pill status-ok">{translateGameType(missionStage.gameType)}</span>
                         </div>
                         <p className="muted-copy">
                           Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
@@ -2731,7 +2801,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                 >
                   <div className="mission-list-item-top">
                     <strong>{liveSession.name}</strong>
-                    <span className="status-pill status-ok">{liveSession.state}</span>
+                    <span className="status-pill status-ok">{translateSessionState(liveSession.state)}</span>
                   </div>
                   <p>{liveSession.missionName}</p>
                   <dl className="mission-meta-grid">
@@ -2755,7 +2825,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                 <p className="eyebrow">Detalle de la captura</p>
                 <h3>{selectedLiveSession?.name ?? "LiveSession programada"}</h3>
               </div>
-              {selectedLiveSession ? <span className="status-pill status-ok">{selectedLiveSession.state}</span> : null}
+              {selectedLiveSession ? <span className="status-pill status-ok">{translateSessionState(selectedLiveSession.state)}</span> : null}
             </div>
 
             {selectedLiveSession ? (
@@ -2884,7 +2954,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                 #{missionStage.sessionStageOrder} {missionStage.name}
                               </strong>
                               <div className="mission-action-row">
-                                <span className="status-pill status-ok">{missionStage.gameType}</span>
+                                <span className="status-pill status-ok">{translateGameType(missionStage.gameType)}</span>
                                 <span className={isStageCompleted ? "status-pill status-error" : "status-pill status-loading"}>
                                   {isStageCompleted ? "Completada" : "Pendiente"}
                                 </span>
@@ -3132,7 +3202,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                     {eligibleTeams.length} equipos elegibles · {missionStage.hints.length} pistas
                                   </p>
                                 </div>
-                                <span className="status-pill status-ok">{missionStage.gameType}</span>
+                                <span className="status-pill status-ok">{translateGameType(missionStage.gameType)}</span>
                               </div>
 
                               {missionStage.hints.length === 0 ? (

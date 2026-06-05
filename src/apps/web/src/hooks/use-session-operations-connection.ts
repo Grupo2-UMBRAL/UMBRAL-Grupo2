@@ -38,11 +38,11 @@ export function useSessionOperationsConnection({
 }: ConnectionOptions) {
   const waitingState: ConnectionState = {
     kind: "disconnected",
-    detail: "SignalR waiting for authenticated session."
+    detail: "SignalR esperando la sesión autenticada."
   };
   const [state, setState] = useState<ConnectionState>({
     kind: "connecting",
-    detail: "Opening session stream."
+    detail: "Abriendo la transmisión de sesión."
   });
   const shouldConnect = accessToken.trim().length > 0 && hubUrl.trim().length > 0;
   const runResync = useEffectEvent(() => onResync?.());
@@ -61,7 +61,7 @@ export function useSessionOperationsConnection({
     async function startConnection() {
       setState({
         kind: "connecting",
-        detail: "Opening session stream."
+        detail: "Abriendo la transmisión de sesión."
       });
 
       connection = new HubConnectionBuilder()
@@ -90,7 +90,7 @@ export function useSessionOperationsConnection({
 
         setState({
           kind: "reconnecting",
-          detail: "Connection dropped. Waiting for SignalR reconnect."
+          detail: "Conexión perdida. Esperando reconexión de SignalR."
         });
       });
 
@@ -101,7 +101,7 @@ export function useSessionOperationsConnection({
 
         setState({
           kind: "connected",
-          detail: "Realtime session stream restored."
+          detail: "Transmisión de sesión en tiempo real restaurada."
         });
         runResync();
       });
@@ -114,8 +114,8 @@ export function useSessionOperationsConnection({
         setState({
           kind: error ? "error" : "disconnected",
           detail: error
-            ? `SignalR closed: ${error.message}`
-            : "SignalR closed before session resumed."
+            ? `SignalR cerrado: ${error.message}`
+            : "SignalR cerrado antes de que se reanudara la sesión."
         });
       });
 
@@ -128,7 +128,7 @@ export function useSessionOperationsConnection({
 
         setState({
           kind: "connected",
-          detail: "Realtime session stream connected."
+          detail: "Transmisión de sesión en tiempo real conectada."
         });
       } catch (error) {
         if (!active) {
@@ -137,7 +137,7 @@ export function useSessionOperationsConnection({
 
         setState({
           kind: "error",
-          detail: error instanceof Error ? error.message : "SignalR startup failed."
+          detail: error instanceof Error ? error.message : "Error al iniciar la conexión SignalR."
         });
       }
     }

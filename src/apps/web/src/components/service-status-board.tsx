@@ -37,25 +37,25 @@ export function ServiceStatusBoard({
     const serviceChecks: ServiceCheck[] = [
       {
         id: "identity",
-        label: "Keycloak discovery",
+        label: "Descubrimiento de Keycloak",
         path: `${config.keycloakPublicBaseUrl}/realms/${config.keycloakRealm}/.well-known/openid-configuration`,
         requiresToken: false
       },
       {
         id: "mission-design",
-        label: "Mission Design smoke",
+        label: "Prueba de humo de Diseño de Misiones",
         path: `${config.edgeProxyPublicBaseUrl}/mission-design/api/mission-design/smoke/${roleRouteSegment}`,
         requiresToken: true
       },
       {
         id: "session-operations",
-        label: "Session Operations smoke",
+        label: "Prueba de humo de Operaciones de Sesión",
         path: `${config.edgeProxyPublicBaseUrl}/session-operations/api/session-operations/smoke/${roleRouteSegment}`,
         requiresToken: true
       },
       {
         id: "scoring-audit",
-        label: "Scoring and Audit smoke",
+        label: "Prueba de humo de Scoring y Auditoría",
         path: `${config.edgeProxyPublicBaseUrl}/scoring-audit/api/scoring-audit/smoke/${roleRouteSegment}`,
         requiresToken: true
       }
@@ -131,7 +131,9 @@ export function ServiceStatusBoard({
       <div className="status-grid">
         {checks.map((check) => (
           <article className="status-card" key={check.id}>
-            <div className={`status-pill status-${check.status}`}>{check.status}</div>
+            <div className={`status-pill status-${check.status}`}>
+              {check.status === "loading" ? "cargando" : check.status === "ok" ? "correcto" : "error"}
+            </div>
             <strong>{check.label}</strong>
             <p>{check.detail}</p>
           </article>
