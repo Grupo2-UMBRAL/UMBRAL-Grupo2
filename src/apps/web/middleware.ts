@@ -24,6 +24,11 @@ function isFrameworkPath(pathname: string) {
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  if (pathname === "/coverage") {
+    const edgeProxyUrl = process.env.NEXT_PUBLIC_EDGE_PROXY_BASE_URL || "http://localhost:7500";
+    return NextResponse.redirect(new URL("/coverage/", edgeProxyUrl).toString());
+  }
+
   if (isFrameworkPath(pathname) || isAuthFreePath(pathname)) {
     return NextResponse.next();
   }
