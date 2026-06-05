@@ -499,7 +499,10 @@ function findValidationIssue(
         return `${label}: leaf stage needs a prompt visible to participants.`;
       }
 
-      if (node.gameType === "Treasure Hunt" && !trimToNull(node.expectedQrHash)) {
+      if (
+        node.gameType === "Treasure Hunt" &&
+        !trimToNull(node.expectedQrHash)
+      ) {
         return `${label}: Treasure Hunt stage needs expected QR hash.`;
       }
 
@@ -577,13 +580,17 @@ function MissionNodeEditor({
       <div className="mission-node-header">
         <div>
           <div className="node-chip-row">
-            <span
-              className={
-                isLeaf ? "node-chip is-leaf" : "node-chip is-composite"
-              }
-            >
-              {isLeaf ? "🎯 Ronda" : "📋 Etapa"}
-            </span>
+            {isLeaf ? (
+              <span className="node-chip is-leaf">
+                {node.gameType === "Trivia"
+                  ? "🎯 Trivia"
+                  : node.gameType === "Treasure Hunt"
+                    ? "🗺️ Treasure Hunt"
+                    : "🎯 Actividad"}
+              </span>
+            ) : (
+              <span className="node-chip is-composite">📋 Etapa</span>
+            )}
             <span
               className={
                 node.isActive
@@ -596,12 +603,12 @@ function MissionNodeEditor({
           </div>
           <h4>
             {node.name.trim() ||
-              (isLeaf ? "Ronda sin título" : "Etapa sin título")}
+              (isLeaf ? "Actividad sin título" : "Etapa sin título")}
           </h4>
           <p className="muted-copy">
             {isLeaf
               ? "Actividad jugable con validación, pistas y tiempo configurables."
-              : "Etapa compuesta. Las rondas hijas heredan el tiempo de esta etapa salvo que definan el propio."}
+              : "Etapa compuesta. Las actividades hijas heredan el tiempo de esta etapa salvo que definan el propio."}
           </p>
         </div>
 
@@ -612,7 +619,7 @@ function MissionNodeEditor({
               onClick={() => onMakeComposite(node.clientId)}
               type="button"
             >
-              Convertir en etapa
+              Hacer etapa compuesta
             </button>
           ) : (
             <button
@@ -620,7 +627,7 @@ function MissionNodeEditor({
               onClick={() => onMakeLeaf(node.clientId)}
               type="button"
             >
-              Convertir en ronda
+              Convertir en actividad
             </button>
           )}
           <button
@@ -645,7 +652,7 @@ function MissionNodeEditor({
             placeholder={
               isLeaf
                 ? "Ej: Curiosidades de Halloween"
-                : "Ej: Recolección de información"
+                : "Ej: Fase 1 - Recolección de información"
             }
             required
             value={node.name}
@@ -680,7 +687,7 @@ function MissionNodeEditor({
 
       {isLeaf ? (
         <>
-          <div className="node-grid">
+          <div className="form-grid-two">
             <label className="field">
               <span>Time budget minutes</span>
               <input
@@ -719,23 +726,9 @@ function MissionNodeEditor({
             </label>
           </div>
 
-          <label className="field">
-            <span>Prompt</span>
-            <textarea
-              className="input textarea-input"
-              maxLength={1024}
-              onChange={(event) => onUpdateNode(node.clientId, "prompt", event.target.value)}
-              required
-              rows={4}
-              value={node.prompt}
-            />
-            <span className="field-hint">
-              Shared participant-facing copy. Trivia uses this as question; Treasure Hunt uses this as instruction.
-            </span>
-          </label>
-
           <GameTypeConfig
             gameType={node.gameType}
+            prompt={node.prompt}
             expectedQrHash={node.expectedQrHash}
             triviaValidAnswer={node.triviaValidAnswer}
             triviaInitialValidationCriterion={
@@ -932,7 +925,9 @@ export function MissionsAdminWorkspace({
         }
 
         setErrorMessage(
-          error instanceof Error ? error.message : "No se pudieron cargar las Misiones.",
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar las Misiones.",
         );
       } finally {
         if (requestSequence === listRequestSequenceRef.current) {
@@ -1228,7 +1223,9 @@ export function MissionsAdminWorkspace({
       await loadMissions(mission.id);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo guardar la Misión.",
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la Misión.",
       );
     } finally {
       setIsSubmitting(false);
@@ -1281,8 +1278,8 @@ export function MissionsAdminWorkspace({
           <h2>Espacio de trabajo de Misiones</h2>
         </div>
         <p className="section-copy">
-          Superficie de control del administrador para autores de misiones,
-          con un lenguaje operativo tranquilo, orientado hacia la consola cálida
+          Superficie de control del administrador para autores de misiones, con
+          un lenguaje operativo tranquilo, orientado hacia la consola cálida
           existente más bloques de edición anidados más densos.
         </p>
       </div>
@@ -1333,7 +1330,8 @@ export function MissionsAdminWorkspace({
             <div className="empty-state">
               <strong>Aún no hay Misiones.</strong>
               <p>
-                Cree la primera Misión reutilizable para el catálogo del administrador.
+                Cree la primera Misión reutilizable para el catálogo del
+                administrador.
               </p>
             </div>
           ) : null}
@@ -1508,8 +1506,9 @@ export function MissionsAdminWorkspace({
                 ))}
               </select>
               <span className="field-hint">
-                Las etapas de la misión ahora pueden mezclar tipos de juego. Mantenga esta etiqueta del catálogo
-                alineada con cómo debe aparecer la Misión en los resúmenes del backend actual.
+                Las etapas de la misión ahora pueden mezclar tipos de juego.
+                Mantenga esta etiqueta del catálogo alineada con cómo debe
+                aparecer la Misión en los resúmenes del backend actual.
               </span>
             </label>
 
@@ -1541,8 +1540,8 @@ export function MissionsAdminWorkspace({
                 <div className="tree-empty-state">
                   <strong>Aún no hay nodos.</strong>
                   <p>
-                    Comience con una etapa jugable o un bloque compuesto que anide
-                    un flujo más profundo.
+                    Comience con una etapa jugable o un bloque compuesto que
+                    anide un flujo más profundo.
                   </p>
                 </div>
               ) : (

@@ -137,7 +137,7 @@ textarea {
 
 .field {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.5rem;
 }
 
 .input,
@@ -209,6 +209,57 @@ textarea {
     grid-template-columns: 280px minmax(0, 1fr) 340px;
     gap: 1rem;
     padding: 1rem;
+    transition: grid-template-columns 200ms ease;
+}
+
+.shell-page.is-rail-collapsed {
+    grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.shell-page.is-rail-collapsed .shell-rail {
+    display: none;
+}
+
+.rail-collapse-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: -0.5rem;
+}
+
+.rail-collapse-header .collapse-btn {
+    font-size: 0.76rem;
+    padding: 0.2rem 0.5rem;
+    min-height: auto;
+    border: 1px solid rgba(82, 70, 57, 0.16);
+    background: transparent;
+    cursor: pointer;
+}
+
+.rail-toggle-tab {
+    position: fixed;
+    top: 1rem;
+    left: 0;
+    width: 32px;
+    height: 48px;
+    background: var(--surface-strong);
+    border: 1px solid rgba(82, 70, 57, 0.2);
+    border-left: 0;
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 2px 0 10px rgba(61, 45, 30, 0.1);
+    z-index: 1000;
+    font-size: 0.9rem;
+    transition:
+        background 150ms ease,
+        transform 150ms ease;
+}
+
+.rail-toggle-tab:hover {
+    background: rgba(255, 251, 245, 0.95);
+    transform: scaleX(1.15);
 }
 
 .shell-rail,
@@ -299,11 +350,13 @@ textarea {
 
 /* Game config section */
 .game-config-section {
-    margin-top: 1rem;
+    margin-top: 1.5rem;
     padding: 1.25rem;
     border-radius: var(--radius-control);
     border: 1px solid var(--border);
     background: rgba(255, 251, 245, 0.6);
+    display: grid;
+    gap: 1rem;
 }
 
 .config-heading {
@@ -459,7 +512,8 @@ textarea {
 }
 
 .field-hint {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
 }
 
 .banner-error,
@@ -485,6 +539,10 @@ textarea {
 .form-grid-two {
     display: grid;
     gap: 1rem;
+}
+
+.form-grid-two {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .mission-summary-grid {
@@ -686,32 +744,32 @@ textarea {
 }
 
 .ranking-table-wrap {
-  overflow-x: auto;
+    overflow-x: auto;
 }
 
 .ranking-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 34rem;
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 34rem;
 }
 
 .ranking-table th,
 .ranking-table td {
-  padding: 0.8rem;
-  border-bottom: 1px solid rgba(75, 64, 51, 0.12);
-  text-align: left;
-  vertical-align: top;
+    padding: 0.8rem;
+    border-bottom: 1px solid rgba(75, 64, 51, 0.12);
+    text-align: left;
+    vertical-align: top;
 }
 
 .ranking-table th {
-  color: var(--text-soft);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.76rem;
-  text-transform: uppercase;
+    color: var(--text-soft);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    text-transform: uppercase;
 }
 
 .ranking-table td {
-  color: var(--text);
+    color: var(--text);
 }
 
 .widget-header,
@@ -1046,6 +1104,10 @@ textarea {
     border-left: 4px solid rgba(39, 105, 199, 0.16);
 }
 
+.mission-node-card .field {
+    margin-bottom: 0;
+}
+
 .live-session-flow-item {
     background: rgba(255, 255, 255, 0.72);
 }
@@ -1107,11 +1169,21 @@ textarea {
 .node-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.8rem;
+    gap: 1rem;
 }
 
 .inline-toggle {
     align-content: end;
+}
+
+.field.inline-toggle {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    min-height: 3.25rem;
 }
 
 .inline-toggle input {
