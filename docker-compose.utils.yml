@@ -1,0 +1,73 @@
+services:
+  auth-smoke-tests:
+    image: python:3.12-alpine
+    container_name: umbral-auth-smoke-tests
+    working_dir: /workspace
+    entrypoint: ["python", "/workspace/infra/keycloak/verify/verify_auth.py"]
+    environment:
+      EDGE_PROXY_URL: http://edge-proxy:8080
+      KEYCLOAK_URL: http://edge-proxy:8080/auth
+      KEYCLOAK_REALM: umbral
+      SHORT_LIVED_CLIENT_ID: umbral-web-shortlived
+      AUTH_SMOKE_SCENARIO: ${AUTH_SMOKE_SCENARIO:-all}
+    depends_on:
+      edge-proxy:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    volumes:
+      - ./:/workspace
+
+  dotnet-sdk:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-dotnet-sdk
+    working_dir: /workspace
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+  template-generator:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-template-generator
+    working_dir: /workspace
+    entrypoint: ["dotnet"]
+    command:
+      - new
+      - list
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+  repo-shell:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    container_name: umbral-repo-shell
+    working_dir: /workspace
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["sleep infinity"]
+    volumes:
+      - ./:/workspace
+      - nuget-cache:/root/.nuget/packages
+
+  web-package-manager:
+    image: node:22-alpine
+    working_dir: /workspace/src/apps/web
+    entrypoint: ["npm"]
+    volumes:
+      - ./:/workspace
+      - web-npm-cache:/root/.npm
+
+  mobile-package-manager:
+    image: node:22-alpine
+    working_dir: /workspace/src/apps/mobile
+    entrypoint: ["npm"]
+    volumes:
+      - ./:/workspace
+      - mobile-node-modules:/workspace/src/apps/mobile/node_modules
+      - mobile-npm-cache:/root/.npm
+
+volumes:
+  nuget-cache:
+  web-npm-cache:
+  mobile-node-modules:
+  mobile-npm-cache:
