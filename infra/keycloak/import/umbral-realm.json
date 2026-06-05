@@ -255,7 +255,8 @@
         }
       ],
       "realmRoles": [
-        "Administrator"
+        "Administrator",
+        "Operator"
       ]
     },
     {
