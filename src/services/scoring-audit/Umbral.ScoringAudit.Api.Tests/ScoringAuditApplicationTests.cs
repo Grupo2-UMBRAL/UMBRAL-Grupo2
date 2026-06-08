@@ -122,11 +122,11 @@ public sealed class SessionEventLogApplicationTests
     public async Task ApplyPenaltyCommand_PersistsPenaltyAppliedAuditEventAndPublishesRealtimePayload()
     {
         await using var dbContext = CreateDbContext();
-        var hubClient = new CapturingScoringAuditClient();
+        var updatesPublisher = new CapturingScoringAuditUpdatesPublisher();
         var handler = new ApplyPenaltyHandler(
-            dbContext,
+            new ApplyPenaltyScoreboardStore(dbContext),
             TimeProvider.System,
-            new CapturingScoringAuditHubContext(hubClient));
+            updatesPublisher);
         var liveSessionId = Guid.NewGuid();
         var sessionTeamId = Guid.NewGuid();
         var commandId = Guid.NewGuid();
@@ -148,20 +148,20 @@ public sealed class SessionEventLogApplicationTests
         Assert.Equal(liveSessionId, persistedEvent.LiveSessionId);
         Assert.Equal("PenaltyApplied", persistedEvent.EventType);
         Assert.Equal(expectedDescription, persistedEvent.Description);
-        Assert.Single(hubClient.EventLogPayloads);
-        Assert.Equal(persistedEvent.Id, hubClient.EventLogPayloads[0].Id);
-        Assert.Single(hubClient.RankingPayloads);
+        Assert.Single(updatesPublisher.EventLogPayloads);
+        Assert.Equal(persistedEvent.Id, updatesPublisher.EventLogPayloads[0].Id);
+        Assert.Single(updatesPublisher.RankingPayloads);
     }
 
     [Fact]
     public async Task ApplyPenaltyCommand_ReplayedCommandDoesNotDuplicateScoreEntryOrPenaltyAppliedEvent()
     {
         await using var dbContext = CreateDbContext();
-        var hubClient = new CapturingScoringAuditClient();
+        var updatesPublisher = new CapturingScoringAuditUpdatesPublisher();
         var handler = new ApplyPenaltyHandler(
-            dbContext,
+            new ApplyPenaltyScoreboardStore(dbContext),
             TimeProvider.System,
-            new CapturingScoringAuditHubContext(hubClient));
+            updatesPublisher);
         var liveSessionId = Guid.NewGuid();
         var sessionTeamId = Guid.NewGuid();
         var commandId = Guid.NewGuid();
@@ -183,8 +183,8 @@ public sealed class SessionEventLogApplicationTests
         Assert.Equal(1, await dbContext.SessionEventLogs.CountAsync());
         var eventLog = await dbContext.SessionEventLogs.SingleAsync();
         Assert.Equal("PenaltyApplied", eventLog.EventType);
-        Assert.Single(hubClient.RankingPayloads);
-        Assert.Single(hubClient.EventLogPayloads);
+        Assert.Single(updatesPublisher.RankingPayloads);
+        Assert.Single(updatesPublisher.EventLogPayloads);
     }
 
     private static ScoringAuditDbContext CreateDbContext()
@@ -255,6 +255,27 @@ public sealed class SessionEventLogApplicationTests
         public Task ReceiveEventLogUpdated(SessionEventLogPayload payload)
         {
             EventLogPayloads.Add(payload);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CapturingScoringAuditUpdatesPublisher : IScoringAuditUpdatesPublisher
+    {
+        public List<RankingPayload> RankingPayloads { get; } = [];
+
+        public List<SessionEventLogPayload> EventLogPayloads { get; } = [];
+
+        public Task PublishRankingUpdatedAsync(RankingPayload ranking, CancellationToken cancellationToken)
+        {
+            RankingPayloads.Add(ranking);
+            return Task.CompletedTask;
+        }
+
+        public Task PublishEventLogUpdatedAsync(
+            SessionEventLogPayload eventLog,
+            CancellationToken cancellationToken)
+        {
+            EventLogPayloads.Add(eventLog);
             return Task.CompletedTask;
         }
     }

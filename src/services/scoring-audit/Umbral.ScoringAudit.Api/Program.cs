@@ -7,6 +7,7 @@ using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ScoringAudit.Api.Application.Scoreboards;
 using Umbral.ScoringAudit.Api.Hubs;
 using Umbral.ScoringAudit.Api.Infrastructure;
+using Umbral.ScoringAudit.Api.Presentation.Realtime;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +36,7 @@ builder.Services.AddUmbralApiDefaults(
 builder.Services.AddSignalR();
 builder.Services.AddMediatR(typeof(Program).Assembly);
 builder.Services.AddScoringAuditInfrastructure(builder.Configuration);
+builder.Services.AddScoped<IScoringAuditUpdatesPublisher, SignalRScoringAuditUpdatesPublisher>();
 
 var app = builder.Build();
 
