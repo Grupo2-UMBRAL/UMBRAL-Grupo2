@@ -1,14 +1,9 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ScoringAudit.Api.Domain.Penalties;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
-using Umbral.ScoringAudit.Api.Hubs;
-using Umbral.ScoringAudit.Api.Hubs.Contracts;
-using Umbral.ScoringAudit.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.ScoringAudit.Api.Application.Scoreboards;
@@ -41,9 +36,9 @@ public sealed record ApplyPenaltyResponse(
     RankingPayload Ranking);
 
 public sealed class ApplyPenaltyHandler(
-    ScoringAuditDbContext dbContext,
+    IApplyPenaltyScoreboardStore scoreboardStore,
     TimeProvider timeProvider,
-    IHubContext<ScoringAuditHub, IScoringAuditClient> hubContext)
+    IScoringAuditUpdatesPublisher updatesPublisher)
     : IRequestHandler<ApplyPenaltyCommand, ApplyPenaltyResponse>
 {
     public async Task<ApplyPenaltyResponse> Handle(
@@ -52,18 +47,7 @@ public sealed class ApplyPenaltyHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await dbContext.Scoreboards
-            .Include(entity => entity.ScoreEntries)
-            .SingleOrDefaultAsync(entity => entity.LiveSessionId == request.LiveSessionId, cancellationToken);
-        if (scoreboard is null)
-        {
-            scoreboard = new Scoreboard(request.LiveSessionId);
-            dbContext.Scoreboards.Add(scoreboard);
-        }
-        else
-        {
-            scoreboard.RebuildState();
-        }
+        var scoreboard = await scoreboardStore.LoadAsync(request.LiveSessionId, cancellationToken);
 
         var penalty = new Penalty(
             Guid.NewGuid(),
@@ -87,8 +71,7 @@ public sealed class ApplyPenaltyHandler(
                 "PenaltyApplied",
                 CreatePenaltyAppliedDescription(penalty, scoreEntry),
                 request.RecordedAt);
-            dbContext.SessionEventLogs.Add(eventLog);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await scoreboardStore.PersistPenaltyApplicationAsync(eventLog, cancellationToken);
             scoreboard.RebuildState();
             penaltyApplied = true;
         }
@@ -100,14 +83,10 @@ public sealed class ApplyPenaltyHandler(
         var ranking = RankingProjection.Create(scoreboard, timeProvider.GetUtcNow());
         if (penaltyApplied)
         {
-            await hubContext.Clients.All.ReceiveRankingUpdated(ranking).WaitAsync(cancellationToken);
-
-            if (eventLog is not null)
-            {
-                await hubContext.Clients.All
-                    .ReceiveEventLogUpdated(SessionEventLogPayload.FromEntity(eventLog))
-                    .WaitAsync(cancellationToken);
-            }
+            await updatesPublisher.PublishRankingUpdatedAsync(ranking, cancellationToken);
+            await updatesPublisher.PublishEventLogUpdatedAsync(
+                SessionEventLogPayload.FromEntity(eventLog!),
+                cancellationToken);
         }
 
         return new ApplyPenaltyResponse(
