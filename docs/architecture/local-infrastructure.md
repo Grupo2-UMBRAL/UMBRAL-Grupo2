@@ -66,6 +66,8 @@ En fases posteriores hay que fijar una estrategia unica de issuer para evitar qu
 
 Para `SignalR`, el servicio `Session Operations` acepta el token JWT en el query string `access_token` solo para el hub `/hubs/session`, que es el patron esperado para conexiones WebSocket autenticadas.
 
+Aunque `edge-proxy` sea la entrada publica local, cada servicio debe seguir validando el `JWT` recibido y aplicar su propia autorizacion. El proxy no reemplaza esa frontera; solo la expone y enruta.
+
 ## Persistencia local
 
 Se usa una sola instancia de `PostgreSQL` con esquemas separados:
@@ -93,6 +95,8 @@ Cada servicio incluye:
 
 - `SignalR`
 - hub `/hubs/session`
+
+El hub pertenece a la capa `Presentation` del servicio, igual que el resto de adaptadores de transporte.
 
 ## Pre-requisitos para ejecutarlo
 

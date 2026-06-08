@@ -104,6 +104,7 @@ Responsabilidad sugerida:
 - enrutamiento a microservicios
 - simplificar auth para clientes
 - centralizar preocupaciones de borde si hace falta
+- nunca reemplazar la autorizacion propia de cada servicio
 
 Estado:
 
@@ -281,18 +282,21 @@ Ejemplo posible:
 - entrada unificada si se usa gateway
 - autenticacion inicial
 - simplificacion de endpoints para web y mobile
+- propagacion del token hacia los servicios sin asumir autorizacion de negocio en el gateway
 
 ### Gateway <-> Microservicios
 
 - enrutamiento
 - composicion basica si hace falta
 - no meter logica de dominio aqui
+- no confiar en el gateway como unica frontera de validacion `JWT` o permisos
 
 ### Servicios <-> Identity and Access
 
 - validacion de tokens
 - autorizacion por roles y permisos
 - separacion entre identidad y dominio central
+- cada servicio sigue siendo responsable de validar `JWT` y aplicar sus reglas de autorizacion aunque el gateway sea la entrada publica
 
 ### Identity and Access <-> Keycloak
 
@@ -314,6 +318,22 @@ Ejemplo posible:
 
 - preferir integracion sincronica si el flujo necesita respuesta inmediata
 - usar eventos cuando la operacion pueda resolverse en segundo plano
+
+## Target interno por servicio
+
+Mientras cada bounded context siga viviendo en un solo proyecto `.Api`, el target interno esperado por servicio es:
+
+- `Presentation`
+- `Application`
+- `Domain`
+- `Infrastructure`
+
+Reglas:
+
+- `Presentation` contiene endpoints, auth adapters y hubs de `SignalR`
+- `Application` coordina casos de uso y no debe depender de `Infrastructure`
+- `Infrastructure` implementa detalles tecnicos hacia afuera
+- el codigo tecnico compartido entre servicios debe salir a `src/shared`, no quedarse como pseudo-contexto dentro de `src/services`
 
 ## Eventos asincronos a definir
 
