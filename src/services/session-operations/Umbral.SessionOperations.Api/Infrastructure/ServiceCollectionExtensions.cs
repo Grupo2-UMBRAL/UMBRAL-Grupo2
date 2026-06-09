@@ -1,5 +1,6 @@
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
 using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Application.Scoring;
@@ -23,7 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
-        services.AddScoped<ILiveSessionStateNotifier, SignalRLiveSessionStateNotifier>();
+        services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionDesignLiveSessionCatalog, MissionDesignLiveSessionCatalog>(client =>

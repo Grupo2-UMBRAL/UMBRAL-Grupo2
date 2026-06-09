@@ -1,13 +1,13 @@
 using System.Reflection;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.Hints;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
 using Umbral.SessionOperations.Api.Infrastructure;
 using Xunit;
@@ -116,12 +116,12 @@ public sealed class HintReleaseQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateRunningLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var hubContext = new RecordingHubContext();
+        var realtimeNotifier = new RecordingSessionRealtimeNotifier();
         var scoringAuditClient = new RecordingScoringAuditClient();
         var handler = new ReleaseHintHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
-            hubContext,
+            realtimeNotifier,
             scoringAuditClient);
 
         var visibleHints = await handler.Handle(
@@ -131,7 +131,7 @@ public sealed class HintReleaseQaTests
         Assert.Equal(2, visibleHints.Count);
         Assert.Equal(2, dbContext.ReleasedHints.Count());
         Assert.Collection(
-            hubContext.Client.HintUnlockedPayloads.OrderBy(payload => payload.SessionTeamId).ToArray(),
+            realtimeNotifier.HintUnlockedPayloads.OrderBy(payload => payload.SessionTeamId).ToArray(),
             first =>
             {
                 Assert.Equal(AlphaTeamId, first.SessionTeamId);
@@ -366,63 +366,20 @@ public sealed class HintReleaseQaTests
         public ParticipantUserId GetRequiredParticipantUserId() => ParticipantUserId.Parse(participantUserId);
     }
 
-    private sealed class RecordingHubContext : IHubContext<SessionOperationsHub, ISessionClient>
-    {
-        public RecordingHubContext()
-        {
-            Client = new RecordingSessionClient();
-            Clients = new RecordingHubClients(Client);
-            Groups = new NoopGroupManager();
-        }
-
-        public RecordingSessionClient Client { get; }
-
-        public IHubClients<ISessionClient> Clients { get; }
-
-        public IGroupManager Groups { get; }
-    }
-
-    private sealed class RecordingHubClients(ISessionClient client) : IHubClients<ISessionClient>
-    {
-        public ISessionClient All => client;
-
-        public ISessionClient AllExcept(IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public ISessionClient Client(string connectionId) => client;
-
-        public ISessionClient Clients(IReadOnlyList<string> connectionIds) => client;
-
-        public ISessionClient Group(string groupName) => client;
-
-        public ISessionClient GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public ISessionClient Groups(IReadOnlyList<string> groupNames) => client;
-
-        public ISessionClient User(string userId) => client;
-
-        public ISessionClient Users(IReadOnlyList<string> userIds) => client;
-    }
-
-    private sealed class NoopGroupManager : IGroupManager
-    {
-        public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-    }
-
-    private sealed class RecordingSessionClient : ISessionClient
+    private sealed class RecordingSessionRealtimeNotifier : ISessionRealtimeNotifier
     {
         public List<HintUnlockedPayload> HintUnlockedPayloads { get; } = [];
 
-        public Task ReceiveSessionStateChanged(SessionStateChangedPayload payload) => Task.CompletedTask;
+        public Task NotifySessionStateChangedAsync(LiveSessionStateChangedEvent stateChangedEvent, CancellationToken cancellationToken)
+            => Task.CompletedTask;
 
-        public Task ReceiveTeamProgressChanged(TeamProgressChangedPayload payload) => Task.CompletedTask;
+        public Task NotifyTeamProgressChangedAsync(TeamProgressChangedPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
 
-        public Task ReceiveEvidenceSubmissionOutcomeChanged(EvidenceSubmissionOutcomeChangedPayload payload) => Task.CompletedTask;
+        public Task NotifyEvidenceSubmissionOutcomeChangedAsync(EvidenceSubmissionOutcomeChangedPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
 
-        public Task ReceiveHintUnlocked(HintUnlockedPayload payload)
+        public Task NotifyHintUnlockedAsync(HintUnlockedPayload payload, CancellationToken cancellationToken)
         {
             HintUnlockedPayloads.Add(payload);
             return Task.CompletedTask;

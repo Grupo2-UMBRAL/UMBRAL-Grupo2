@@ -1,10 +1,9 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
+using Umbral.SessionOperations.Api.Application.Realtime;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
-using Umbral.SessionOperations.Api.Hubs.Contracts;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.LiveSessions;
@@ -14,7 +13,7 @@ public sealed record DeactivateStageCommand(Guid LiveSessionId, Guid MissionStag
 public sealed class DeactivateStageHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext)
+    ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<DeactivateStageCommand, LiveSessionResponse>
 {
     public async Task<LiveSessionResponse> Handle(
@@ -40,28 +39,17 @@ public sealed class DeactivateStageHandler(
         liveSession.DeactivateStage(request.MissionStageId, updatedAtUtc);
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await PublishSessionStateChangedAsync(liveSession, previousState, updatedAtUtc, cancellationToken);
+        await realtimeNotifier.NotifySessionStateChangedAsync(
+            new LiveSessionStateChangedEvent(
+                liveSession.Id,
+                previousState,
+                liveSession.State,
+                liveSession.SessionTeams.Count,
+                liveSession.SequenceNumber,
+                "Session Stage Flow changed; refresh LiveSession snapshot.",
+                updatedAtUtc),
+            cancellationToken);
 
         return liveSession.ToResponse();
-    }
-
-    private async Task PublishSessionStateChangedAsync(
-        LiveSession liveSession,
-        string previousState,
-        DateTimeOffset occurredAtUtc,
-        CancellationToken cancellationToken)
-    {
-        var payload = new SessionStateChangedPayload(
-            new RealtimeEventMetadata(
-                liveSession.Id,
-                liveSession.SequenceNumber,
-                occurredAtUtc,
-                SnapshotRefreshPolicy.RefreshSnapshot,
-                "Session Stage Flow changed; refresh LiveSession snapshot."),
-            previousState,
-            liveSession.State,
-            null);
-
-        await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
     }
 }

@@ -1,11 +1,10 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.Scoring;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
 using Umbral.SessionOperations.Api.Infrastructure;
 
@@ -19,7 +18,7 @@ public sealed record ReleaseHintRequest(Guid? SessionTeamId);
 public sealed class ReleaseHintHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    ISessionRealtimeNotifier realtimeNotifier,
     IScoringAuditClient scoringAuditClient)
     : IRequestHandler<ReleaseHintCommand, IReadOnlyList<VisibleHintSnapshot>>
 {
@@ -63,9 +62,9 @@ public sealed class ReleaseHintHandler(
             await PublishHintUnlockedAsync(
                 liveSession,
                 releasedHint.SessionTeamId,
-                MapVisibleHint(liveSession, releasedHint),
-                releasedAtUtc,
-                cancellationToken);
+            MapVisibleHint(liveSession, releasedHint),
+            releasedAtUtc,
+            cancellationToken);
         }
 
         return visibleHints;
@@ -129,19 +128,17 @@ public sealed class ReleaseHintHandler(
         VisibleHintSnapshot visibleHint,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
-    {
-        var payload = new HintUnlockedPayload(
-            new RealtimeEventMetadata(
-                liveSession.Id,
-                liveSession.SequenceNumber,
-                occurredAtUtc,
-                SnapshotRefreshPolicy.ApplyIncremental,
-                "Hint unlocked for Session Team."),
-            sessionTeamId,
-            visibleHint);
-
-        await hubContext.Clients.All.ReceiveHintUnlocked(payload).WaitAsync(cancellationToken);
-    }
+        => await realtimeNotifier.NotifyHintUnlockedAsync(
+            new HintUnlockedPayload(
+                new RealtimeEventMetadata(
+                    liveSession.Id,
+                    liveSession.SequenceNumber,
+                    occurredAtUtc,
+                    SnapshotRefreshPolicy.ApplyIncremental,
+                    "Hint unlocked for Session Team."),
+                sessionTeamId,
+                visibleHint),
+            cancellationToken);
 
     private async Task LogHintReleasedAsync(
         ReleasedHint releasedHint,
