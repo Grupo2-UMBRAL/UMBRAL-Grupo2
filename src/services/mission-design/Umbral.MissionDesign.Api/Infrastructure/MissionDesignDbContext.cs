@@ -3,7 +3,8 @@ using Umbral.MissionDesign.Api.Domain.Missions;
 
 namespace Umbral.MissionDesign.Api.Infrastructure;
 
-public sealed class MissionDesignDbContext(DbContextOptions<MissionDesignDbContext> options) : DbContext(options)
+public sealed class MissionDesignDbContext(DbContextOptions<MissionDesignDbContext> options)
+    : DbContext(options), IMissionDesignDbContext
 {
     public DbSet<Mission> Missions => Set<Mission>();
     public DbSet<MissionStage> MissionStages => Set<MissionStage>();
