@@ -74,6 +74,16 @@ app.UseFileServer(new FileServerOptions
 
 app.MapGet("/coverage", () => Results.Redirect("/coverage/"));
 
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "edge-proxy",
+    role = "preferred-public-edge",
+    notes = new[]
+    {
+        "Clients should prefer the edge-proxy base URL for local web and mobile traffic.",
+        "Downstream services still validate JWT issuer and audience and enforce authorization at their own boundary."
+    }
+}));
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "edge-proxy" }));
 app.MapReverseProxy();
 

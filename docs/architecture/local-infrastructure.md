@@ -36,6 +36,8 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `/scoring-audit/*` -> `scoring-audit-service`
 - `/auth/*` -> `Keycloak`
 
+Para trafico de clientes locales, el host preferido es `http://localhost:7500` y no las URLs directas de cada servicio. Las URLs directas siguen siendo utiles para debugging puntual o trafico interno dentro de Docker, pero no son el borde publico recomendado para `web` ni `mobile`.
+
 ## Bootstrap de identidad
 
 Archivo fuente:
@@ -67,6 +69,8 @@ En fases posteriores hay que fijar una estrategia unica de issuer para evitar qu
 Para `SignalR`, el servicio `Session Operations` acepta el token JWT en el query string `access_token` solo para el hub `/hubs/session`, que es el patron esperado para conexiones WebSocket autenticadas.
 
 Aunque `edge-proxy` sea la entrada publica local, cada servicio debe seguir validando el `JWT` recibido y aplicar su propia autorizacion. El proxy no reemplaza esa frontera; solo la expone y enruta.
+
+Ese contrato se mantiene hoy en el wiring compartido de `src/shared/Umbral.ServiceDefaults`, donde cada servicio configura su propio `Authority`, `Audience` y middleware de autenticacion/autorizacion.
 
 ## Persistencia local
 

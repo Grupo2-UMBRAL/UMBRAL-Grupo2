@@ -108,8 +108,9 @@ Responsabilidad sugerida:
 
 Estado:
 
-- recomendado para evolucion
-- puede omitirse en el primer esqueleto si el alcance obliga a ir mas rapido
+- ya existe localmente como `edge-proxy`
+- es la entrada publica preferida para clientes en desarrollo local
+- sigue siendo un concern de borde; no reemplaza la validacion `JWT` ni la autorizacion propia de cada servicio
 
 ### 6. Web
 
