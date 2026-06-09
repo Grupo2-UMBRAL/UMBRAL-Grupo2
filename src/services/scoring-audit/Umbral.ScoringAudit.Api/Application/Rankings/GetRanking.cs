@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.ScoringAudit.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.ScoringAudit.Api.Application.Rankings;
@@ -8,7 +7,7 @@ namespace Umbral.ScoringAudit.Api.Application.Rankings;
 public sealed record GetRankingQuery(Guid LiveSessionId) : IRequest<RankingPayload>;
 
 public sealed class GetRankingHandler(
-    ScoringAuditDbContext dbContext,
+    IScoringAuditDbContext dbContext,
     TimeProvider timeProvider)
     : IRequestHandler<GetRankingQuery, RankingPayload>
 {

@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.ScoringAudit.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.ScoringAudit.Api.Application.Audit;
@@ -11,7 +10,7 @@ public sealed record GetSessionEventLogQuery(Guid LiveSessionId)
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
-public sealed class GetSessionEventLogHandler(ScoringAuditDbContext dbContext)
+public sealed class GetSessionEventLogHandler(IScoringAuditDbContext dbContext)
     : IRequestHandler<GetSessionEventLogQuery, IReadOnlyList<SessionEventLogPayload>>
 {
     public async Task<IReadOnlyList<SessionEventLogPayload>> Handle(
