@@ -7,7 +7,7 @@ Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y
 - install y build de `web` y `mobile`
 - lint y typecheck de `web`
 - typecheck y build de `mobile`
-- build y tests `.NET` para `building-blocks`, `identity-access`, `mission-design`, `session-operations` y `scoring-audit`
+- build y tests `.NET` para `shared`, `identity-access`, `mission-design`, `session-operations` y `scoring-audit`
 - cobertura backend con `Coverlet`
 - reportes agregados de cobertura con `ReportGenerator`
 - smoke tests de `docker compose` para `edge-proxy`, servicios backend, `Keycloak`, `PostgreSQL` y `RabbitMQ`

@@ -20,8 +20,8 @@ Estructura real actual del repositorio.
 |  |  |- edge-proxy/
 |  |  |- mobile/
 |  |  `- web/
+|  |- shared/
 |  `- services/
-|     |- building-blocks/
 |     |- identity-access/
 |     |- mission-design/
 |     |- scoring-audit/
@@ -40,8 +40,7 @@ Estructura real actual del repositorio.
 - `Presentation` aloja endpoints HTTP, adaptadores del borde de auth y hubs de `SignalR` cuando existan.
 - `Application` coordina casos de uso y puede depender de `Domain`, pero no debe depender de `Infrastructure`.
 - `Infrastructure` implementa persistencia, mensajeria, clientes externos y wiring tecnico para las capas internas.
-- `src/services/building-blocks/` existe hoy como contenedor tecnico compartido, pero no representa un bounded context de negocio.
-- El target de refactor es mover ese codigo tecnico compartido a `src/shared/`.
+- `src/shared/` contiene soporte tecnico cross-cutting que no pertenece a un bounded context.
 - `src/shared/` no debe absorber contratos de negocio, modelos de dominio ni vocabulario propio de un bounded context.
 - `src/apps/edge-proxy/` contiene el borde tecnico minimo para exponer entrada unificada sin meter logica de dominio.
 - El gateway o `edge-proxy` es el borde publico, pero no reemplaza la validacion `JWT` ni la autorizacion propia de cada servicio.
@@ -61,7 +60,7 @@ Estructura real actual del repositorio.
 Sin asumir carpetas que todavia no existen, la direccion acordada es esta:
 
 - `src/services/` debe quedar reservado para bounded contexts y sus servicios.
-- `src/shared/` sera el destino del codigo tecnico compartido que hoy vive en `src/services/building-blocks/`.
+- `src/shared/` aloja el codigo tecnico compartido movido fuera de `src/services/`.
 - Cada servicio seguira en un solo `.Api` por ahora, pero con layering interno `Presentation`, `Application`, `Domain`, `Infrastructure`.
 
 ## No asumir todavia
