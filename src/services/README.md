@@ -58,10 +58,10 @@ dotnet build src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAu
 dotnet test src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj
 ```
 
-### Shared building blocks
+### Shared technical defaults
 
 ```powershell
-dotnet test src/services/building-blocks/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj
+dotnet test src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj
 ```
 
 ## Migraciones EF Core

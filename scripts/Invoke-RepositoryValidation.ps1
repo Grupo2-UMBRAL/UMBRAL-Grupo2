@@ -21,7 +21,7 @@ $webDirectory = Join-Path $repositoryRoot "src/apps/web"
 $mobileDirectory = Join-Path $repositoryRoot "src/apps/mobile"
 
 $backendProjects = @(
-    "src/services/building-blocks/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
+    "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.IdentityAccess.Api.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
     "src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj",
@@ -33,7 +33,7 @@ $backendProjects = @(
 )
 
 $backendTestProjects = @(
-    "src/services/building-blocks/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
+    "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
     "src/services/mission-design/Umbral.MissionDesign.Api.Tests/Umbral.MissionDesign.Api.Tests.csproj",
     "src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj",
