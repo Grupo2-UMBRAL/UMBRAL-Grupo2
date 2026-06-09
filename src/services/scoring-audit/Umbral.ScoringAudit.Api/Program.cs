@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MediatR;
+using Umbral.ScoringAudit.Api.Application;
 using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Application.Bootstrap.Commands;
 using Umbral.ScoringAudit.Api.Application.Bootstrap.Queries;
@@ -36,6 +37,7 @@ builder.Services.AddUmbralApiDefaults(
 builder.Services.AddSignalR();
 builder.Services.AddMediatR(typeof(Program).Assembly);
 builder.Services.AddScoringAuditInfrastructure(builder.Configuration);
+builder.Services.AddScoped<IScoringAuditDbContext>(serviceProvider => serviceProvider.GetRequiredService<ScoringAuditDbContext>());
 builder.Services.AddScoped<IScoringAuditUpdatesPublisher, SignalRScoringAuditUpdatesPublisher>();
 
 var app = builder.Build();

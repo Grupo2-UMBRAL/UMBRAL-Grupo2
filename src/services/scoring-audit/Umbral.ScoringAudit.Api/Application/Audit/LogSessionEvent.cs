@@ -1,9 +1,6 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
+using Umbral.ScoringAudit.Api.Application.Scoreboards;
 using Umbral.ScoringAudit.Api.Domain.Audit;
-using Umbral.ScoringAudit.Api.Hubs;
-using Umbral.ScoringAudit.Api.Hubs.Contracts;
-using Umbral.ScoringAudit.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.ScoringAudit.Api.Application.Audit;
@@ -17,9 +14,9 @@ public sealed record LogSessionEventCommand(
 }
 
 public sealed class LogSessionEventHandler(
-    ScoringAuditDbContext dbContext,
+    IScoringAuditDbContext dbContext,
     TimeProvider timeProvider,
-    IHubContext<ScoringAuditHub, IScoringAuditClient> hubContext)
+    IScoringAuditUpdatesPublisher updatesPublisher)
     : IRequestHandler<LogSessionEventCommand, SessionEventLogPayload>
 {
     public async Task<SessionEventLogPayload> Handle(
@@ -39,7 +36,7 @@ public sealed class LogSessionEventHandler(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var payload = SessionEventLogPayload.FromEntity(eventLog);
-        await hubContext.Clients.All.ReceiveEventLogUpdated(payload).WaitAsync(cancellationToken);
+        await updatesPublisher.PublishEventLogUpdatedAsync(payload, cancellationToken);
 
         return payload;
     }

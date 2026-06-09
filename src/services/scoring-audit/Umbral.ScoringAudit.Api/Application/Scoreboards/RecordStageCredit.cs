@@ -1,13 +1,9 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ScoringAudit.Api.Domain.Audit;
 using Umbral.ScoringAudit.Api.Domain.Scoreboards;
-using Umbral.ScoringAudit.Api.Hubs;
-using Umbral.ScoringAudit.Api.Hubs.Contracts;
-using Umbral.ScoringAudit.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.ScoringAudit.Api.Application.Scoreboards;
@@ -39,9 +35,9 @@ public sealed record RecordStageCreditResponse(
     RankingPayload Ranking);
 
 public sealed class RecordStageCreditHandler(
-    ScoringAuditDbContext dbContext,
+    IScoringAuditDbContext dbContext,
     TimeProvider timeProvider,
-    IHubContext<ScoringAuditHub, IScoringAuditClient> hubContext)
+    IScoringAuditUpdatesPublisher updatesPublisher)
     : IRequestHandler<RecordStageCreditCommand, RecordStageCreditResponse>
 {
     public async Task<RecordStageCreditResponse> Handle(
@@ -88,13 +84,13 @@ public sealed class RecordStageCreditHandler(
         var ranking = RankingProjection.Create(scoreboard, timeProvider.GetUtcNow());
         if (scoreEntry is not null)
         {
-            await hubContext.Clients.All.ReceiveRankingUpdated(ranking).WaitAsync(cancellationToken);
+            await updatesPublisher.PublishRankingUpdatedAsync(ranking, cancellationToken);
 
             if (eventLog is not null)
             {
-                await hubContext.Clients.All
-                    .ReceiveEventLogUpdated(SessionEventLogPayload.FromEntity(eventLog))
-                    .WaitAsync(cancellationToken);
+                await updatesPublisher.PublishEventLogUpdatedAsync(
+                    SessionEventLogPayload.FromEntity(eventLog),
+                    cancellationToken);
             }
         }
 

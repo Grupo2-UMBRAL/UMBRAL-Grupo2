@@ -1,11 +1,8 @@
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ScoringAudit.Api.Application.Audit;
 using Umbral.ScoringAudit.Api.Application.Rankings;
 using Umbral.ScoringAudit.Api.Application.Scoreboards;
 using Umbral.ScoringAudit.Api.Domain.Audit;
-using Umbral.ScoringAudit.Api.Hubs;
-using Umbral.ScoringAudit.Api.Hubs.Contracts;
 using Umbral.ScoringAudit.Api.Infrastructure;
 using Xunit;
 
@@ -17,11 +14,11 @@ public sealed class SessionEventLogApplicationTests
     public async Task LogSessionEventCommand_PersistsEventLogAndPublishesRealtimePayload()
     {
         await using var dbContext = CreateDbContext();
-        var hubClient = new CapturingScoringAuditClient();
+        var updatesPublisher = new CapturingScoringAuditUpdatesPublisher();
         var handler = new LogSessionEventHandler(
             dbContext,
             TimeProvider.System,
-            new CapturingScoringAuditHubContext(hubClient));
+            updatesPublisher);
         var liveSessionId = Guid.NewGuid();
 
         var payload = await handler.Handle(
@@ -33,8 +30,8 @@ public sealed class SessionEventLogApplicationTests
         Assert.Equal(liveSessionId, persisted.LiveSessionId);
         Assert.Equal("OperatorNote", persisted.EventType);
         Assert.Equal("Operador marco control manual.", persisted.Description);
-        Assert.Single(hubClient.EventLogPayloads);
-        Assert.Equal(payload, hubClient.EventLogPayloads[0]);
+        Assert.Single(updatesPublisher.EventLogPayloads);
+        Assert.Equal(payload, updatesPublisher.EventLogPayloads[0]);
     }
 
     [Fact]
@@ -88,11 +85,11 @@ public sealed class SessionEventLogApplicationTests
     public async Task RecordStageCreditCommand_PersistsStageCreditAuditEvent()
     {
         await using var dbContext = CreateDbContext();
-        var hubClient = new CapturingScoringAuditClient();
+        var updatesPublisher = new CapturingScoringAuditUpdatesPublisher();
         var handler = new RecordStageCreditHandler(
             dbContext,
             TimeProvider.System,
-            new CapturingScoringAuditHubContext(hubClient));
+            updatesPublisher);
         var liveSessionId = Guid.NewGuid();
         var sessionTeamId = Guid.NewGuid();
         var missionStageId = Guid.NewGuid();
@@ -114,8 +111,8 @@ public sealed class SessionEventLogApplicationTests
         Assert.Contains(sessionTeamId.ToString(), persistedEvent.Description);
         Assert.Contains(missionStageId.ToString(), persistedEvent.Description);
         Assert.Contains("200", persistedEvent.Description);
-        Assert.Single(hubClient.EventLogPayloads);
-        Assert.Equal(persistedEvent.Id, hubClient.EventLogPayloads[0].Id);
+        Assert.Single(updatesPublisher.EventLogPayloads);
+        Assert.Equal(persistedEvent.Id, updatesPublisher.EventLogPayloads[0].Id);
     }
 
     [Fact]
@@ -194,69 +191,6 @@ public sealed class SessionEventLogApplicationTests
             .Options;
 
         return new ScoringAuditDbContext(options);
-    }
-
-    private sealed class CapturingScoringAuditHubContext(CapturingScoringAuditClient client)
-        : IHubContext<ScoringAuditHub, IScoringAuditClient>
-    {
-        public IHubClients<IScoringAuditClient> Clients { get; } = new CapturingHubClients(client);
-
-        public IGroupManager Groups { get; } = new NoOpGroupManager();
-    }
-
-    private sealed class CapturingHubClients(IScoringAuditClient client) : IHubClients<IScoringAuditClient>
-    {
-        public IScoringAuditClient All => client;
-
-        public IScoringAuditClient AllExcept(IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public IScoringAuditClient Client(string connectionId) => client;
-
-        public IScoringAuditClient Clients(IReadOnlyList<string> connectionIds) => client;
-
-        public IScoringAuditClient Group(string groupName) => client;
-
-        public IScoringAuditClient GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public IScoringAuditClient Groups(IReadOnlyList<string> groupNames) => client;
-
-        public IScoringAuditClient User(string userId) => client;
-
-        public IScoringAuditClient Users(IReadOnlyList<string> userIds) => client;
-    }
-
-    private sealed class NoOpGroupManager : IGroupManager
-    {
-        public Task AddToGroupAsync(
-            string connectionId,
-            string groupName,
-            CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-
-        public Task RemoveFromGroupAsync(
-            string connectionId,
-            string groupName,
-            CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-    }
-
-    private sealed class CapturingScoringAuditClient : IScoringAuditClient
-    {
-        public List<RankingPayload> RankingPayloads { get; } = [];
-
-        public List<SessionEventLogPayload> EventLogPayloads { get; } = [];
-
-        public Task ReceiveRankingUpdated(RankingPayload payload)
-        {
-            RankingPayloads.Add(payload);
-            return Task.CompletedTask;
-        }
-
-        public Task ReceiveEventLogUpdated(SessionEventLogPayload payload)
-        {
-            EventLogPayloads.Add(payload);
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class CapturingScoringAuditUpdatesPublisher : IScoringAuditUpdatesPublisher

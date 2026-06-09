@@ -4,7 +4,8 @@ using Umbral.ScoringAudit.Api.Domain.Scoreboards;
 
 namespace Umbral.ScoringAudit.Api.Infrastructure;
 
-public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext> options) : DbContext(options)
+public sealed class ScoringAuditDbContext(DbContextOptions<ScoringAuditDbContext> options)
+    : DbContext(options), IScoringAuditDbContext
 {
     public DbSet<Scoreboard> Scoreboards => Set<Scoreboard>();
 
