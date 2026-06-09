@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
@@ -10,7 +9,7 @@ public sealed record ListMissionsQuery : IRequest<IReadOnlyList<MissionSummaryRe
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
 }
 
-public sealed class ListMissionsQueryHandler(MissionDesignDbContext dbContext)
+public sealed class ListMissionsQueryHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<ListMissionsQuery, IReadOnlyList<MissionSummaryResponse>>
 {
     public async Task<IReadOnlyList<MissionSummaryResponse>> Handle(

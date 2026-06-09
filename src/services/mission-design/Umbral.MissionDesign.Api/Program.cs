@@ -1,4 +1,5 @@
 using MediatR;
+using Umbral.MissionDesign.Api.Application;
 using Umbral.MissionDesign.Api.Application.Bootstrap.Commands;
 using Umbral.MissionDesign.Api.Application.Bootstrap.Queries;
 using Umbral.MissionDesign.Api.Infrastructure;
@@ -12,6 +13,7 @@ builder.Services.AddUmbralApiDefaults(
     builder.Configuration);
 builder.Services.AddMediatR(typeof(Program).Assembly);
 builder.Services.AddMissionDesignInfrastructure(builder.Configuration);
+builder.Services.AddScoped<IMissionDesignDbContext>(serviceProvider => serviceProvider.GetRequiredService<MissionDesignDbContext>());
 
 var app = builder.Build();
 

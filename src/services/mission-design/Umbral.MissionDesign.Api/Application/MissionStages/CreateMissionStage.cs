@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.MissionDesign.Api.Domain.Missions;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.MissionStages;
@@ -18,7 +17,7 @@ public sealed record CreateMissionStageCommand(
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
 }
 
-public sealed class CreateMissionStageCommandHandler(MissionDesignDbContext dbContext)
+public sealed class CreateMissionStageCommandHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionStageCommand, MissionStageResponse>
 {
     public async Task<MissionStageResponse> Handle(CreateMissionStageCommand request, CancellationToken cancellationToken)

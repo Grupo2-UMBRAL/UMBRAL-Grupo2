@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
@@ -10,7 +9,7 @@ public sealed record GetEligibleMissionForLiveSessionQuery(Guid MissionId) : IRe
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
-public sealed class GetEligibleMissionForLiveSessionQueryHandler(MissionDesignDbContext dbContext)
+public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<GetEligibleMissionForLiveSessionQuery, EligibleMissionForLiveSessionResponse>
 {
     public async Task<EligibleMissionForLiveSessionResponse> Handle(

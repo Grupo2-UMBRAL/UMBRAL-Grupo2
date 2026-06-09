@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.MissionDesign.Api.Domain.Missions;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
@@ -17,7 +16,7 @@ public sealed record CreateMissionCommand(
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
 }
 
-public sealed class CreateMissionCommandHandler(MissionDesignDbContext dbContext)
+public sealed class CreateMissionCommandHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<CreateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(CreateMissionCommand request, CancellationToken cancellationToken)

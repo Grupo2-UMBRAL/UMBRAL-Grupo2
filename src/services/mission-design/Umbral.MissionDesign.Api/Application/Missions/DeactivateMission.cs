@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.Missions;
@@ -10,7 +9,7 @@ public sealed record DeactivateMissionCommand(Guid MissionId) : IRequest<Mission
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
 }
 
-public sealed class DeactivateMissionCommandHandler(MissionDesignDbContext dbContext)
+public sealed class DeactivateMissionCommandHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<DeactivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(DeactivateMissionCommand request, CancellationToken cancellationToken)

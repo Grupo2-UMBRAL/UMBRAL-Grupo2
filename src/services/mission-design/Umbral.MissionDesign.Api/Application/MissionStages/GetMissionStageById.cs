@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Umbral.MissionDesign.Api.Infrastructure;
 using Umbral.ServiceDefaults;
 
 namespace Umbral.MissionDesign.Api.Application.MissionStages;
@@ -10,7 +9,7 @@ public sealed record GetMissionStageByIdQuery(Guid MissionStageId) : IRequest<Mi
     public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOnly;
 }
 
-public sealed class GetMissionStageByIdQueryHandler(MissionDesignDbContext dbContext)
+public sealed class GetMissionStageByIdQueryHandler(IMissionDesignDbContext dbContext)
     : IRequestHandler<GetMissionStageByIdQuery, MissionStageResponse>
 {
     public async Task<MissionStageResponse> Handle(GetMissionStageByIdQuery request, CancellationToken cancellationToken)
