@@ -1,12 +1,12 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.Scoring;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
@@ -35,7 +35,7 @@ public sealed class OverrideValidationOutcomeHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    ISessionRealtimeNotifier realtimeNotifier,
     IScoringAuditClient scoringAuditClient)
     : IRequestHandler<OverrideValidationOutcomeCommand, OverrideValidationOutcomeResponse>
 {
@@ -157,7 +157,7 @@ public sealed class OverrideValidationOutcomeHandler(
             previousOutcome,
             evidenceSubmission.FailureReason);
 
-        await hubContext.Clients.All.ReceiveEvidenceSubmissionOutcomeChanged(payload).WaitAsync(cancellationToken);
+        await realtimeNotifier.NotifyEvidenceSubmissionOutcomeChangedAsync(payload, cancellationToken);
     }
 
     private async Task PublishTeamProgressChangedAsync(
@@ -176,7 +176,7 @@ public sealed class OverrideValidationOutcomeHandler(
             MapCurrentStage(currentStage),
             progressState);
 
-        await hubContext.Clients.All.ReceiveTeamProgressChanged(payload).WaitAsync(cancellationToken);
+        await realtimeNotifier.NotifyTeamProgressChangedAsync(payload, cancellationToken);
     }
 
     private async Task PublishSessionStateChangedAsync(
@@ -184,15 +184,16 @@ public sealed class OverrideValidationOutcomeHandler(
         string previousState,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
-    {
-        var payload = new SessionStateChangedPayload(
-            CreateMetadata(liveSession, occurredAtUtc, "LiveSession finalized after Validation Override."),
-            previousState,
-            liveSession.State,
-            null);
-
-        await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
-    }
+        => await realtimeNotifier.NotifySessionStateChangedAsync(
+            new LiveSessionStateChangedEvent(
+                liveSession.Id,
+                previousState,
+                liveSession.State,
+                liveSession.SessionTeams.Count,
+                liveSession.SequenceNumber,
+                "LiveSession finalized after Validation Override.",
+                occurredAtUtc),
+            cancellationToken);
 
     private static RealtimeEventMetadata CreateMetadata(
         LiveSession liveSession,

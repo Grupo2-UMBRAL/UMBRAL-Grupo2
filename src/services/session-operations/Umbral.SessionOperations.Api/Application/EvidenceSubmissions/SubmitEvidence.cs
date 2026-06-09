@@ -1,13 +1,13 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.Scoring;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
@@ -30,7 +30,7 @@ public sealed class SubmitEvidenceHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    ISessionRealtimeNotifier realtimeNotifier,
     IScoringAuditClient scoringAuditClient)
     : IRequestHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>
 {
@@ -89,22 +89,22 @@ public sealed class SubmitEvidenceHandler(
                     validationOverride: false),
                 cancellationToken);
 
-            await PublishTeamProgressChangedAsync(
-                liveSession,
-                request.SessionTeamId,
-                previousStage,
-                currentStage,
+        await PublishTeamProgressChangedAsync(
+            liveSession,
+            request.SessionTeamId,
+            previousStage,
+            currentStage,
                 progressState,
                 submittedAtUtc,
                 cancellationToken);
 
             if (!string.Equals(previousLiveSessionState, liveSession.State, StringComparison.Ordinal))
             {
-                await PublishSessionStateChangedAsync(
-                    liveSession,
-                    previousLiveSessionState,
-                    submittedAtUtc,
-                    cancellationToken);
+            await PublishSessionStateChangedAsync(
+                liveSession,
+                previousLiveSessionState,
+                submittedAtUtc,
+                cancellationToken);
             }
         }
 
@@ -154,7 +154,7 @@ public sealed class SubmitEvidenceHandler(
             MapCurrentStage(currentStage),
             progressState);
 
-        await hubContext.Clients.All.ReceiveTeamProgressChanged(payload).WaitAsync(cancellationToken);
+        await realtimeNotifier.NotifyTeamProgressChangedAsync(payload, cancellationToken);
     }
 
     private async Task PublishSessionStateChangedAsync(
@@ -162,15 +162,16 @@ public sealed class SubmitEvidenceHandler(
         string previousState,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
-    {
-        var payload = new SessionStateChangedPayload(
-            CreateMetadata(liveSession, occurredAtUtc, "LiveSession finalized after Evidence Submission."),
-            previousState,
-            liveSession.State,
-            null);
-
-        await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
-    }
+        => await realtimeNotifier.NotifySessionStateChangedAsync(
+            new LiveSessionStateChangedEvent(
+                liveSession.Id,
+                previousState,
+                liveSession.State,
+                liveSession.SessionTeams.Count,
+                liveSession.SequenceNumber,
+                "LiveSession finalized after Evidence Submission.",
+                occurredAtUtc),
+            cancellationToken);
 
     private async Task LogEvidenceSubmissionEventsAsync(
         EvidenceSubmission evidenceSubmission,

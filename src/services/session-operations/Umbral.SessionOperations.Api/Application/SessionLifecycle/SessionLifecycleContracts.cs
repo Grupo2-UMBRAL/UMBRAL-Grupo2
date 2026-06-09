@@ -12,9 +12,13 @@ public sealed record LiveSessionStateChangedEvent(
     string PreviousState,
     string State,
     int RegisteredSessionTeamCount,
+    long SequenceNumber,
+    string Reason,
     DateTimeOffset OccurredAtUtc);
 
 public interface ILiveSessionStateNotifier
 {
-    Task NotifyStateChangedAsync(LiveSessionStateChangedEvent stateChangedEvent, CancellationToken cancellationToken);
+    Task NotifyStateChangedAsync(
+        LiveSessionStateChangedEvent stateChangedEvent,
+        CancellationToken cancellationToken);
 }

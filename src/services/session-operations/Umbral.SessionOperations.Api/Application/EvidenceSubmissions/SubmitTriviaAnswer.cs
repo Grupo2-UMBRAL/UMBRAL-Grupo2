@@ -1,13 +1,13 @@
 using MediatR;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.Scoring;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
@@ -20,7 +20,7 @@ public sealed class SubmitTriviaAnswerHandler(
     SessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
-    IHubContext<SessionOperationsHub, ISessionClient> hubContext,
+    ISessionRealtimeNotifier realtimeNotifier,
     IScoringAuditClient scoringAuditClient)
     : IRequestHandler<SubmitTriviaAnswerCommand, SubmitEvidenceResponse>
 {
@@ -152,7 +152,7 @@ public sealed class SubmitTriviaAnswerHandler(
             previousOutcome,
             evidenceSubmission.FailureReason);
 
-        await hubContext.Clients.All.ReceiveEvidenceSubmissionOutcomeChanged(payload).WaitAsync(cancellationToken);
+        await realtimeNotifier.NotifyEvidenceSubmissionOutcomeChangedAsync(payload, cancellationToken);
     }
 
     private async Task PublishTeamProgressChangedAsync(
@@ -172,7 +172,7 @@ public sealed class SubmitTriviaAnswerHandler(
             MapCurrentStage(currentStage),
             progressState);
 
-        await hubContext.Clients.All.ReceiveTeamProgressChanged(payload).WaitAsync(cancellationToken);
+        await realtimeNotifier.NotifyTeamProgressChangedAsync(payload, cancellationToken);
     }
 
     private async Task PublishSessionStateChangedAsync(
@@ -180,15 +180,16 @@ public sealed class SubmitTriviaAnswerHandler(
         string previousState,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
-    {
-        var payload = new SessionStateChangedPayload(
-            CreateMetadata(liveSession, occurredAtUtc, "LiveSession finalized after Trivia Evidence Submission."),
-            previousState,
-            liveSession.State,
-            null);
-
-        await hubContext.Clients.All.ReceiveSessionStateChanged(payload).WaitAsync(cancellationToken);
-    }
+        => await realtimeNotifier.NotifySessionStateChangedAsync(
+            new LiveSessionStateChangedEvent(
+                liveSession.Id,
+                previousState,
+                liveSession.State,
+                liveSession.SessionTeams.Count,
+                liveSession.SequenceNumber,
+                "LiveSession finalized after Trivia Evidence Submission.",
+                occurredAtUtc),
+            cancellationToken);
 
     private async Task LogEvidenceSubmissionEventsAsync(
         EvidenceSubmission evidenceSubmission,

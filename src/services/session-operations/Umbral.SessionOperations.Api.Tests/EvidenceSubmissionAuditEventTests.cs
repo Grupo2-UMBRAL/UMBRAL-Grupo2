@@ -1,12 +1,12 @@
 using System.Reflection;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
+using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.Scoring;
 using Umbral.SessionOperations.Api.Application.SessionEnrollment;
+using Umbral.SessionOperations.Api.Application.SessionLifecycle;
 using Umbral.SessionOperations.Api.Application.SessionSnapshots;
 using Umbral.SessionOperations.Api.Domain.LiveSessions;
-using Umbral.SessionOperations.Api.Hubs;
 using Umbral.SessionOperations.Api.Hubs.Contracts;
 using Umbral.SessionOperations.Api.Infrastructure;
 using Xunit;
@@ -31,7 +31,7 @@ public sealed class EvidenceSubmissionAuditEventTests
             dbContext,
             new FixedTimeProvider(NowUtc),
             new StaticParticipantIdentity("participant-alpha"),
-            new RecordingHubContext(),
+            new NoopSessionRealtimeNotifier(),
             scoringAuditClient);
 
         var response = await handler.Handle(
@@ -167,53 +167,18 @@ public sealed class EvidenceSubmissionAuditEventTests
         string EventType,
         string Description);
 
-    private sealed class RecordingHubContext : IHubContext<SessionOperationsHub, ISessionClient>
+    private sealed class NoopSessionRealtimeNotifier : ISessionRealtimeNotifier
     {
-        private readonly ISessionClient client = new NoopSessionClient();
-
-        public IHubClients<ISessionClient> Clients => new RecordingHubClients(client);
-
-        public IGroupManager Groups { get; } = new NoopGroupManager();
-    }
-
-    private sealed class RecordingHubClients(ISessionClient client) : IHubClients<ISessionClient>
-    {
-        public ISessionClient All => client;
-
-        public ISessionClient AllExcept(IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public ISessionClient Client(string connectionId) => client;
-
-        public ISessionClient Clients(IReadOnlyList<string> connectionIds) => client;
-
-        public ISessionClient Group(string groupName) => client;
-
-        public ISessionClient GroupExcept(string groupName, IReadOnlyList<string> excludedConnectionIds) => client;
-
-        public ISessionClient Groups(IReadOnlyList<string> groupNames) => client;
-
-        public ISessionClient User(string userId) => client;
-
-        public ISessionClient Users(IReadOnlyList<string> userIds) => client;
-    }
-
-    private sealed class NoopGroupManager : IGroupManager
-    {
-        public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
+        public Task NotifySessionStateChangedAsync(LiveSessionStateChangedEvent stateChangedEvent, CancellationToken cancellationToken)
             => Task.CompletedTask;
 
-        public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
+        public Task NotifyTeamProgressChangedAsync(TeamProgressChangedPayload payload, CancellationToken cancellationToken)
             => Task.CompletedTask;
-    }
 
-    private sealed class NoopSessionClient : ISessionClient
-    {
-        public Task ReceiveSessionStateChanged(SessionStateChangedPayload payload) => Task.CompletedTask;
+        public Task NotifyEvidenceSubmissionOutcomeChangedAsync(EvidenceSubmissionOutcomeChangedPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
 
-        public Task ReceiveTeamProgressChanged(TeamProgressChangedPayload payload) => Task.CompletedTask;
-
-        public Task ReceiveEvidenceSubmissionOutcomeChanged(EvidenceSubmissionOutcomeChangedPayload payload) => Task.CompletedTask;
-
-        public Task ReceiveHintUnlocked(HintUnlockedPayload payload) => Task.CompletedTask;
+        public Task NotifyHintUnlockedAsync(HintUnlockedPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
     }
 }
