@@ -2,6 +2,8 @@
 
 `UMB-31` moves authorization to the MediatR request boundary so each command/query declares its allowed roles explicitly, beyond HTTP route guards.
 
+The public `edge-proxy` may be the preferred client entry, but this matrix is still enforced inside each backend service after that routing step. The gateway does not replace per-service `JWT` validation, `audience` checks, or request-level authorization.
+
 ## Role rules
 
 - `Administrator` can manage `Mission Design`, read bootstrap metadata, and administer `Operator` users.
