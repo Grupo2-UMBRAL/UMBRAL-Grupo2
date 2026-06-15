@@ -41,6 +41,10 @@ services:
     command:
       - start-dev
       - --import-realm
+      - --proxy=edge
+      - --http-relative-path=/auth
+      - --hostname=http://localhost:7500/auth
+      - --hostname-backchannel-dynamic=true
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -197,7 +201,7 @@ services:
       dockerfile: Dockerfile
     container_name: umbral-web
     working_dir: /app
-    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    command: ["npm", "run", "dev", "--", "--host"]
     environment:
       NODE_ENV: development
       PORT: ${WEB_PORT}

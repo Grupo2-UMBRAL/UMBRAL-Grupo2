@@ -1,144 +1,114 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getClientConfig } from "@/lib/config";
 import type { WebShellRole } from "@/lib/roles";
 
 type ServiceCheck = {
-  id: string;
   label: string;
-  path: string;
-  requiresToken: boolean;
-};
-
-type ServiceCheckState = {
-  id: string;
-  label: string;
-  status: "loading" | "ok" | "error";
+  status: "pending" | "ok" | "error";
   detail: string;
 };
 
 type ServiceStatusBoardProps = {
   accessToken: string;
   role: WebShellRole;
-  refreshKey: number;
 };
 
 export function ServiceStatusBoard({
   accessToken,
   role,
-  refreshKey
 }: ServiceStatusBoardProps) {
-  const [checks, setChecks] = useState<ServiceCheckState[]>([]);
-  const config = getClientConfig();
+  const [checks, setChecks] = useState<ServiceCheck[]>([]);
 
-  useEffect(() => {
-    const roleRouteSegment = role === "Administrator" ? "administrator" : "operator";
-    const serviceChecks: ServiceCheck[] = [
+  const runChecks = useCallback(async () => {
+    const config = getClientConfig();
+    const base = config.edgeProxyPublicBaseUrl;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    const endpoints: { label: string; url: string; auth: boolean }[] = [
       {
-        id: "identity",
-        label: "Descubrimiento de Keycloak",
-        path: `${config.keycloakPublicBaseUrl}/realms/${config.keycloakRealm}/.well-known/openid-configuration`,
-        requiresToken: false
+        label: "Keycloak OIDC",
+        url: `${base}/auth/realms/umbral/.well-known/openid-configuration`,
+        auth: false,
       },
       {
-        id: "mission-design",
-        label: "Prueba de humo de Diseño de Misiones",
-        path: `${config.edgeProxyPublicBaseUrl}/mission-design/api/mission-design/smoke/${roleRouteSegment}`,
-        requiresToken: true
+        label: "Mission Design",
+        url: `${base}/mission-design/api/mission-design/smoke/${role}`,
+        auth: true,
       },
       {
-        id: "session-operations",
-        label: "Prueba de humo de Operaciones de Sesión",
-        path: `${config.edgeProxyPublicBaseUrl}/session-operations/api/session-operations/smoke/${roleRouteSegment}`,
-        requiresToken: true
+        label: "Session Operations",
+        url: `${base}/session-operations/api/session-operations/smoke/${role}`,
+        auth: true,
       },
       {
-        id: "scoring-audit",
-        label: "Prueba de humo de Scoring y Auditoría",
-        path: `${config.edgeProxyPublicBaseUrl}/scoring-audit/api/scoring-audit/smoke/${roleRouteSegment}`,
-        requiresToken: true
-      }
+        label: "Scoring & Audit",
+        url: `${base}/scoring-audit/api/scoring-audit/smoke/${role}`,
+        auth: true,
+      },
     ];
 
-    let ignore = false;
-    const loadingChecks = serviceChecks.map((check) => ({
-      id: check.id,
-      label: check.label,
-      status: "loading",
-      detail: "Verificando endpoint."
-    })) satisfies ServiceCheckState[];
+    const results: ServiceCheck[] = endpoints.map((ep) => ({
+      label: ep.label,
+      status: "pending" as const,
+      detail: "Verificando...",
+    }));
+    setChecks([...results]);
 
-    async function runChecks() {
-      setChecks(loadingChecks);
-
-      const results = await Promise.all(
-        serviceChecks.map(async (check) => {
-          try {
-            const response = await fetch(check.path, {
-              headers: check.requiresToken
-                ? {
-                    Authorization: `Bearer ${accessToken}`
-                  }
-                : undefined
-            });
-
-            const detail = response.ok
-              ? "El endpoint aceptó la solicitud."
-              : `${response.status} ${response.statusText}`;
-
-            return {
-              id: check.id,
-              label: check.label,
-              status: response.ok ? "ok" : "error",
-              detail
-            } satisfies ServiceCheckState;
-          } catch (error) {
-            return {
-              id: check.id,
-              label: check.label,
-              status: "error",
-              detail: error instanceof Error ? error.message : "La solicitud falló."
-            } satisfies ServiceCheckState;
-          }
-        })
-      );
-
-      if (!ignore) {
-        setChecks(results);
+    for (let i = 0; i < endpoints.length; i++) {
+      const ep = endpoints[i];
+      try {
+        const res = await fetch(ep.url, {
+          headers: ep.auth ? headers : undefined,
+        });
+        results[i] = {
+          label: ep.label,
+          status: res.ok ? "ok" : "error",
+          detail: res.ok ? `${res.status} OK` : `${res.status} ${res.statusText}`,
+        };
+      } catch (err) {
+        results[i] = {
+          label: ep.label,
+          status: "error",
+          detail: err instanceof Error ? err.message : "Error de conexión",
+        };
       }
+      setChecks([...results]);
     }
+  }, [accessToken, role]);
 
+  useEffect(() => {
     void runChecks();
+  }, [runChecks]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [accessToken, config.edgeProxyPublicBaseUrl, config.keycloakPublicBaseUrl, config.keycloakRealm, refreshKey, role]);
+  const statusDotClass = (status: ServiceCheck["status"]) => {
+    switch (status) {
+      case "ok": return "status-dot status-dot-green";
+      case "error": return "status-dot status-dot-red";
+      default: return "status-dot status-dot-muted status-dot-pulse";
+    }
+  };
 
   return (
-    <section className="panel stack-gap">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Disponibilidad</p>
-          <h2>Verificaciones operativas</h2>
-        </div>
-        <p className="section-copy">
-          El cliente del navegador accede al servicio de identidad y a los endpoints de API protegidos con el JWT actual.
-        </p>
+    <div className="card card-compact">
+      <div className="row-between" style={{ marginBottom: "1rem" }}>
+        <h3 style={{ fontSize: "var(--text-sm)", fontWeight: 600 }}>
+          Estado de servicios
+        </h3>
+        <button className="btn btn-ghost btn-sm" onClick={() => void runChecks()}>
+          Verificar
+        </button>
       </div>
-
       <div className="status-grid">
         {checks.map((check) => (
-          <article className="status-card" key={check.id}>
-            <div className={`status-pill status-${check.status}`}>
-              {check.status === "loading" ? "cargando" : check.status === "ok" ? "correcto" : "error"}
+          <div className="status-card" key={check.label}>
+            <div className="status-card-header">
+              <span className="status-card-label">{check.label}</span>
+              <span className={statusDotClass(check.status)} />
             </div>
-            <strong>{check.label}</strong>
-            <p>{check.detail}</p>
-          </article>
+            <span className="status-card-detail">{check.detail}</span>
+          </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

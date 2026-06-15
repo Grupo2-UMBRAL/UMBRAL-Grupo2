@@ -215,6 +215,8 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   const [isRotatingPassword, setIsRotatingPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const operatorsUrl = useMemo(
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/identity-access/api/identity-access/operators`,
@@ -350,6 +352,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
 
       setIsLoading(true);
       setDraft(createEmptyDraft());
+      setShowCreateModal(false);
       setFeedback("Usuario Operador creado a través de la fachada identity-access.");
       await syncOperators(createdOperatorId);
     } catch (error) {
@@ -423,6 +426,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       }
 
       setPasswordRotationDraft(createEmptyPasswordRotationDraft());
+      setShowPasswordModal(false);
       setFeedback(`Contraseña rotada para el Usuario Operador ${selectedOperator.username}.`);
       await syncOperators(selectedOperator.id);
     } catch (error) {
@@ -433,303 +437,391 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   }
 
   return (
-    <section className="panel stack-gap">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Identidad y acceso</p>
-          <h2>Espacio de trabajo de Operadores</h2>
-        </div>
-        <p className="section-copy">
+    <div className="workspace-section">
+      <div className="workspace-section-header">
+        <h3>Espacio de trabajo de Operadores</h3>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setDraft(createEmptyDraft());
+            setErrorMessage(null);
+            setShowCreateModal(true);
+          }}
+          type="button"
+        >
+          Crear Usuario Operador
+        </button>
+      </div>
+
+      <div className="workspace-section-body">
+        <p className="text-muted text-sm">
           Las llamadas del navegador del administrador pasan a través de la fachada de edge-proxy con el token de portador actual.
           No hay tráfico directo de administración de Keycloak desde la consola.
         </p>
-      </div>
 
-      <div className="mission-summary-grid">
-        <article className="signal-card">
-          <strong>Total de Operadores</strong>
-          <p className="metric-value">{summary.total}</p>
-        </article>
-        <article className="signal-card">
-          <strong>Activos</strong>
-          <p className="metric-value metric-success">{summary.active}</p>
-        </article>
-        <article className="signal-card">
-          <strong>Inactivos</strong>
-          <p className="metric-value metric-danger">{summary.inactive}</p>
-        </article>
-      </div>
-
-      {errorMessage ? <p className="banner-error">{errorMessage}</p> : null}
-      {feedback ? <p className="banner-success">{feedback}</p> : null}
-
-      <div className="operator-workspace-grid">
-        <section className="operator-list-panel">
-          <div className="mission-list-header">
-            <div>
-              <p className="eyebrow">Lista</p>
-              <h3>Usuarios Operadores</h3>
+        <div className="row row-wrap" style={{ gap: "1rem", marginTop: "0.75rem", marginBottom: "0.75rem" }}>
+          <div className="card card-compact">
+            <div className="card-section">
+              <span className="text-muted text-sm">Total de Operadores</span>
+              <p><strong>{summary.total}</strong></p>
             </div>
-            <button
-              className="ghost-button"
-              onClick={() => {
-                setIsLoading(true);
-                void syncOperators(selectedOperator?.id);
-              }}
-              type="button"
-            >
-              Actualizar
-            </button>
           </div>
-
-          {isLoading ? <p className="muted-copy">Cargando Usuarios Operadores.</p> : null}
-
-          {!isLoading && operators.length === 0 ? (
-            <div className="empty-state">
-              <strong>Aún no se han devuelto Usuarios Operadores.</strong>
-              <p>La fachada es accesible, pero no ha devuelto una lista para esta vista de administrador.</p>
+          <div className="card card-compact">
+            <div className="card-section">
+              <span className="text-muted text-sm">Activos</span>
+              <p><strong className="badge badge-green">{summary.active}</strong></p>
             </div>
-          ) : null}
+          </div>
+          <div className="card card-compact">
+            <div className="card-section">
+              <span className="text-muted text-sm">Inactivos</span>
+              <p><strong className="badge badge-red">{summary.inactive}</strong></p>
+            </div>
+          </div>
+        </div>
 
-          <div className="operator-list">
-            {operators.map((operator) => (
-              <button
-                className={
-                  operator.id === selectedOperator?.id ? "operator-list-item is-active" : "operator-list-item"
-                }
-                key={operator.id}
-                onClick={() => {
-                  setFeedback(null);
-                  setPasswordRotationDraft(createEmptyPasswordRotationDraft());
-                  setSelectedOperatorId(operator.id);
-                }}
-                type="button"
-              >
-                <div className="mission-list-item-top">
-                  <strong>{operator.displayName}</strong>
-                  <span className={operator.isActive ? "status-pill status-ok" : "status-pill status-error"}>
-                    {operator.isActive ? "activo" : "inactivo"}
-                  </span>
+        {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+        {feedback ? <div className="success-banner">{feedback}</div> : null}
+
+        {isLoading ? (
+          <div className="loading-center">Cargando Usuarios Operadores…</div>
+        ) : operators.length === 0 ? (
+          <div className="empty-state">
+            <p><strong>Aún no se han devuelto Usuarios Operadores.</strong></p>
+            <p>La fachada es accesible, pero no ha devuelto una lista para esta vista de administrador.</p>
+          </div>
+        ) : (
+          <div className="split-layout">
+            {/* Left: operator table */}
+            <div>
+              <div className="card card-flush">
+                <div className="card-header card-header-actions">
+                  <span className="eyebrow">Lista de Usuarios Operadores</span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      setIsLoading(true);
+                      void syncOperators(selectedOperator?.id);
+                    }}
+                    type="button"
+                  >
+                    Actualizar
+                  </button>
                 </div>
-                <p>@{operator.username}</p>
-                <dl className="mission-meta-grid">
-                  <div>
-                    <dt>Email</dt>
-                    <dd>{operator.email ?? "No reportado"}</dd>
-                  </div>
-                  <div>
-                    <dt>Roles</dt>
-                    <dd>{operator.roles.join(", ")}</dd>
-                  </div>
-                </dl>
-              </button>
-            ))}
-          </div>
-        </section>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>Roles</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {operators.map((operator) => (
+                        <tr
+                          className={
+                            operator.id === selectedOperator?.id
+                              ? "clickable is-selected"
+                              : "clickable"
+                          }
+                          key={operator.id}
+                          onClick={() => {
+                            setFeedback(null);
+                            setPasswordRotationDraft(createEmptyPasswordRotationDraft());
+                            setSelectedOperatorId(operator.id);
+                          }}
+                        >
+                          <td>{operator.displayName}</td>
+                          <td><code>@{operator.username}</code></td>
+                          <td>{operator.email ?? <span className="text-muted">No reportado</span>}</td>
+                          <td>{operator.roles.join(", ")}</td>
+                          <td>
+                            <span className={operator.isActive ? "badge badge-green" : "badge badge-red"}>
+                              {operator.isActive ? "Activo" : "Inactivo"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
 
-        <section className="operator-form-panel">
-          <div className="mission-list-header">
+            {/* Right: detail panel */}
             <div>
-              <p className="eyebrow">Provisión</p>
+              {selectedOperator ? (
+                <div className="stack">
+                  <div className="detail-panel">
+                    <h4 style={{ marginBottom: "0.5rem" }}>{selectedOperator.displayName}</h4>
+                    <div className="detail-row">
+                      <span className="detail-label">ID de usuario</span>
+                      <span className="detail-value mono">{selectedOperator.id}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Nombre de usuario</span>
+                      <span className="detail-value">{selectedOperator.username}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Email</span>
+                      <span className="detail-value">{selectedOperator.email ?? "No reportado por la fachada"}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Nombre</span>
+                      <span className="detail-value">{selectedOperator.firstName ?? "No reportado por la fachada"}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Apellido</span>
+                      <span className="detail-value">{selectedOperator.lastName ?? "No reportado por la fachada"}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Roles</span>
+                      <span className="detail-value">{selectedOperator.roles.join(", ")}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Estado</span>
+                      <span className="detail-value">
+                        <span className={selectedOperator.isActive ? "badge badge-green" : "badge badge-red"}>
+                          {selectedOperator.isActive ? "Activo" : "Inactivo"}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="detail-label">Última actualización</span>
+                      <span className="detail-value">{formatTimestamp(selectedOperator.lastUpdatedAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="row" style={{ gap: "0.5rem" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={!selectedOperator || isRotatingPassword}
+                      onClick={() => {
+                        setPasswordRotationDraft(createEmptyPasswordRotationDraft());
+                        setErrorMessage(null);
+                        setShowPasswordModal(true);
+                      }}
+                      type="button"
+                    >
+                      Rotar contraseña
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      disabled={!selectedOperator.isActive || isDeactivating}
+                      onClick={() => void handleDeactivateSelectedOperator()}
+                      type="button"
+                    >
+                      {isDeactivating ? "Desactivando…" : "Desactivar"}
+                    </button>
+                  </div>
+
+                  <div className="text-muted text-xs" style={{ marginTop: "0.25rem" }}>
+                    <span>Contrato de ruta: </span>
+                    <code>{operatorsUrl}</code>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p><strong>Ningún Usuario Operador seleccionado.</strong></p>
+                  <p>Seleccione una entrada de la lista después de que la fachada devuelva datos.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Create operator modal */}
+      {showCreateModal ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
               <h3>Crear Usuario Operador</h3>
-            </div>
-          </div>
-
-          <form className="auth-form" onSubmit={handleCreateOperator}>
-            <div className="form-grid-two">
-              <label className="field">
-                <span>Nombre de usuario</span>
-                <input
-                  className="input"
-                  maxLength={100}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      username: event.target.value
-                    }))
-                  }
-                  required
-                  value={draft.username}
-                />
-              </label>
-
-              <label className="field">
-                <span>Email</span>
-                <input
-                  className="input"
-                  maxLength={200}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      email: event.target.value
-                    }))
-                  }
-                  required
-                  type="email"
-                  value={draft.email}
-                />
-              </label>
-            </div>
-
-            <div className="form-grid-two">
-              <label className="field">
-                <span>Nombre</span>
-                <input
-                  className="input"
-                  maxLength={80}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      firstName: event.target.value
-                    }))
-                  }
-                  required
-                  value={draft.firstName}
-                />
-              </label>
-
-              <label className="field">
-                <span>Apellido</span>
-                <input
-                  className="input"
-                  maxLength={80}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      lastName: event.target.value
-                    }))
-                  }
-                  required
-                  value={draft.lastName}
-                />
-              </label>
-            </div>
-
-            <div className="form-grid-two">
-              <label className="field">
-                <span>Contraseña</span>
-                <input
-                  className="input"
-                  minLength={8}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      password: event.target.value
-                    }))
-                  }
-                  required
-                  type="password"
-                  value={draft.password}
-                />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Contrato de ruta</span>
-              <input className="input" disabled value={operatorsUrl} />
-              <span className="field-hint">
-                Esta sección utiliza GET, POST, POST /{"{userId}"}/deactivate y POST /{"{userId}"}/reset-password.
-              </span>
-            </label>
-
-            <div className="mission-action-row">
-              <button className="primary-button" disabled={isSubmitting} type="submit">
-                Crear Usuario Operador
-              </button>
-            </div>
-          </form>
-
-          <section className="operator-detail-card">
-            <div className="mission-list-header">
-              <div>
-                <p className="eyebrow">Usuario seleccionado</p>
-                <h3>{selectedOperator?.displayName ?? "Ningún Usuario Operador seleccionado"}</h3>
-              </div>
-            </div>
-
-            {selectedOperator ? (
-              <dl className="definition-grid">
-                <div>
-                  <dt>ID de usuario</dt>
-                  <dd>{selectedOperator.id}</dd>
-                </div>
-                <div>
-                  <dt>Nombre de usuario</dt>
-                  <dd>{selectedOperator.username}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{selectedOperator.email ?? "No reportado por la fachada"}</dd>
-                </div>
-                <div>
-                  <dt>Nombre</dt>
-                  <dd>{selectedOperator.firstName ?? "No reportado por la fachada"}</dd>
-                </div>
-                <div>
-                  <dt>Apellido</dt>
-                  <dd>{selectedOperator.lastName ?? "No reportado por la fachada"}</dd>
-                </div>
-                <div>
-                  <dt>Roles</dt>
-                  <dd>{selectedOperator.roles.join(", ")}</dd>
-                </div>
-                <div>
-                  <dt>Estado</dt>
-                  <dd>{selectedOperator.isActive ? "Activo" : "Inactivo"}</dd>
-                </div>
-                <div>
-                  <dt>Última actualización</dt>
-                  <dd>{formatTimestamp(selectedOperator.lastUpdatedAt)}</dd>
-                </div>
-              </dl>
-            ) : (
-              <div className="empty-state">
-                <strong>Ningún Usuario Operador seleccionado.</strong>
-                <p>Seleccione una entrada de la lista después de que la fachada devuelva datos.</p>
-              </div>
-            )}
-
-            <form className="stack-gap" onSubmit={handleRotateSelectedOperatorPassword}>
-              <label className="field">
-                <span>Rotar contraseña</span>
-                <input
-                  className="input"
-                  disabled={!selectedOperator || isRotatingPassword}
-                  minLength={8}
-                  onChange={(event) =>
-                    setPasswordRotationDraft({
-                      password: event.target.value
-                    })
-                  }
-                  required
-                  type="password"
-                  value={passwordRotationDraft.password}
-                />
-                <span className="field-hint">
-                  El nuevo secreto va a `identity-access`. La consola nunca recibe credenciales de administrador de Keycloak.
-                </span>
-              </label>
-
-              <div className="mission-action-row">
-                <button className="primary-button" disabled={!selectedOperator || isRotatingPassword} type="submit">
-                  {isRotatingPassword ? "Rotando..." : "Rotar contraseña"}
-                </button>
-              </div>
-            </form>
-
-            <div className="mission-action-row">
               <button
-                className="ghost-button danger-button"
-                disabled={!selectedOperator?.isActive || isDeactivating}
-                onClick={() => void handleDeactivateSelectedOperator()}
+                className="modal-close"
+                onClick={() => setShowCreateModal(false)}
                 type="button"
               >
-                {isDeactivating ? "Desactivando..." : "Desactivar Usuario Operador"}
+                ×
               </button>
             </div>
-          </section>
-        </section>
-      </div>
-    </section>
+            <div className="modal-body">
+              <form id="create-operator-form" onSubmit={handleCreateOperator}>
+                <div className="stack">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Nombre de usuario</label>
+                      <input
+                        className="form-input"
+                        maxLength={100}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            username: event.target.value
+                          }))
+                        }
+                        required
+                        value={draft.username}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input
+                        className="form-input"
+                        maxLength={200}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            email: event.target.value
+                          }))
+                        }
+                        required
+                        type="email"
+                        value={draft.email}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Nombre</label>
+                      <input
+                        className="form-input"
+                        maxLength={80}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            firstName: event.target.value
+                          }))
+                        }
+                        required
+                        value={draft.firstName}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Apellido</label>
+                      <input
+                        className="form-input"
+                        maxLength={80}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            lastName: event.target.value
+                          }))
+                        }
+                        required
+                        value={draft.lastName}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contraseña</label>
+                    <input
+                      className="form-input"
+                      minLength={8}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          password: event.target.value
+                        }))
+                      }
+                      required
+                      type="password"
+                      value={draft.password}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contrato de ruta</label>
+                    <input className="form-input" disabled value={operatorsUrl} />
+                    <span className="form-hint">
+                      Esta sección utiliza GET, POST, POST /{"{userId}"}/deactivate y POST /{"{userId}"}/reset-password.
+                    </span>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowCreateModal(false)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={isSubmitting}
+                form="create-operator-form"
+                type="submit"
+              >
+                {isSubmitting ? "Creando…" : "Crear Usuario Operador"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Password rotation modal */}
+      {showPasswordModal && selectedOperator ? (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Rotar contraseña — {selectedOperator.displayName}</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowPasswordModal(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="rotate-password-form" onSubmit={handleRotateSelectedOperatorPassword}>
+                <div className="stack">
+                  <div className="form-group">
+                    <label className="form-label">Nueva contraseña</label>
+                    <input
+                      className="form-input"
+                      disabled={isRotatingPassword}
+                      minLength={8}
+                      onChange={(event) =>
+                        setPasswordRotationDraft({
+                          password: event.target.value
+                        })
+                      }
+                      required
+                      type="password"
+                      value={passwordRotationDraft.password}
+                    />
+                    <span className="form-hint">
+                      El nuevo secreto va a identity-access. La consola nunca recibe credenciales de administrador de Keycloak.
+                    </span>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowPasswordModal(false)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={isRotatingPassword}
+                form="rotate-password-form"
+                type="submit"
+              >
+                {isRotatingPassword ? "Rotando…" : "Rotar contraseña"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

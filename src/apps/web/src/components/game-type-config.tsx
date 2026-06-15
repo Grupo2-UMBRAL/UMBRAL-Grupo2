@@ -1,5 +1,3 @@
-"use client";
-
 type GameTypeConfigProps = {
   gameType: string;
   prompt: string;
@@ -19,114 +17,93 @@ export function GameTypeConfig({
 }: GameTypeConfigProps) {
   if (gameType === "Treasure Hunt") {
     return (
-      <div className="game-config-section">
-        <h5 className="config-heading">🗺️ Configuración Treasure Hunt</h5>
+      <div className="stack">
+        <h4>Configuración Treasure Hunt</h4>
 
-        <label className="field">
-          <span>Instrucción para participantes *</span>
+        <div className="form-group">
+          <label className="form-label">Instrucción para participantes *</label>
           <textarea
-            className="input textarea-input"
+            className="form-textarea"
             maxLength={1024}
-            onChange={(event) => onUpdate("prompt", event.target.value)}
-            placeholder="Ej: Encuentra el código QR escondido en el salón siguiendo las pistas..."
+            onChange={(e) => onUpdate("prompt", e.target.value)}
+            placeholder="Ej: Encuentra el código QR escondido en el salón..."
             required
             rows={3}
             value={prompt}
           />
-          <span className="field-hint">
-            Texto que verán los participantes explicando qué deben buscar.
-          </span>
-        </label>
+          <span className="form-hint">Texto que verán los participantes explicando qué deben buscar.</span>
+        </div>
 
-        <label className="field">
-          <span>QR Hash esperado *</span>
+        <div className="form-group">
+          <label className="form-label">QR Hash esperado *</label>
           <input
-            className="input"
+            className="form-input"
             maxLength={256}
-            onChange={(event) => onUpdate("expectedQrHash", event.target.value)}
+            onChange={(e) => onUpdate("expectedQrHash", e.target.value)}
             placeholder="Hash del código QR que deben encontrar"
             required
             value={expectedQrHash}
           />
-          <span className="field-hint">
-            Identificador único del QR físico que los participantes deben
-            escanear.
-          </span>
-        </label>
-        {/* TODO: Add QR photo upload + location picker for treasure hunt setup */}
+          <span className="form-hint">Identificador único del QR físico que los participantes deben escanear.</span>
+        </div>
       </div>
     );
   }
 
   if (gameType === "Trivia") {
     return (
-      <div className="game-config-section">
-        <h5 className="config-heading">🎯 Configuración Trivia</h5>
+      <div className="stack">
+        <h4>Configuración Trivia</h4>
 
-        <label className="field">
-          <span>Pregunta para participantes *</span>
+        <div className="form-group">
+          <label className="form-label">Pregunta para participantes *</label>
           <textarea
-            className="input textarea-input"
+            className="form-textarea"
             maxLength={1024}
-            onChange={(event) => onUpdate("prompt", event.target.value)}
+            onChange={(e) => onUpdate("prompt", e.target.value)}
             placeholder="Ej: ¿Qué significa 'Jack O'Lantern'?"
             required
             rows={3}
             value={prompt}
           />
-          <span className="field-hint">
-            Pregunta que verán los participantes y deberán responder.
-          </span>
-        </label>
+          <span className="form-hint">Pregunta que verán los participantes y deberán responder.</span>
+        </div>
 
-        <p className="field-hint config-hint">
+        <p className="form-hint" style={{ fontWeight: 500, color: "var(--text-secondary)" }}>
           Define al menos UNA de estas opciones para validar respuestas:
         </p>
 
-        <label className="field">
-          <span>Respuesta válida</span>
+        <div className="form-group">
+          <label className="form-label">Respuesta válida</label>
           <input
-            className="input"
+            className="form-input"
             maxLength={512}
-            onChange={(event) =>
-              onUpdate("triviaValidAnswer", event.target.value)
-            }
+            onChange={(e) => onUpdate("triviaValidAnswer", e.target.value)}
             placeholder="Ej: Jack O'Lantern"
             value={triviaValidAnswer}
           />
-          <span className="field-hint">
-            Respuesta exacta esperada. Validación automática contra esta cadena.
-          </span>
-        </label>
-
-        <div className="field-divider">
-          <span>O</span>
+          <span className="form-hint">Respuesta exacta esperada. Validación automática contra esta cadena.</span>
         </div>
 
-        <label className="field">
-          <span>Criterio de validación</span>
+        <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "var(--text-sm)" }}>O</div>
+
+        <div className="form-group">
+          <label className="form-label">Criterio de validación</label>
           <input
-            className="input"
+            className="form-input"
             maxLength={512}
-            onChange={(event) =>
-              onUpdate("triviaInitialValidationCriterion", event.target.value)
-            }
+            onChange={(e) => onUpdate("triviaInitialValidationCriterion", e.target.value)}
             placeholder="Ej: debe mencionar 'calabaza' o 'linterna'"
             value={triviaInitialValidationCriterion}
           />
-          <span className="field-hint">
-            Regla flexible para validación inicial. Operador puede corregir
-            después.
-          </span>
-        </label>
+          <span className="form-hint">Regla flexible para validación inicial. Operador puede corregir después.</span>
+        </div>
 
-        {!triviaValidAnswer.trim() &&
-          !triviaInitialValidationCriterion.trim() && (
-            <p className="validation-warning">
-              ⚠️ Debes definir al menos una respuesta válida o un criterio de
-              validación para esta etapa de trivia.
-            </p>
-          )}
+        {!triviaValidAnswer.trim() && !triviaInitialValidationCriterion.trim() && (
+          <div className="error-banner">
+            Debes definir al menos una respuesta válida o un criterio de validación para esta etapa de trivia.
+          </div>
+        )}
       </div>
     );
   }

@@ -1,73 +1,91 @@
-"use client";
-
-import { useState } from "react";
-import { getClientConfig } from "@/lib/config";
+import { useEffect, useRef, useState } from "react";
 import {
-  type LiveSessionStateChangedEvent,
-  useSessionOperationsConnection
-} from "@/hooks/use-session-operations-connection";
+  HubConnectionBuilder,
+  HubConnectionState,
+  HttpTransportType,
+  LogLevel,
+} from "@microsoft/signalr";
+import { getClientConfig } from "@/lib/config";
+
+type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "error";
 
 type LiveSessionConnectionProps = {
   accessToken: string;
-  onResync: () => void;
+  onResync?: () => void;
 };
 
 export function LiveSessionConnection({
   accessToken,
-  onResync
+  onResync,
 }: LiveSessionConnectionProps) {
-  const config = getClientConfig();
-  const [resyncCount, setResyncCount] = useState(0);
-  const [lastStateChange, setLastStateChange] = useState<LiveSessionStateChangedEvent | null>(null);
-  const connection = useSessionOperationsConnection({
-    accessToken,
-    hubUrl: config.sessionHubUrl,
-    onResync: () => {
-      setResyncCount((current) => current + 1);
-      onResync();
-    },
-    onLiveSessionStateChanged: setLastStateChange
-  });
+  const [state, setState] = useState<ConnectionState>("connecting");
+  const connectionRef = useRef<ReturnType<
+    typeof new HubConnectionBuilder().build
+  > | null>(null);
+
+  useEffect(() => {
+    const config = getClientConfig();
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(config.sessionHubUrl, {
+        accessTokenFactory: () => accessToken,
+        transport: HttpTransportType.WebSockets,
+        skipNegotiation: true,
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connectionRef.current = connection;
+
+    connection.onreconnecting(() => setState("reconnecting"));
+    connection.onreconnected(() => {
+      setState("connected");
+      onResync?.();
+    });
+    connection.onclose(() => setState("disconnected"));
+
+    connection
+      .start()
+      .then(() => setState("connected"))
+      .catch(() => setState("error"));
+
+    return () => {
+      if (connection.state !== HubConnectionState.Disconnected) {
+        void connection.stop();
+      }
+    };
+  }, [accessToken, onResync]);
+
+  const dotClass = () => {
+    switch (state) {
+      case "connected": return "status-dot status-dot-green";
+      case "reconnecting":
+      case "connecting": return "status-dot status-dot-amber status-dot-pulse";
+      case "error": return "status-dot status-dot-red";
+      default: return "status-dot status-dot-muted";
+    }
+  };
+
+  const label = () => {
+    switch (state) {
+      case "connected": return "Conectado";
+      case "reconnecting": return "Reconectando...";
+      case "connecting": return "Conectando...";
+      case "error": return "Error de conexión";
+      default: return "Desconectado";
+    }
+  };
 
   return (
-    <section className="panel stack-gap">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Tiempo real</p>
-          <h2>Transmisión de sesión</h2>
-        </div>
-        <p className="section-copy">
-          El hook apunta a `/session-hub/hubs/session`, utiliza autenticación por consulta JWT, se reconecta automáticamente y luego solicita la resincronización de la consola.
-        </p>
-      </div>
-
-      <div className={`signal-card signal-${connection.kind}`}>
-        <strong>{connection.kind}</strong>
-        <p>{connection.detail}</p>
-      </div>
-
-      <dl className="definition-grid">
-        <div>
-          <dt>URL del Hub</dt>
-          <dd>{config.sessionHubUrl}</dd>
-        </div>
-        <div>
-          <dt>Cantidad de resincronizaciones</dt>
-          <dd>{resyncCount}</dd>
-        </div>
-      </dl>
-
-      {lastStateChange ? (
-        <div className="signal-card signal-connected">
-          <strong>Último evento de ciclo de vida</strong>
-          <p>
-            {lastStateChange.previousState} -&gt; {lastStateChange.state}
-          </p>
-          <p>
-            Sesión {lastStateChange.liveSessionId} con {lastStateChange.registeredSessionTeamCount} equipo(s)
-          </p>
-        </div>
-      ) : null}
-    </section>
+    <div className="connection-indicator">
+      <span className={dotClass()} />
+      <span>{label()}</span>
+    </div>
   );
 }
