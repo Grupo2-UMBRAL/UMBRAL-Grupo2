@@ -1,48 +1,73 @@
-## Web
+# React + TypeScript + Vite
 
-Next.js shell for `Administrator` and `Operator`.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-### Scope
+Currently, two official plugins are available:
 
-- Keycloak login and logout
-- protected routes for web roles
-- browser API checks with attached JWT
-- administrator Operator User provisioning through `/identity-access/api/identity-access/operators` via edge-proxy
-- SignalR reconnect hook with resync callback
-- calm operational layout aligned with `docs/product/design.md`
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-### Local run with Docker Compose
+## React Compiler
 
-Install frontend deps:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-docker compose --env-file .env.example -f docker-compose.dev.yml -f docker-compose.utils.yml run --rm web-package-manager install next react react-dom @microsoft/signalr @fontsource/ibm-plex-sans @fontsource/ibm-plex-mono
-docker compose --env-file .env.example -f docker-compose.dev.yml -f docker-compose.utils.yml run --rm web-package-manager install -D typescript @types/node @types/react @types/react-dom eslint eslint-config-next @eslint/eslintrc
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-Start backend stack plus web shell:
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```bash
-docker compose --env-file .env.example -f docker-compose.dev.yml up --build web edge-proxy keycloak identity-access-service mission-design-service session-operations-service scoring-audit-service
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-Run lint:
-
-```bash
-docker compose --env-file .env.example -f docker-compose.dev.yml -f docker-compose.utils.yml run --rm web-package-manager run lint
-```
-
-### Verification
-
-1. Open `http://localhost:3000/login`
-2. Login with `admin / admin123!`
-3. Verify redirect to `/administrator`
-4. Verify administrator shell can load Operator Users from `/identity-access/api/identity-access/operators`
-5. Login with `operator / operator123!`
-6. Verify redirect to `/operator`
-7. Login with `participant / participant123!`
-8. Verify `403` role rejection message
-9. Verify browser API calls route through `edge-proxy`, including `/identity-access/*` once the service project exists in the worktree
-10. Stop `session-operations-service` or `edge-proxy`
-11. Verify SignalR state flips to error or reconnecting
-12. Bring service back and verify resync counter increments

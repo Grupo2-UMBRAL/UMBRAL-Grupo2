@@ -477,16 +477,16 @@ function findValidationIssue(
   for (const node of nodes) {
     const trimmedName = node.name.trim();
     if (!trimmedName) {
-      return `${pathPrefix}: node name is required.`;
+      return `${pathPrefix}: el nombre del nodo es obligatorio.`;
     }
 
     const order = Number.parseInt(node.order, 10);
     if (!Number.isFinite(order) || order <= 0) {
-      return `${pathPrefix}: node "${trimmedName || "Untitled"}" needs a positive order.`;
+      return `${pathPrefix}: el nodo "${trimmedName || "Sin título"}" necesita un orden positivo.`;
     }
 
     if (orders.has(order)) {
-      return `${pathPrefix}: sibling order ${order} is duplicated.`;
+      return `${pathPrefix}: el orden ${order} está duplicado entre hermanos.`;
     }
 
     orders.set(order, trimmedName);
@@ -499,37 +499,37 @@ function findValidationIssue(
     const ownBudget = parseOptionalInteger(node.timeBudgetMinutes);
 
     if (defaultBudget !== null && !Number.isFinite(defaultBudget)) {
-      return `${label}: default time budget must be a number.`;
+      return `${label}: el presupuesto de tiempo por defecto debe ser un número.`;
     }
 
     if (ownBudget !== null && !Number.isFinite(ownBudget)) {
-      return `${label}: time budget must be a number.`;
+      return `${label}: el presupuesto de tiempo debe ser un número.`;
     }
 
     if (isLeaf) {
       const effectiveBudget = ownBudget ?? inheritedBudgetMinutes;
 
       if (!effectiveBudget || effectiveBudget <= 0) {
-        return `${label}: leaf stage needs a local time budget or inherited mission budget.`;
+        return `${label}: la etapa hoja necesita un presupuesto de tiempo local o heredado de la misión.`;
       }
 
       if (!node.gameType) {
-        return `${label}: leaf stage needs a game type.`;
+        return `${label}: la etapa hoja necesita un tipo de juego.`;
       }
 
       if (!isSupportedDifficulty(node.difficulty)) {
-        return `${label}: leaf stage needs a valid difficulty.`;
+        return `${label}: la etapa hoja necesita una dificultad válida.`;
       }
 
       if (!trimToNull(node.prompt)) {
-        return `${label}: leaf stage needs a prompt visible to participants.`;
+        return `${label}: la etapa hoja necesita un enunciado visible para los participantes.`;
       }
 
       if (
         node.gameType === "Treasure Hunt" &&
         !trimToNull(node.expectedQrHash)
       ) {
-        return `${label}: Treasure Hunt stage needs expected QR hash.`;
+        return `${label}: la etapa Treasure Hunt necesita el hash QR esperado.`;
       }
 
       if (
@@ -537,33 +537,33 @@ function findValidationIssue(
         !trimToNull(node.triviaValidAnswer) &&
         !trimToNull(node.triviaInitialValidationCriterion)
       ) {
-        return `${label}: Trivia stage needs valid answer or validation criterion.`;
+        return `${label}: la etapa Trivia necesita una respuesta válida o un criterio de validación.`;
       }
 
       for (const hint of node.hints) {
-        const hintLabel = `${label} / hint`;
+        const hintLabel = `${label} / pista`;
         if (!hint.content.trim()) {
-          return `${hintLabel}: content is required.`;
+          return `${hintLabel}: el contenido es obligatorio.`;
         }
 
         const hasLatitude = hint.latitude.trim().length > 0;
         const hasLongitude = hint.longitude.trim().length > 0;
         if (hasLatitude !== hasLongitude) {
-          return `${hintLabel}: coordinates need both latitude and longitude.`;
+          return `${hintLabel}: las coordenadas necesitan tanto latitud como longitud.`;
         }
 
         if (
           hasLatitude &&
           !Number.isFinite(parseOptionalDecimal(hint.latitude))
         ) {
-          return `${hintLabel}: latitude must be numeric.`;
+          return `${hintLabel}: la latitud debe ser numérica.`;
         }
 
         if (
           hasLongitude &&
           !Number.isFinite(parseOptionalDecimal(hint.longitude))
         ) {
-          return `${hintLabel}: longitude must be numeric.`;
+          return `${hintLabel}: la longitud debe ser numérica.`;
         }
       }
 
@@ -584,6 +584,30 @@ function findValidationIssue(
   return null;
 }
 
+function difficultyBadgeClass(difficulty: string) {
+  switch (difficulty) {
+    case "Easy":
+      return "badge badge-green";
+    case "Medium":
+      return "badge badge-amber";
+    case "Hard":
+      return "badge badge-red";
+    default:
+      return "badge badge-muted";
+  }
+}
+
+function gameTypeBadgeClass(gameType: string) {
+  switch (gameType) {
+    case "Treasure Hunt":
+      return "badge badge-blue";
+    case "Trivia":
+      return "badge badge-accent";
+    default:
+      return "badge badge-muted";
+  }
+}
+
 function MissionNodeEditor({
   depth,
   node,
@@ -599,15 +623,15 @@ function MissionNodeEditor({
   const isLeaf = node.children.length === 0;
 
   return (
-    <article
-      className="mission-node-card"
-      style={{ marginLeft: `${depth * 16}px` }}
+    <div
+      className={depth > 0 ? "node-item node-item-nested" : "node-item"}
+      style={depth > 0 ? { marginLeft: `${depth * 16}px` } : undefined}
     >
-      <div className="mission-node-header">
-        <div>
-          <div className="node-chip-row">
+      <div className="node-item-header row-between">
+        <div className="stack-sm">
+          <div className="row-sm">
             {isLeaf ? (
-              <span className="node-chip is-leaf">
+              <span className={gameTypeBadgeClass(node.gameType)}>
                 {node.gameType === "Trivia"
                   ? "🎯 Trivia"
                   : node.gameType === "Treasure Hunt"
@@ -615,33 +639,31 @@ function MissionNodeEditor({
                     : "🎯 Actividad"}
               </span>
             ) : (
-              <span className="node-chip is-composite">📋 Etapa</span>
+              <span className="badge badge-muted">📋 Etapa</span>
             )}
             <span
               className={
-                node.isActive
-                  ? "status-pill status-ok"
-                  : "status-pill status-error"
+                node.isActive ? "badge badge-green" : "badge badge-red"
               }
             >
-              {node.isActive ? "activa" : "inactiva"}
+              {node.isActive ? "Activa" : "Inactiva"}
             </span>
           </div>
-          <h4>
+          <strong>
             {node.name.trim() ||
               (isLeaf ? "Actividad sin título" : "Etapa sin título")}
-          </h4>
-          <p className="muted-copy">
+          </strong>
+          <p className="text-muted text-sm">
             {isLeaf
               ? "Actividad jugable con validación, pistas y tiempo configurables."
               : "Etapa compuesta. Las actividades hijas heredan el tiempo de esta etapa salvo que definan el propio."}
           </p>
         </div>
 
-        <div className="node-actions">
+        <div className="node-item-actions row-sm">
           {isLeaf ? (
             <button
-              className="ghost-button"
+              className="btn btn-ghost btn-sm"
               onClick={() => onMakeComposite(node.clientId)}
               type="button"
             >
@@ -649,7 +671,7 @@ function MissionNodeEditor({
             </button>
           ) : (
             <button
-              className="ghost-button"
+              className="btn btn-ghost btn-sm"
               onClick={() => onMakeLeaf(node.clientId)}
               type="button"
             >
@@ -657,7 +679,7 @@ function MissionNodeEditor({
             </button>
           )}
           <button
-            className="ghost-button danger-button"
+            className="btn btn-danger btn-sm"
             onClick={() => onRemoveNode(node.clientId)}
             type="button"
           >
@@ -666,11 +688,11 @@ function MissionNodeEditor({
         </div>
       </div>
 
-      <div className="node-grid">
-        <label className="field">
-          <span>Nombre *</span>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Nombre *</label>
           <input
-            className="input"
+            className="form-input"
             maxLength={120}
             onChange={(event) =>
               onUpdateNode(node.clientId, "name", event.target.value)
@@ -683,12 +705,12 @@ function MissionNodeEditor({
             required
             value={node.name}
           />
-        </label>
+        </div>
 
-        <label className="field">
-          <span>Orden</span>
+        <div className="form-group">
+          <label className="form-label">Orden</label>
           <input
-            className="input"
+            className="form-input"
             min={1}
             onChange={(event) =>
               onUpdateNode(node.clientId, "order", event.target.value)
@@ -697,27 +719,29 @@ function MissionNodeEditor({
             type="number"
             value={node.order}
           />
-        </label>
+        </div>
 
-        <label className="field inline-toggle">
-          <span>Activa</span>
-          <input
-            checked={node.isActive}
-            onChange={(event) =>
-              onUpdateNode(node.clientId, "isActive", event.target.checked)
-            }
-            type="checkbox"
-          />
-        </label>
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              checked={node.isActive}
+              onChange={(event) =>
+                onUpdateNode(node.clientId, "isActive", event.target.checked)
+              }
+              type="checkbox"
+            />
+            Activa
+          </label>
+        </div>
       </div>
 
       {isLeaf ? (
         <>
-          <div className="form-grid-two">
-            <label className="field">
-              <span>Time budget minutes</span>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Presupuesto de tiempo (min)</label>
               <input
-                className="input"
+                className="form-input"
                 min={1}
                 onChange={(event) =>
                   onUpdateNode(
@@ -729,15 +753,16 @@ function MissionNodeEditor({
                 type="number"
                 value={node.timeBudgetMinutes}
               />
-              <span className="field-hint">
-                Leave empty to inherit the mission or parent block budget.
+              <span className="form-hint">
+                Dejar vacío para heredar el presupuesto de la misión o del
+                bloque padre.
               </span>
-            </label>
+            </div>
 
-            <label className="field">
-              <span>Dificultad</span>
+            <div className="form-group">
+              <label className="form-label">Dificultad</label>
               <select
-                className="input"
+                className="form-select"
                 onChange={(event) =>
                   onUpdateNode(node.clientId, "difficulty", event.target.value)
                 }
@@ -750,12 +775,12 @@ function MissionNodeEditor({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label className="field">
-              <span>Game Type</span>
+            <div className="form-group">
+              <label className="form-label">Tipo de juego</label>
               <select
-                className="input"
+                className="form-select"
                 onChange={(event) =>
                   onUpdateNode(node.clientId, "gameType", event.target.value)
                 }
@@ -767,7 +792,7 @@ function MissionNodeEditor({
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
           </div>
 
           <GameTypeConfig
@@ -787,32 +812,32 @@ function MissionNodeEditor({
             }
           />
 
-          <section className="node-subsection">
-            <div className="mission-list-header">
-              <div>
-                <p className="eyebrow">Hints</p>
-                <h5>Clues and solution drops</h5>
+          <div className="card-section stack-sm">
+            <div className="card-header card-header-actions">
+              <div className="stack-sm">
+                <span className="eyebrow">Pistas</span>
+                <strong>Claves y soluciones</strong>
               </div>
               <button
-                className="ghost-button"
+                className="btn btn-ghost btn-sm"
                 onClick={() => onAddHint(node.clientId)}
                 type="button"
               >
-                Add hint
+                Agregar pista
               </button>
             </div>
 
             {node.hints.length === 0 ? (
-              <div className="tree-empty-state">
-                <strong>No hints yet.</strong>
+              <div className="empty-state">
+                <strong>Aún no hay pistas.</strong>
                 <p>
-                  Treasure Hunt and Trivia stages can carry visible clues or
-                  final solution drops.
+                  Las etapas Treasure Hunt y Trivia pueden llevar claves
+                  visibles o soluciones finales.
                 </p>
               </div>
             ) : null}
 
-            <div className="hint-editor-list">
+            <div className="stack-sm">
               {node.hints.map((hint, index) => (
                 <HintEditor
                   key={hint.clientId}
@@ -825,14 +850,16 @@ function MissionNodeEditor({
                 />
               ))}
             </div>
-          </section>
+          </div>
         </>
       ) : (
         <>
-          <label className="field">
-            <span>Default time budget minutes</span>
+          <div className="form-group">
+            <label className="form-label">
+              Presupuesto de tiempo por defecto (min)
+            </label>
             <input
-              className="input"
+              className="form-input"
               min={1}
               onChange={(event) =>
                 onUpdateNode(
@@ -844,37 +871,37 @@ function MissionNodeEditor({
               type="number"
               value={node.defaultTimeBudgetMinutes}
             />
-            <span className="field-hint">
-              Optional override for all descendants that do not define a leaf
-              budget.
+            <span className="form-hint">
+              Sobreescritura opcional para todos los descendientes que no
+              definan un presupuesto de hoja.
             </span>
-          </label>
+          </div>
 
-          <section className="node-subsection">
-            <div className="mission-list-header">
-              <div>
-                <p className="eyebrow">Children</p>
-                <h5>Nested flow</h5>
+          <div className="card-section stack-sm">
+            <div className="card-header card-header-actions">
+              <div className="stack-sm">
+                <span className="eyebrow">Hijos</span>
+                <strong>Flujo anidado</strong>
               </div>
-              <div className="node-actions">
+              <div className="row-sm">
                 <button
-                  className="ghost-button"
+                  className="btn btn-ghost btn-sm"
                   onClick={() => onAddChild(node.clientId, "leaf")}
                   type="button"
                 >
-                  Add stage
+                  Agregar etapa
                 </button>
                 <button
-                  className="ghost-button"
+                  className="btn btn-ghost btn-sm"
                   onClick={() => onAddChild(node.clientId, "composite")}
                   type="button"
                 >
-                  Add block
+                  Agregar bloque
                 </button>
               </div>
             </div>
 
-            <div className="mission-node-list">
+            <div className="node-tree">
               {node.children.map((child) => (
                 <MissionNodeEditor
                   depth={depth + 1}
@@ -891,10 +918,10 @@ function MissionNodeEditor({
                 />
               ))}
             </div>
-          </section>
+          </div>
         </>
       )}
-    </article>
+    </div>
   );
 }
 
@@ -1209,7 +1236,7 @@ export function MissionsAdminWorkspace({
     const validationIssue = findValidationIssue(
       draft.nodes,
       Number.isFinite(maximumDurationMinutes) ? maximumDurationMinutes : null,
-      draft.name.trim() || "Mission",
+      draft.name.trim() || "Misión",
     );
     if (validationIssue) {
       setErrorMessage(validationIssue);
@@ -1317,345 +1344,408 @@ export function MissionsAdminWorkspace({
   }
 
   return (
-    <section className="panel stack-gap">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Diseño de misiones</p>
+    <div className="workspace-section">
+      <div className="workspace-section-header">
+        <div className="stack-sm">
+          <span className="eyebrow">Diseño de misiones</span>
           <h2>Espacio de trabajo de Misiones</h2>
+          <p className="text-muted">
+            Superficie de control del administrador para autores de misiones,
+            con un lenguaje operativo tranquilo orientado hacia la consola
+            cálida existente más bloques de edición anidados más densos.
+          </p>
         </div>
-        <p className="section-copy">
-          Superficie de control del administrador para autores de misiones, con
-          un lenguaje operativo tranquilo, orientado hacia la consola cálida
-          existente más bloques de edición anidados más densos.
-        </p>
       </div>
 
-      <div className="mission-summary-grid">
-        <article className="signal-card">
-          <strong>Total de Misiones</strong>
-          <p className="metric-value">{selectionSummary.total}</p>
-        </article>
-        <article className="signal-card">
-          <strong>Activas</strong>
-          <p className="metric-value metric-success">
-            {selectionSummary.active}
-          </p>
-        </article>
-        <article className="signal-card">
-          <strong>Inactivas</strong>
-          <p className="metric-value metric-danger">
-            {selectionSummary.inactive}
-          </p>
-        </article>
-      </div>
-
-      {errorMessage ? <p className="banner-error">{errorMessage}</p> : null}
-      {feedback ? <p className="banner-success">{feedback}</p> : null}
-
-      <div className="mission-workspace-grid">
-        <section className="mission-list-panel">
-          <div className="mission-list-header">
-            <div>
-              <p className="eyebrow">Catálogo</p>
-              <h3>Misiones</h3>
-            </div>
-            <button
-              className="ghost-button"
-              onClick={handleCreateMode}
-              type="button"
-            >
-              Nueva Misión
-            </button>
+      <div className="workspace-section-body stack">
+        <div className="row-wrap" style={{ gap: "0.75rem" }}>
+          <div className="card-compact">
+            <span className="text-muted text-sm">Total de Misiones</span>
+            <strong>{selectionSummary.total}</strong>
           </div>
+          <div className="card-compact">
+            <span className="text-muted text-sm">Activas</span>
+            <strong>
+              <span className="badge badge-green">
+                {selectionSummary.active}
+              </span>
+            </strong>
+          </div>
+          <div className="card-compact">
+            <span className="text-muted text-sm">Inactivas</span>
+            <strong>
+              <span className="badge badge-red">
+                {selectionSummary.inactive}
+              </span>
+            </strong>
+          </div>
+        </div>
 
-          {isLoadingList ? (
-            <p className="muted-copy">Cargando Misiones.</p>
-          ) : null}
+        {errorMessage ? (
+          <div className="error-banner">{errorMessage}</div>
+        ) : null}
+        {feedback ? (
+          <div className="success-banner">{feedback}</div>
+        ) : null}
 
-          {!isLoadingList && missions.length === 0 ? (
-            <div className="empty-state">
-              <strong>Aún no hay Misiones.</strong>
-              <p>
-                Cree la primera Misión reutilizable para el catálogo del
-                administrador.
-              </p>
-            </div>
-          ) : null}
-
-          <div className="mission-list">
-            {missions.map((mission) => (
+        <div className="split-layout-wide">
+          {/* ── Mission list panel ── */}
+          <section className="card stack">
+            <div className="card-header card-header-actions">
+              <div className="stack-sm">
+                <span className="eyebrow">Catálogo</span>
+                <h3>Misiones</h3>
+              </div>
               <button
-                className={
-                  mission.id === selectedMissionId
-                    ? "mission-list-item is-active"
-                    : "mission-list-item"
-                }
-                key={mission.id}
-                onClick={() => {
-                  setFeedback(null);
-                  setSelectedMissionId(mission.id);
-                }}
+                className="btn btn-ghost btn-sm"
+                onClick={handleCreateMode}
                 type="button"
               >
-                <div className="mission-list-item-top">
-                  <strong>{mission.name}</strong>
-                  <span
-                    className={
-                      mission.isActive
-                        ? "status-pill status-ok"
-                        : "status-pill status-error"
-                    }
-                  >
-                    {mission.isActive ? "activa" : "inactiva"}
+                Nueva Misión
+              </button>
+            </div>
+
+            {isLoadingList ? (
+              <div className="loading-center">Cargando Misiones…</div>
+            ) : null}
+
+            {!isLoadingList && missions.length === 0 ? (
+              <div className="empty-state">
+                <strong>Aún no hay Misiones.</strong>
+                <p>
+                  Cree la primera Misión reutilizable para el catálogo del
+                  administrador.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Estado</th>
+                    <th>Dificultad</th>
+                    <th>Tipo</th>
+                    <th>Duración</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {missions.map((mission) => (
+                    <tr
+                      className={
+                        mission.id === selectedMissionId
+                          ? "clickable is-selected"
+                          : "clickable"
+                      }
+                      key={mission.id}
+                      onClick={() => {
+                        setFeedback(null);
+                        setSelectedMissionId(mission.id);
+                      }}
+                    >
+                      <td>
+                        <strong>{mission.name}</strong>
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            mission.isActive
+                              ? "badge badge-green"
+                              : "badge badge-red"
+                          }
+                        >
+                          {mission.isActive ? "Activa" : "Inactiva"}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={difficultyBadgeClass(mission.difficulty)}
+                        >
+                          {mission.difficulty}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={gameTypeBadgeClass(mission.gameType)}
+                        >
+                          {mission.gameType}
+                        </span>
+                      </td>
+                      <td className="mono text-sm">
+                        {mission.maximumDurationMinutes} min
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* ── Mission editor panel ── */}
+          <section className="card stack">
+            <div className="card-header card-header-actions">
+              <div className="stack-sm">
+                <span className="eyebrow">
+                  {editorMode === "create"
+                    ? "Crear"
+                    : "Misión seleccionada"}
+                </span>
+                <h3>
+                  {editorMode === "create"
+                    ? "Nueva Misión"
+                    : (selectedMission?.name ?? "Detalles de la misión")}
+                </h3>
+              </div>
+              {selectedMission ? (
+                <span
+                  className={
+                    selectedMission.isActive
+                      ? "badge badge-green"
+                      : "badge badge-red"
+                  }
+                >
+                  {selectedMission.isActive ? "Activa" : "Inactiva"}
+                </span>
+              ) : null}
+            </div>
+
+            {isLoadingDetail ? (
+              <div className="loading-center">
+                Cargando detalles de la misión…
+              </div>
+            ) : null}
+
+            <form className="stack" onSubmit={handleSubmit}>
+              {/* Tree stats */}
+              <div className="info-banner">
+                <div className="row-wrap" style={{ gap: "1rem" }}>
+                  <span>
+                    <strong>Total de nodos:</strong>{" "}
+                    {missionTreeStats.totalNodes}
+                  </span>
+                  <span>
+                    <strong>Etapas hoja:</strong>{" "}
+                    {missionTreeStats.leafStages}
+                  </span>
+                  <span>
+                    <strong>Bloques:</strong>{" "}
+                    {missionTreeStats.compositeBlocks}
+                  </span>
+                  <span>
+                    <strong>Pistas:</strong> {missionTreeStats.hints}
                   </span>
                 </div>
-                <p>{mission.difficulty}</p>
-                <dl className="mission-meta-grid">
-                  <div>
-                    <dt>Tipo de catálogo</dt>
-                    <dd>{mission.gameType}</dd>
-                  </div>
-                  <div>
-                    <dt>Duración máxima</dt>
-                    <dd>{mission.maximumDurationMinutes} min</dd>
-                  </div>
-                </dl>
-              </button>
-            ))}
-          </div>
-        </section>
+              </div>
 
-        <section className="mission-editor-panel">
-          <div className="mission-list-header">
-            <div>
-              <p className="eyebrow">
-                {editorMode === "create" ? "Crear" : "Misión seleccionada"}
-              </p>
-              <h3>
-                {editorMode === "create"
-                  ? "Nueva Misión"
-                  : (selectedMission?.name ?? "Detalles de la misión")}
-              </h3>
-            </div>
-            {selectedMission ? (
-              <span
-                className={
-                  selectedMission.isActive
-                    ? "status-pill status-ok"
-                    : "status-pill status-error"
-                }
-              >
-                {selectedMission.isActive ? "activa" : "inactiva"}
-              </span>
-            ) : null}
-          </div>
-
-          {isLoadingDetail ? (
-            <p className="muted-copy">Cargando detalles de la misión.</p>
-          ) : null}
-
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="tree-stat-grid">
-              <article className="signal-card">
-                <strong>Total de nodos</strong>
-                <p className="metric-value">{missionTreeStats.totalNodes}</p>
-              </article>
-              <article className="signal-card">
-                <strong>Etapas hoja</strong>
-                <p className="metric-value">{missionTreeStats.leafStages}</p>
-              </article>
-              <article className="signal-card">
-                <strong>Bloques</strong>
-                <p className="metric-value">
-                  {missionTreeStats.compositeBlocks}
-                </p>
-              </article>
-              <article className="signal-card">
-                <strong>Pistas</strong>
-                <p className="metric-value">{missionTreeStats.hints}</p>
-              </article>
-            </div>
-
-            <label className="field">
-              <span>Nombre</span>
-              <input
-                className="input"
-                maxLength={120}
-                onChange={(event) =>
-                  updateDraftField("name", event.target.value)
-                }
-                required
-                value={draft.name}
-              />
-            </label>
-
-            <label className="field">
-              <span>Descripción</span>
-              <textarea
-                className="input textarea-input"
-                maxLength={1024}
-                onChange={(event) =>
-                  updateDraftField("description", event.target.value)
-                }
-                required
-                rows={5}
-                value={draft.description}
-              />
-            </label>
-
-            <div className="form-grid-two">
-              <label className="field">
-                <span>Dificultad</span>
-                <select
-                  className="input"
+              <div className="form-group">
+                <label className="form-label">Nombre</label>
+                <input
+                  className="form-input"
+                  maxLength={120}
                   onChange={(event) =>
-                    updateDraftField("difficulty", event.target.value)
+                    updateDraftField("name", event.target.value)
                   }
                   required
-                  value={draft.difficulty}
+                  value={draft.name}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Descripción</label>
+                <textarea
+                  className="form-textarea"
+                  maxLength={1024}
+                  onChange={(event) =>
+                    updateDraftField("description", event.target.value)
+                  }
+                  required
+                  rows={5}
+                  value={draft.description}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Dificultad</label>
+                  <select
+                    className="form-select"
+                    onChange={(event) =>
+                      updateDraftField("difficulty", event.target.value)
+                    }
+                    required
+                    value={draft.difficulty}
+                  >
+                    {difficultyOptions.map((difficulty) => (
+                      <option key={difficulty} value={difficulty}>
+                        {difficulty}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Duración máxima (minutos)
+                  </label>
+                  <input
+                    className="form-input"
+                    max={1440}
+                    min={1}
+                    onChange={(event) =>
+                      updateDraftField(
+                        "maximumDurationMinutes",
+                        event.target.value,
+                      )
+                    }
+                    required
+                    type="number"
+                    value={draft.maximumDurationMinutes}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Tipo de juego del catálogo
+                </label>
+                <select
+                  className="form-select"
+                  onChange={(event) =>
+                    updateDraftField("gameType", event.target.value)
+                  }
+                  value={draft.gameType}
                 >
-                  {difficultyOptions.map((difficulty) => (
-                    <option key={difficulty} value={difficulty}>
-                      {difficulty}
+                  {gameTypeOptions.map((gameType) => (
+                    <option key={gameType} value={gameType}>
+                      {gameType}
                     </option>
                   ))}
                 </select>
-              </label>
-
-              <label className="field">
-                <span>Duración máxima (minutos)</span>
-                <input
-                  className="input"
-                  max={1440}
-                  min={1}
-                  onChange={(event) =>
-                    updateDraftField(
-                      "maximumDurationMinutes",
-                      event.target.value,
-                    )
-                  }
-                  required
-                  type="number"
-                  value={draft.maximumDurationMinutes}
-                />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Tipo de juego del catálogo</span>
-              <select
-                className="input"
-                onChange={(event) =>
-                  updateDraftField("gameType", event.target.value)
-                }
-                value={draft.gameType}
-              >
-                {gameTypeOptions.map((gameType) => (
-                  <option key={gameType} value={gameType}>
-                    {gameType}
-                  </option>
-                ))}
-              </select>
-              <span className="field-hint">
-                Las etapas de la misión ahora pueden mezclar tipos de juego.
-                Mantenga esta etiqueta del catálogo alineada con cómo debe
-                aparecer la Misión en los resúmenes del backend actual.
-              </span>
-            </label>
-
-            <section className="node-subsection">
-              <div className="mission-list-header">
-                <div>
-                  <p className="eyebrow">Estructura</p>
-                  <h4>Árbol de nodos de la misión</h4>
-                </div>
-                <div className="node-actions">
-                  <button
-                    className="ghost-button"
-                    onClick={() => addRootNode("leaf")}
-                    type="button"
-                  >
-                    Agregar etapa raíz
-                  </button>
-                  <button
-                    className="ghost-button"
-                    onClick={() => addRootNode("composite")}
-                    type="button"
-                  >
-                    Agregar bloque raíz
-                  </button>
-                </div>
+                <span className="form-hint">
+                  Las etapas de la misión ahora pueden mezclar tipos de juego.
+                  Mantenga esta etiqueta del catálogo alineada con cómo debe
+                  aparecer la Misión en los resúmenes del backend actual.
+                </span>
               </div>
 
-              {draft.nodes.length === 0 ? (
-                <div className="tree-empty-state">
-                  <strong>Aún no hay nodos.</strong>
-                  <p>
-                    Comience con una etapa jugable o un bloque compuesto que
-                    anide un flujo más profundo.
-                  </p>
+              {/* ── Node tree ── */}
+              <div className="card-section stack">
+                <div className="card-header card-header-actions">
+                  <div className="stack-sm">
+                    <span className="eyebrow">Estructura</span>
+                    <h4>Árbol de nodos de la misión</h4>
+                  </div>
+                  <div className="row-sm">
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => addRootNode("leaf")}
+                      type="button"
+                    >
+                      Agregar etapa raíz
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => addRootNode("composite")}
+                      type="button"
+                    >
+                      Agregar bloque raíz
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="mission-node-list">
-                  {draft.nodes.map((node) => (
-                    <MissionNodeEditor
-                      depth={0}
-                      key={node.clientId}
-                      node={node}
-                      onAddChild={addChildNode}
-                      onAddHint={addHint}
-                      onMakeComposite={makeComposite}
-                      onMakeLeaf={makeLeaf}
-                      onRemoveHint={removeHint}
-                      onRemoveNode={removeNode}
-                      onUpdateHint={updateHintField}
-                      onUpdateNode={updateNodeField}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
 
-            <div className="mission-action-row">
-              <button
-                className="primary-button"
-                disabled={isSubmitting}
-                type="submit"
-              >
-                {editorMode === "create" ? "Crear Misión" : "Guardar cambios"}
-              </button>
+                {draft.nodes.length === 0 ? (
+                  <div className="empty-state">
+                    <strong>Aún no hay nodos.</strong>
+                    <p>
+                      Comience con una etapa jugable o un bloque compuesto que
+                      anide un flujo más profundo.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="node-tree">
+                    {draft.nodes.map((node) => (
+                      <MissionNodeEditor
+                        depth={0}
+                        key={node.clientId}
+                        node={node}
+                        onAddChild={addChildNode}
+                        onAddHint={addHint}
+                        onMakeComposite={makeComposite}
+                        onMakeLeaf={makeLeaf}
+                        onRemoveHint={removeHint}
+                        onRemoveNode={removeNode}
+                        onUpdateHint={updateHintField}
+                        onUpdateNode={updateNodeField}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              {selectedMission?.isActive ? (
+              <div className="form-actions">
                 <button
-                  className="ghost-button danger-button"
+                  className="btn btn-primary"
                   disabled={isSubmitting}
-                  onClick={handleDeactivate}
-                  type="button"
+                  type="submit"
                 >
-                  Desactivar
+                  {editorMode === "create"
+                    ? "Crear Misión"
+                    : "Guardar cambios"}
                 </button>
-              ) : null}
-            </div>
-          </form>
 
-          {selectedMission ? (
-            <dl className="definition-grid mission-detail-grid">
-              <div>
-                <dt>ID de la misión</dt>
-                <dd>{selectedMission.id}</dd>
+                {selectedMission?.isActive ? (
+                  <button
+                    className="btn btn-danger"
+                    disabled={isSubmitting}
+                    onClick={handleDeactivate}
+                    type="button"
+                  >
+                    Desactivar
+                  </button>
+                ) : null}
               </div>
-              <div>
-                <dt>Etiqueta del catálogo</dt>
-                <dd>{selectedMission.gameType}</dd>
+            </form>
+
+            {selectedMission ? (
+              <div className="detail-panel">
+                <div className="detail-row">
+                  <span className="detail-label">ID de la misión</span>
+                  <span className="detail-value mono">
+                    {selectedMission.id}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Etiqueta del catálogo</span>
+                  <span className="detail-value">
+                    <span
+                      className={gameTypeBadgeClass(
+                        selectedMission.gameType,
+                      )}
+                    >
+                      {selectedMission.gameType}
+                    </span>
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Estado actual</span>
+                  <span className="detail-value">
+                    <span
+                      className={
+                        selectedMission.isActive
+                          ? "badge badge-green"
+                          : "badge badge-red"
+                      }
+                    >
+                      {selectedMission.isActive ? "Activa" : "Inactiva"}
+                    </span>
+                  </span>
+                </div>
               </div>
-              <div>
-                <dt>Estado actual</dt>
-                <dd>{selectedMission.isActive ? "Activa" : "Inactiva"}</dd>
-              </div>
-            </dl>
-          ) : null}
-        </section>
+            ) : null}
+          </section>
+        </div>
       </div>
-    </section>
+    </div>
   );
 }

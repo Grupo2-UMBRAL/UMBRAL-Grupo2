@@ -13,7 +13,14 @@ type JwtPayload = {
 function decodeBase64UrlSegment(segment: string) {
   const normalized = segment.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-  return Buffer.from(padded, "base64").toString("utf8");
+  
+  // Standard client-side base64 decode
+  const binaryString = atob(padded);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
 }
 
 export function decodeJwtPayload(token: string): JwtPayload {

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 
 type HintEditorProps = {
@@ -21,7 +19,6 @@ export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps)
 
   function handleToggleLocation() {
     if (showLocation) {
-      // Clear location when hiding
       onUpdate("latitude", "");
       onUpdate("longitude", "");
     }
@@ -29,77 +26,74 @@ export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps)
   }
 
   return (
-    <article className="hint-card">
-      <div className="mission-list-header">
-        <div>
-          <p className="eyebrow">Pista {index + 1}</p>
-        </div>
-        <button className="ghost-button danger-button" onClick={onRemove} type="button">
+    <article className="node-item">
+      <div className="row-between">
+        <span className="text-sm font-semibold text-secondary">Pista {index + 1}</span>
+        <button className="btn btn-danger btn-sm" onClick={onRemove} type="button">
           Quitar
         </button>
       </div>
 
-      <label className="field">
-        <span>Contenido</span>
+      <div className="form-group">
+        <label className="form-label">Contenido</label>
         <textarea
-          className="input textarea-input"
+          className="form-textarea"
           maxLength={1024}
-          onChange={(event) => onUpdate("content", event.target.value)}
+          onChange={(e) => onUpdate("content", e.target.value)}
           placeholder="Descripción de la pista que verán los participantes..."
           required
           rows={3}
           value={hint.content}
         />
-      </label>
+      </div>
 
-      <label className="field inline-toggle">
-        <span>Revelar como solución final</span>
+      <label className="checkbox-label">
         <input
           checked={hint.isSolution}
-          onChange={(event) => onUpdate("isSolution", event.target.checked)}
+          onChange={(e) => onUpdate("isSolution", e.target.checked)}
           type="checkbox"
         />
+        Revelar como solución final
       </label>
 
-      <div className="hint-location-section">
+      <div className="stack-sm">
         {!showLocation ? (
-          <button className="text-link" onClick={handleToggleLocation} type="button">
-            + Agregar ubicación (opcional)
+          <button className="btn btn-ghost btn-sm" onClick={handleToggleLocation} type="button">
+            + Agregar ubicación
           </button>
         ) : (
-          <div className="location-fields">
-            <div className="location-header">
-              <span className="field-label">📍 Ubicación de la pista</span>
-              <button className="text-link danger-text" onClick={handleToggleLocation} type="button">
+          <div className="stack-sm">
+            <div className="row-between">
+              <span className="form-label">Ubicación de la pista</span>
+              <button className="btn btn-danger btn-sm" onClick={handleToggleLocation} type="button">
                 Quitar ubicación
               </button>
             </div>
-            <div className="form-grid-two">
-              <label className="field">
-                <span>Latitud</span>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Latitud</label>
                 <input
-                  className="input"
-                  onChange={(event) => onUpdate("latitude", event.target.value)}
+                  className="form-input"
+                  onChange={(e) => onUpdate("latitude", e.target.value)}
                   placeholder="Ej: 40.7128"
                   step="any"
                   type="number"
                   value={hint.latitude}
                 />
-              </label>
-
-              <label className="field">
-                <span>Longitud</span>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Longitud</label>
                 <input
-                  className="input"
-                  onChange={(event) => onUpdate("longitude", event.target.value)}
+                  className="form-input"
+                  onChange={(e) => onUpdate("longitude", e.target.value)}
                   placeholder="Ej: -74.0060"
                   step="any"
                   type="number"
                   value={hint.longitude}
                 />
-              </label>
+              </div>
             </div>
-            <p className="field-hint">Coordenadas donde se encuentra esta pista en el mapa.</p>
+            <p className="form-hint">Coordenadas donde se encuentra esta pista en el mapa.</p>
           </div>
         )}
       </div>
