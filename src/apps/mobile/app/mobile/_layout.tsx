@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Buffer } from "buffer";
-import { SessionProvider } from "../src/providers/session-provider";
+import { SessionProvider } from "../../src/providers/session-provider";
 
 if (!globalThis.Buffer) {
   globalThis.Buffer = Buffer;

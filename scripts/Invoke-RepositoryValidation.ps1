@@ -17,6 +17,18 @@ $backendCoverageReportDirectory = Join-Path $artifactRoot "backend-coverage-repo
 $null = New-Item -ItemType Directory -Force -Path $artifactRoot, $testResultsDirectory, $backendCoverageReportDirectory
 $hasHostDotnet = $null -ne (Get-Command dotnet -ErrorAction SilentlyContinue)
 
+$envFile = if (-not [string]::IsNullOrWhiteSpace($EnvironmentFilePath)) {
+    if ([System.IO.Path]::IsPathRooted($EnvironmentFilePath)) {
+        $EnvironmentFilePath
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path $repositoryRoot $EnvironmentFilePath))
+    }
+} elseif (Test-Path (Join-Path $repositoryRoot ".env")) {
+    Join-Path $repositoryRoot ".env"
+} else {
+    Join-Path $repositoryRoot ".env.example"
+}
+
 $webDirectory = Join-Path $repositoryRoot "src/apps/web"
 $mobileDirectory = Join-Path $repositoryRoot "src/apps/mobile"
 
@@ -84,7 +96,7 @@ function Invoke-NpmCommand {
 
     Push-Location $repositoryRoot
     try {
-        & docker compose --env-file ".env.example" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm $ComposeService @CommandArgs
+        & docker compose --env-file "$envFile" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm $ComposeService @CommandArgs
         if ($LASTEXITCODE -ne 0) {
             throw "docker compose run $ComposeService $($CommandArgs -join ' ') failed with exit code $LASTEXITCODE."
         }
@@ -110,7 +122,7 @@ function Invoke-DotnetCommand {
 
     Push-Location $repositoryRoot
     try {
-        & docker compose --env-file ".env.example" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm --entrypoint dotnet dotnet-sdk @Arguments
+        & docker compose --env-file "$envFile" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm --entrypoint dotnet dotnet-sdk @Arguments
     }
     finally {
         Pop-Location
@@ -180,10 +192,7 @@ if (Test-Scope -AllowedScopes @("Full", "Backend")) {
 if (-not $SkipComposeSmoke -and $Scope -eq "Full") {
     $composeSmokeArguments = @{
         ArtifactDirectory = (Join-Path $ArtifactDirectory "compose")
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($EnvironmentFilePath)) {
-        $composeSmokeArguments.EnvironmentFilePath = $EnvironmentFilePath
+        EnvironmentFilePath = $envFile
     }
 
     & (Join-Path $PSScriptRoot "Invoke-ComposeSmokeValidation.ps1") @composeSmokeArguments

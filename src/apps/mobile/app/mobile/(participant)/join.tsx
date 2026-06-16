@@ -1,19 +1,19 @@
 ﻿import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StatusChip } from "../../src/components/status-chip";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StatusChip } from "../../../src/components/status-chip";
 import {
   ApiClientError,
   createAuthorizedApiClient,
   type ParticipantEnrollmentStatus,
   type SessionTeam
-} from "../../src/lib/api-client";
+} from "../../../src/lib/api-client";
 import {
   loadStoredEnrollment,
   saveStoredEnrollment
-} from "../../src/lib/session-storage";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/session-storage";
+import { useSession } from "../../../src/providers/session-provider";
 
 type ValidationState = "idle" | "checking" | "open" | "closed" | "invalid" | "error";
 type EnrollmentMode = "joinExisting" | "createTeam";
@@ -70,7 +70,7 @@ export default function JoinPage() {
         return;
       }
 
-      router.replace("/board");
+      router.replace("/mobile/board");
     }
 
     void redirectStoredEnrollment();
@@ -161,7 +161,7 @@ export default function JoinPage() {
       teamName: nextTeamName
     });
     setSubmissionState("success");
-    router.replace("/board");
+    router.replace("/mobile/board");
   }
 
   async function handleJoinExistingTeam() {
@@ -424,3 +424,4 @@ const styles = StyleSheet.create({
     opacity: 0.85
   }
 });
+

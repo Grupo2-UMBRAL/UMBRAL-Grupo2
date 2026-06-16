@@ -26,7 +26,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `scoring-audit-service`: `7103`
 - `postgres`: `5432`
 - `rabbitmq`: `5672`
-- `rabbitmq management`: `15672`
+- `rabbitmq management`: `16672`
 
 ## Rutas del edge proxy
 

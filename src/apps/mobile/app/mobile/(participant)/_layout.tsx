@@ -1,6 +1,6 @@
 import { Redirect, Stack } from "expo-router";
-import { LoadingScreen } from "../../src/components/loading-screen";
-import { useSession } from "../../src/providers/session-provider";
+import { LoadingScreen } from "../../../src/components/loading-screen";
+import { useSession } from "../../../src/providers/session-provider";
 
 export default function ParticipantLayout() {
   const { loading, session } = useSession();
@@ -10,11 +10,11 @@ export default function ParticipantLayout() {
   }
 
   if (!session) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/mobile/login" />;
   }
 
   if (!session.roles.includes("Participant")) {
-    return <Redirect href="/forbidden" />;
+    return <Redirect href="/mobile/forbidden" />;
   }
 
   return (

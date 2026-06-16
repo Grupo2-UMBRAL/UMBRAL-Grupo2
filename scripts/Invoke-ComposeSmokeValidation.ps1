@@ -16,7 +16,12 @@ else {
 $null = New-Item -ItemType Directory -Force -Path $artifactRoot
 
 $envFile = if ([string]::IsNullOrWhiteSpace($EnvironmentFilePath)) {
-    Join-Path $repositoryRoot ".env.example"
+    $localEnv = Join-Path $repositoryRoot ".env"
+    if (Test-Path $localEnv) {
+        $localEnv
+    } else {
+        Join-Path $repositoryRoot ".env.example"
+    }
 }
 elseif ([System.IO.Path]::IsPathRooted($EnvironmentFilePath)) {
     [System.IO.Path]::GetFullPath($EnvironmentFilePath)

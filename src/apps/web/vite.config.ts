@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: true,
+      allowedHosts: true,
       watch: {
         usePolling: true,
       },

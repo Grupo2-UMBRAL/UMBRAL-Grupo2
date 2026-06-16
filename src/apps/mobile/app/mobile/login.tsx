@@ -1,8 +1,8 @@
 import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { ScreenShell, shellStyles } from "../src/components/screen-shell";
-import { useSession } from "../src/providers/session-provider";
+import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
+import { useSession } from "../../src/providers/session-provider";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   if (!loading && session?.roles.includes("Participant")) {
-    return <Redirect href="/home" />;
+    return <Redirect href="/mobile/home" />;
   }
 
   async function handleLogin() {
@@ -22,7 +22,7 @@ export default function LoginPage() {
 
     try {
       await signIn(username, password);
-      router.replace("/home");
+      router.replace("/mobile/home");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Login failed.");
     } finally {

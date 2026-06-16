@@ -10,10 +10,10 @@ import {
   TextInput,
   View
 } from "react-native";
-import { LoadingScreen } from "../../src/components/loading-screen";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StaticHintMap } from "../../src/components/static-hint-map";
-import { StatusChip } from "../../src/components/status-chip";
+import { LoadingScreen } from "../../../src/components/loading-screen";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StaticHintMap } from "../../../src/components/static-hint-map";
+import { StatusChip } from "../../../src/components/status-chip";
 import {
   ApiClientError,
   SnapshotRefreshPolicies,
@@ -23,14 +23,14 @@ import {
   type SessionTeamSnapshot,
   type TeamProgressChangedPayload,
   type VisibleHintSnapshot
-} from "../../src/lib/api-client";
-import { getClientConfig } from "../../src/lib/config";
+} from "../../../src/lib/api-client";
+import { getClientConfig } from "../../../src/lib/config";
 import {
   loadStoredEnrollment,
   type StoredEnrollment
-} from "../../src/lib/session-storage";
-import { useSessionOperationsConnection } from "../../src/hooks/use-session-operations-connection";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/session-storage";
+import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSession } from "../../../src/providers/session-provider";
 
 type SubmissionFeedback =
   | { tone: "success"; title: string; detail: string }
@@ -411,7 +411,7 @@ export default function BoardPage() {
   }
 
   if (!storedEnrollment) {
-    return <Redirect href="/join" />;
+    return <Redirect href="/mobile/join" />;
   }
 
   if (!snapshot) {
