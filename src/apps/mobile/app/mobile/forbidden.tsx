@@ -1,14 +1,14 @@
 import { Redirect, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ScreenShell, shellStyles } from "../src/components/screen-shell";
-import { useSession } from "../src/providers/session-provider";
+import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
+import { useSession } from "../../src/providers/session-provider";
 
 export default function ForbiddenPage() {
   const router = useRouter();
   const { loading, session, signOut } = useSession();
 
   if (!loading && !session) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/mobile/login" />;
   }
 
   return (
@@ -24,7 +24,7 @@ export default function ForbiddenPage() {
 
       <Pressable
         onPress={() => {
-          void signOut().then(() => router.replace("/login"));
+          void signOut().then(() => router.replace("/mobile/login"));
         }}
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
       >

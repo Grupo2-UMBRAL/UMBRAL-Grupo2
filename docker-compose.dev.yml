@@ -178,6 +178,7 @@ services:
       ReverseProxy__Clusters__session-operations__Destinations__primary__Address: http://session-operations-service:8080/
       ReverseProxy__Clusters__scoring-audit__Destinations__primary__Address: http://scoring-audit-service:8080/
       ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080/
+      ReverseProxy__Clusters__mobile__Destinations__primary__Address: http://mobile:19006/
       ReverseProxy__Clusters__web__Destinations__primary__Address: http://web:3000/
     ports:
       - "${EDGE_PROXY_PORT}:8080"
@@ -231,8 +232,8 @@ services:
       - /bin/sh
       - -lc
       - >
-          npm install &&
-          npm run web:compose
+        npm install &&
+        npm run web:compose
     environment:
       CI: "1"
       NODE_ENV: development

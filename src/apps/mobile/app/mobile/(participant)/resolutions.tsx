@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StatusChip } from "../../src/components/status-chip";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StatusChip } from "../../../src/components/status-chip";
 
 export default function ResolutionsPage() {
   return (

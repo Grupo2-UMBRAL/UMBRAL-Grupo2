@@ -1,15 +1,15 @@
 import { Redirect } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
-import { LoadingScreen } from "../../src/components/loading-screen";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StatusChip } from "../../src/components/status-chip";
-import { createAuthorizedApiClient, type SessionTeamSnapshot } from "../../src/lib/api-client";
+import { LoadingScreen } from "../../../src/components/loading-screen";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StatusChip } from "../../../src/components/status-chip";
+import { createAuthorizedApiClient, type SessionTeamSnapshot } from "../../../src/lib/api-client";
 import {
   loadStoredEnrollment,
   type StoredEnrollment
-} from "../../src/lib/session-storage";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/session-storage";
+import { useSession } from "../../../src/providers/session-provider";
 
 function countHintsWithCoordinates(snapshot: SessionTeamSnapshot | null) {
   if (!snapshot) {
@@ -63,7 +63,7 @@ export default function ProgressPage() {
   }
 
   if (!storedEnrollment) {
-    return <Redirect href="/join" />;
+    return <Redirect href="/mobile/join" />;
   }
 
   const completedStages = snapshot?.currentStage

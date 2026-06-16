@@ -43,6 +43,11 @@ const int MaxLogs = 100;
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
+    if (path.Value == "/mobile")
+    {
+        context.Response.Redirect("/mobile/");
+        return;
+    }
     
     // Skip static assets and dashboard endpoints to prevent noise
     if (path.StartsWithSegments("/dashboard") ||

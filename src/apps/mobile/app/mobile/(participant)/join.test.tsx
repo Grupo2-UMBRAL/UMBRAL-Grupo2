@@ -1,4 +1,4 @@
-Ôªøimport { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import JoinPage from "./join";
 import {
   ApiClientError,
@@ -6,12 +6,12 @@ import {
   type EnrollmentResult,
   type ParticipantEnrollmentStatus,
   type SessionTeamsResult
-} from "../../src/lib/api-client";
+} from "../../../src/lib/api-client";
 import {
   loadStoredEnrollment,
   saveStoredEnrollment
-} from "../../src/lib/session-storage";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/session-storage";
+import { useSession } from "../../../src/providers/session-provider";
 
 const mockReplace = jest.fn();
 
@@ -21,17 +21,17 @@ jest.mock("expo-router", () => ({
   })
 }));
 
-jest.mock("../../src/providers/session-provider", () => ({
+jest.mock("../../../src/providers/session-provider", () => ({
   useSession: jest.fn()
 }));
 
-jest.mock("../../src/lib/session-storage", () => ({
+jest.mock("../../../src/lib/session-storage", () => ({
   loadStoredEnrollment: jest.fn(),
   saveStoredEnrollment: jest.fn()
 }));
 
-jest.mock("../../src/lib/api-client", () => {
-  const actual = jest.requireActual("../../src/lib/api-client");
+jest.mock("../../../src/lib/api-client", () => {
+  const actual = jest.requireActual("../../../src/lib/api-client");
 
   return {
     ...actual,
@@ -121,7 +121,7 @@ test("shows unavailable session error when join code is invalid", async () => {
   fireEvent.changeText(screen.getByPlaceholderText("ABC234"), "bad999");
 
   await waitFor(() => {
-    expect(screen.getByText("Session Join Code inv√°lido o no registrado.")).toBeTruthy();
+    expect(screen.getByText("Session Join Code inv·lido o no registrado.")).toBeTruthy();
   });
   expect(apiClient.listEnrollmentTeams).not.toHaveBeenCalled();
 });
@@ -136,7 +136,7 @@ test("blocks team actions and shows warning when enrollment window is closed", a
 
   await waitFor(() => {
     expect(
-      screen.getByText("Team Assignment Window est√° cerrada. No puedes crear ni unirte a equipos ahora.")
+      screen.getByText("Team Assignment Window est· cerrada. No puedes crear ni unirte a equipos ahora.")
     ).toBeTruthy();
   });
   expect(screen.queryByText("Join selected team")).toBeNull();

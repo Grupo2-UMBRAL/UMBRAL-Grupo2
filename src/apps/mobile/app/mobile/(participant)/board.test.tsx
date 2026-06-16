@@ -1,4 +1,4 @@
-ï»¿import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import BoardPage from "./board";
 import {
   createAuthorizedApiClient,
@@ -6,28 +6,28 @@ import {
   type HintUnlockedPayload,
   type SessionStateChangedPayload,
   type SessionTeamSnapshot
-} from "../../src/lib/api-client";
-import { loadStoredEnrollment } from "../../src/lib/session-storage";
-import { useSessionOperationsConnection } from "../../src/hooks/use-session-operations-connection";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/api-client";
+import { loadStoredEnrollment } from "../../../src/lib/session-storage";
+import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSession } from "../../../src/providers/session-provider";
 
 jest.mock("expo-router", () => ({
   Redirect: ({ href }: { href: string }) => `Redirect:${href}`
 }));
 
-jest.mock("../../src/providers/session-provider", () => ({
+jest.mock("../../../src/providers/session-provider", () => ({
   useSession: jest.fn()
 }));
 
-jest.mock("../../src/lib/session-storage", () => ({
+jest.mock("../../../src/lib/session-storage", () => ({
   loadStoredEnrollment: jest.fn()
 }));
 
-jest.mock("../../src/hooks/use-session-operations-connection", () => ({
+jest.mock("../../../src/hooks/use-session-operations-connection", () => ({
   useSessionOperationsConnection: jest.fn()
 }));
 
-jest.mock("../../src/lib/config", () => ({
+jest.mock("../../../src/lib/config", () => ({
   getClientConfig: () => ({
     edgeProxyPublicBaseUrl: "https://edge.test",
     keycloakPublicBaseUrl: "https://keycloak.test",
@@ -37,8 +37,8 @@ jest.mock("../../src/lib/config", () => ({
   })
 }));
 
-jest.mock("../../src/lib/api-client", () => {
-  const actual = jest.requireActual("../../src/lib/api-client");
+jest.mock("../../../src/lib/api-client", () => {
+  const actual = jest.requireActual("../../../src/lib/api-client");
 
   return {
     ...actual,
@@ -326,7 +326,7 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByText("Resoluciones de la MisiÃ³n")).toBeTruthy();
+    expect(screen.getByText("Resoluciones de la Misión")).toBeTruthy();
   });
 
   expect(screen.getByText("Decode the seal")).toBeTruthy();
@@ -369,7 +369,7 @@ test("keeps final solutions out of live Visible hints before finalization", asyn
     expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
   });
 
-  expect(screen.queryByText("Resoluciones de la MisiÃ³n")).toBeNull();
+  expect(screen.queryByText("Resoluciones de la Misión")).toBeNull();
   expect(screen.queryByText("The answer is aurora.")).toBeNull();
 });
 
@@ -561,7 +561,7 @@ test("submits scanned QR evidence and renders rejected feedback", async () => {
       qrHash: "wrong-hash"
     });
   });
-  expect(screen.getByText(/CÃ³digo incorrecto, intÃ©ntalo de nuevo/)).toBeTruthy();
+  expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
 });
 
 test("submits Trivia answer and renders accepted feedback", async () => {

@@ -1,13 +1,13 @@
 import { act, render, screen, waitFor } from "@testing-library/react-native";
 import RankingPage from "./ranking";
-import { loadStoredEnrollment } from "../../src/lib/session-storage";
-import { useSession } from "../../src/providers/session-provider";
+import { loadStoredEnrollment } from "../../../src/lib/session-storage";
+import { useSession } from "../../../src/providers/session-provider";
 
-jest.mock("../../src/providers/session-provider", () => ({
+jest.mock("../../../src/providers/session-provider", () => ({
   useSession: jest.fn()
 }));
 
-jest.mock("../../src/lib/session-storage", () => ({
+jest.mock("../../../src/lib/session-storage", () => ({
   loadStoredEnrollment: jest.fn()
 }));
 

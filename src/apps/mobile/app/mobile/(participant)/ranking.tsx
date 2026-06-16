@@ -7,19 +7,19 @@ import {
 import { Redirect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { LoadingScreen } from "../../src/components/loading-screen";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StatusChip } from "../../src/components/status-chip";
+import { LoadingScreen } from "../../../src/components/loading-screen";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StatusChip } from "../../../src/components/status-chip";
 import {
   createAuthorizedApiClient,
   type SessionTeamSnapshot
-} from "../../src/lib/api-client";
-import { getClientConfig } from "../../src/lib/config";
+} from "../../../src/lib/api-client";
+import { getClientConfig } from "../../../src/lib/config";
 import {
   loadStoredEnrollment,
   type StoredEnrollment
-} from "../../src/lib/session-storage";
-import { useSession } from "../../src/providers/session-provider";
+} from "../../../src/lib/session-storage";
+import { useSession } from "../../../src/providers/session-provider";
 
 type RankingStatus = "idle" | "loading" | "fresh" | "reconnecting" | "error";
 
@@ -285,7 +285,7 @@ export default function RankingPage() {
   }
 
   if (!storedEnrollment) {
-    return <Redirect href="/join" />;
+    return <Redirect href="/mobile/join" />;
   }
 
   const status = resolveRankingStatus(rankingStatus);

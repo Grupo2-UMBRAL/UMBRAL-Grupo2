@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { RouteCard } from "../../src/components/route-card";
-import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
-import { StatusChip } from "../../src/components/status-chip";
-import { createAuthorizedApiClient, type ApiProbeResult } from "../../src/lib/api-client";
-import { getClientConfig } from "../../src/lib/config";
-import { useSessionOperationsConnection } from "../../src/hooks/use-session-operations-connection";
-import { useSession } from "../../src/providers/session-provider";
+import { RouteCard } from "../../../src/components/route-card";
+import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { StatusChip } from "../../../src/components/status-chip";
+import { createAuthorizedApiClient, type ApiProbeResult } from "../../../src/lib/api-client";
+import { getClientConfig } from "../../../src/lib/config";
+import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSession } from "../../../src/providers/session-provider";
 
 function resolveConnectionTone(kind: string) {
   switch (kind) {
@@ -110,27 +110,27 @@ export default function HomePage() {
         <RouteCard
           title="Join session"
           description="Prepare Session Enrollment request shape for join code and Session Team choice."
-          onPress={() => router.push("/join")}
+          onPress={() => router.push("/mobile/join")}
         />
         <RouteCard
           title="Team board"
           description="Reserve the participant surface for current stage, team state and evidence CTA."
-          onPress={() => router.push("/board")}
+          onPress={() => router.push("/mobile/board")}
         />
         <RouteCard
           title="Progress path"
           description="Keep room for a Duolingo-like guided progression without exposing the whole mission tree."
-          onPress={() => router.push("/progress")}
+          onPress={() => router.push("/mobile/progress")}
         />
         <RouteCard
           title="Ranking"
           description="Reserve a participant ranking view once Scoreboard is available."
-          onPress={() => router.push("/ranking")}
+          onPress={() => router.push("/mobile/ranking")}
         />
         <RouteCard
           title="Hints and solutions"
           description="Leave a dedicated surface for Hint Release and final revealed resolutions."
-          onPress={() => router.push("/resolutions")}
+          onPress={() => router.push("/mobile/resolutions")}
         />
       </View>
 
@@ -143,7 +143,7 @@ export default function HomePage() {
 
       <Pressable
         onPress={() => {
-          void signOut().then(() => router.replace("/login"));
+          void signOut().then(() => router.replace("/mobile/login"));
         }}
         style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
       >
