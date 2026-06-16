@@ -5,6 +5,8 @@ description: Test-driven development with red-green-refactor loop. Use when user
 
 # Test-Driven Development
 
+> **Scope Restriction**: This skill applies exclusively to **backend development**. Frontend features must be tested using Playwright instead.
+
 ## Philosophy
 
 **Core principle**: Tests should verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't.
@@ -48,12 +50,13 @@ When exploring the codebase, use the project's domain glossary so that test name
 
 Before writing any code:
 
+- [ ] **Crucial Gate**: Ensure an Implementation Plan / Specification has been generated and explicitly approved by a human before proceeding.
 - [ ] Confirm with user what interface changes are needed
 - [ ] Confirm with user which behaviors to test (prioritize)
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
 - [ ] Design interfaces for [testability](interface-design.md)
 - [ ] List the behaviors to test (not implementation steps)
-- [ ] Get user approval on the plan
+- [ ] Get user approval on the plan (if not already done via the Orchestrator Human Gate)
 - [ ] Decide which repo validation command from `.agents/skills/local-validation/` will be used before closing the slice
 
 Ask: "What should the public interface look like? Which behaviors are most important to test?"
@@ -96,6 +99,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 - [ ] Apply SOLID principles where natural
 - [ ] Consider what new code reveals about existing code
 - [ ] Run tests after each refactor step
+- [ ] Before finishing the slice, ensure the test suite survives **Mutation Testing** (e.g. `tools/mutate.py` or equivalent configured tool).
 - [ ] Before finishing the slice, run the narrowest relevant repo validation command
 
 **Never refactor while RED.** Get to GREEN first.

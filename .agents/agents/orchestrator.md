@@ -66,18 +66,20 @@ Si un worker necesita mas permisos, devolver control al orquestador en vez de el
    - `chore/` para trabajo tecnico sin cambio funcional
 6. Crear branch por ticket con formato `<tipo>/<issue-id>-<slug>`.
 7. Crear `git worktree` dedicado con formato `../wt-<issue-id>`.
-8. Inyectar al worker:
+8. **Generar un Implementation Plan / Especificacion tecnica** en el root del `worktree` o documentar el plan de accion.
+9. **PAUSAR ejecucion (Human Gate)**. Solicitar validacion humana del plan. No iniciar implementacion sin aprobacion explicita.
+10. Una vez aprobado, inyectar al worker (ejecutor de implementacion):
    - ID del ticket
    - ruta exacta del `worktree`
    - branch esperada
-   - criterios de aceptacion
+   - criterios de aceptacion y plan aprobado
    - bounded context afectado
    - ADRs relevantes
    - restricciones de permisos
-9. Antes de editar, exigir que el worker valide contexto con `assert-ticket-worktree.ps1`.
-10. Si el worker no puede demostrar que esta parado en el `worktree` correcto, abortar esa ejecucion.
-11. Mantener log operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/worker.log`.
-12. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
+11. Antes de editar, exigir que el worker valide contexto con `assert-ticket-worktree.ps1`.
+12. Si el worker no puede demostrar que esta parado en el `worktree` correcto, abortar esa ejecucion.
+13. Mantener estado operativo por ticket fuera del branch usando `.worktrees/_runtime/<ISSUE-ID>/session-state.md` (checklist) y `worker.log`.
+14. Exponer seguimiento humano con `watch-ticket-worker-log.ps1`.
 13. Recibir resultado, correr validacion y review del alcance.
 14. Antes de integracion, sincronizar la branch del ticket contra la rama de integracion remota con `fetch` + `rebase`, no con merges intermedios hacia `develop` local.
 15. Correr una sola validacion final despues de ese `rebase`.

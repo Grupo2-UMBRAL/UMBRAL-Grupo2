@@ -42,6 +42,7 @@ $runtimeRoot = Join-Path -Path $resolvedWorktreeParent -ChildPath '_runtime'
 $issueRuntimeRoot = Join-Path -Path $runtimeRoot -ChildPath $normalizedIssueId
 $sessionFile = Join-Path -Path $issueRuntimeRoot -ChildPath 'session.json'
 $workerLogFile = Join-Path -Path $issueRuntimeRoot -ChildPath 'worker.log'
+$sessionStateFile = Join-Path -Path $issueRuntimeRoot -ChildPath 'session-state.md'
 $handoffFile = Join-Path -Path $issueRuntimeRoot -ChildPath 'handoff.md'
 
 if ($PSCmdlet.ShouldProcess($issueRuntimeRoot, "Initialize runtime metadata for $normalizedIssueId")) {
@@ -53,9 +54,10 @@ if ($PSCmdlet.ShouldProcess($issueRuntimeRoot, "Initialize runtime metadata for 
         branchName     = $branchName
         worktreePath   = $worktreePath
         repositoryRoot = $resolvedRepositoryRoot
-        runtimeRoot    = $issueRuntimeRoot
-        workerLogFile  = $workerLogFile
-        handoffFile    = $handoffFile
+        runtimeRoot      = $issueRuntimeRoot
+        workerLogFile    = $workerLogFile
+        sessionStateFile = $sessionStateFile
+        handoffFile      = $handoffFile
         createdAtUtc   = [DateTime]::UtcNow.ToString('o')
     }
 
@@ -67,6 +69,19 @@ if ($PSCmdlet.ShouldProcess($issueRuntimeRoot, "Initialize runtime metadata for 
             ('branch={0}' -f $branchName)
             ('worktree={0}' -f $worktreePath)
         ) | Set-Content -LiteralPath $workerLogFile
+    }
+
+    if (-not (Test-Path -LiteralPath $sessionStateFile)) {
+        @(
+            ('# Session State {0}' -f $normalizedIssueId)
+            ''
+            '## Tasks'
+            ''
+            '- [ ] Review spec/implementation plan'
+            '- [ ] Implementation'
+            '- [ ] Local validation & Mutation Testing'
+            '- [ ] Handoff ready'
+        ) | Set-Content -LiteralPath $sessionStateFile
     }
 
     if (-not (Test-Path -LiteralPath $handoffFile)) {
@@ -83,8 +98,9 @@ if ($PSCmdlet.ShouldProcess($issueRuntimeRoot, "Initialize runtime metadata for 
 [pscustomobject]@{
     IssueId       = $normalizedIssueId
     BranchName    = $branchName
-    WorktreePath  = $worktreePath
-    SessionFile   = $sessionFile
-    WorkerLogFile = $workerLogFile
-    HandoffFile   = $handoffFile
+    WorktreePath     = $worktreePath
+    SessionFile      = $sessionFile
+    WorkerLogFile    = $workerLogFile
+    SessionStateFile = $sessionStateFile
+    HandoffFile      = $handoffFile
 }

@@ -1,39 +1,29 @@
-## Agent skills
+# AGENTS.md — Entry Point & Navigation Map
 
-Read this file first. Then follow the referenced documents in the order described here.
+> Point of entry for any agent working in this repository.
+> This is a map, read only what you need when you need it (progressive disclosure).
 
-### Issue tracker
+---
 
-Issues are tracked in Linear using the workflow described in `.agents/agents/issue-tracker.md`.
+## 1. Map of the Repository
 
-### Agent orchestration
+| File / Folder | What it contains | When to read it |
+| --- | --- | --- |
+| `docs/product/ers.md` | ERS (Product Requirements) | To understand the domain and what to build |
+| `docs/architecture/repo-structure.md` | Repo architecture | Before assuming folder structures |
+| `src/*/CONTEXT.md` | Bounded context ubiquitous language | Before writing code in a specific service |
+| `docs/architecture/adr/` | Architecture Decision Records | Before making hard-to-reverse changes |
+| `.agents/agents/orchestrator.md` | Orchestrator workflow and Git rules | When taking tickets from Linear |
+| `.agents/agents/operating-model.md` | Code guidelines, PR rules, TDD | Before writing, reviewing, or committing code |
+| `.agents/agents/issue-tracker.md` | Linear issue lifecycle | When changing issue states |
+| `.agents/skills/` | Specialized procedures (e.g., local-validation, tdd) | When asked or when facing a specific procedure |
 
-When work is executed from Linear tickets, use `.agents/agents/orchestrator.md` as the source of truth for ticket ownership, agent permissions, branch naming, worktree isolation, and delegation boundaries.
+## 2. Hard Rules (Non-negotiable)
 
-### Triage labels
-
-This repo uses the default canonical triage labels. See `.agents/agents/triage-labels.md`.
-
-### Domain docs
-
-This repo uses a shared domain-doc set for multiple bounded contexts. See `.agents/agents/domain.md`.
-
-### Operating model
-
-All agents should follow `.agents/agents/operating-model.md`.
-For implementation or review work, treat `.agents/agents/operating-model.md` as the baseline contribution policy for branching, commits, PR scope, testing expectations, naming, code quality, and documentation updates.
-
-### Engineering standards
-
-When the task involves writing, refactoring, or reviewing code:
-
-- Read the relevant ADRs in `docs/architecture/adr/` before changing code when they apply to the affected area.
-- Apply `.agents/skills/engineering-guardrails/` as the default reusable procedure for implementation and review guardrails.
-- Apply `.agents/skills/local-validation/` when choosing or running local tests, coverage checks, secret scans, or repo validation evidence.
-- When local validation or debugging uses `docker compose`, apply `.agents/skills/docker-compose-context-hygiene/` to keep logs, runtime evidence, and chat context under control.
-- Use `src/services/*/CONTEXT.md` as the source of truth for ubiquitous language and bounded-context terminology.
-
-### Product and architecture
-
-Use `docs/product/ers.md` as the normalized operational summary of the academic ERS.
-Use `docs/architecture/repo-structure.md` to avoid assuming implementation folders that do not exist yet.
+- **One Ticket per Worktree**: Do not mix tickets. Each ticket MUST live in its own `git worktree` and branch (`feature/`, `fix/`, etc.).
+- **Pre-Code Human Gate**: Never start writing implementation code without an approved Implementation Plan or Spec.
+- **Strict TDD (Backend Only)**: Follow Red-Green-Refactor cycles strictly. Code must be verifiable via `Invoke-RepositoryValidation.ps1`. Frontend components will be tested via Playwright.
+- **Mutation Testing**: A task is not `done` until it passes mutation testing constraints and local validation.
+- **Orchestrator Absolute Authority**: Only the Orchestrator changes Linear status, creates branches, or handles `git` operations outside the worktree.
+- **Worker Isolation**: Workers must log state in `.worktrees/_runtime/<ISSUE-ID>/session-state.md` and only act within their scoped worktree.
+- **Domain Language**: Always use terminology from `CONTEXT.md`. Do not invent names.
