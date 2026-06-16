@@ -1,0 +1,34 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]: UMBRAL
+    - generic [ref=e6]:
+      - link "Capacidades" [ref=e7] [cursor=pointer]:
+        - /url: "#capacidades"
+      - button "Ingresar" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - heading "Control de misiones en tiempo real" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Plataforma de operaciones para experiencias inmersivas. Gestiona Treasure Hunt y Trivia, monitorea equipos y puntajes en vivo.
+      - generic [ref=e13]:
+        - button "Ingresar a Consola" [ref=e14] [cursor=pointer]
+        - link "Explorar" [ref=e15] [cursor=pointer]:
+          - /url: "#capacidades"
+          - button "Explorar" [ref=e16]
+    - img "Vista de operaciones UMBRAL mostrando rutas y puntos de misión" [ref=e18]
+  - generic [ref=e19]:
+    - heading "Capacidades de la plataforma" [level=2] [ref=e21]
+    - generic [ref=e22]:
+      - article [ref=e23]:
+        - generic [ref=e24]: "01"
+        - heading "Diseño de Misiones" [level=3] [ref=e25]
+        - paragraph [ref=e26]: Crea misiones con nodos jerárquicos, etapas configurables, pistas geolocalizadas y niveles de dificultad ajustables por nodo.
+      - article [ref=e27]:
+        - generic [ref=e28]: "02"
+        - heading "Operaciones en Vivo" [level=3] [ref=e29]
+        - paragraph [ref=e30]: Controla sesiones en tiempo real. Inicia, pausa o finaliza etapas. Libera pistas y aplica penalizaciones al instante.
+      - article [ref=e31]:
+        - generic [ref=e32]: "03"
+        - heading "Auditoría y Puntajes" [level=3] [ref=e33]
+        - paragraph [ref=e34]: Ranking actualizado en tiempo real con desglose de puntos por dificultad, penalizaciones y registro completo de eventos.
+  - contentinfo [ref=e35]:
+    - paragraph [ref=e36]: © 2026 UMBRAL. Todos los derechos reservados.

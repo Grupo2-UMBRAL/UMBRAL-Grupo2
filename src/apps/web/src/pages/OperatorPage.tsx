@@ -9,6 +9,8 @@ export default function OperatorPage() {
   const { isAuthenticated, token, roles, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log("OperatorPage render:", { isAuthenticated, loading, roles, hasToken: !!token });
+
   useEffect(() => {
     const isOperatorOrAdmin =
       roles.includes("Operator") || roles.includes("Administrator");

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  HubConnection,
   HubConnectionBuilder,
   HubConnectionState,
   HttpTransportType,
@@ -24,9 +25,7 @@ export function LiveSessionConnection({
   onResync,
 }: LiveSessionConnectionProps) {
   const [state, setState] = useState<ConnectionState>("connecting");
-  const connectionRef = useRef<ReturnType<
-    typeof new HubConnectionBuilder().build
-  > | null>(null);
+  const connectionRef = useRef<HubConnection | null>(null);
 
   useEffect(() => {
     const config = getClientConfig();

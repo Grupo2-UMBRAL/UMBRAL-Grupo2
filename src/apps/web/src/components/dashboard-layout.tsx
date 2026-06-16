@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
 import type { WebShellRole } from "@/lib/roles";
+import { Link } from "react-router-dom";
 
 type DashboardLayoutProps = {
   role: WebShellRole;
@@ -38,8 +39,8 @@ export function DashboardLayout({
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Espacios de trabajo</div>
           {roles.includes("Administrator") && (
-            <a
-              href="/administrator"
+            <Link
+              to="/administrator"
               className={`nav-link ${role === "Administrator" ? "is-active" : ""}`}
             >
               <svg className="nav-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -49,10 +50,10 @@ export function DashboardLayout({
                 <rect x="14" y="14" width="7" height="7" rx="1" />
               </svg>
               Administrador
-            </a>
+            </Link>
           )}
-          <a
-            href="/operator"
+          <Link
+            to="/operator"
             className={`nav-link ${role === "Operator" ? "is-active" : ""}`}
           >
             <svg className="nav-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -60,7 +61,7 @@ export function DashboardLayout({
               <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
             </svg>
             Operador
-          </a>
+          </Link>
         </nav>
 
         <div className="sidebar-footer">

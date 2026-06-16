@@ -77,7 +77,10 @@ export function ServiceStatusBoard({
   }, [accessToken, role]);
 
   useEffect(() => {
-    void runChecks();
+    const timer = setTimeout(() => {
+      void runChecks();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [runChecks]);
 
   const statusDotClass = (status: ServiceCheck["status"]) => {
