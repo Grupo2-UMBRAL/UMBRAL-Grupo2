@@ -1,0 +1,85 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: UMBRAL
+      - generic [ref=e7]: Consola operativa
+    - navigation [ref=e8]:
+      - generic [ref=e9]: Espacios de trabajo
+      - link "Operador" [ref=e10] [cursor=pointer]:
+        - /url: /operator
+        - img [ref=e11]
+        - text: Operador
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: UU
+        - generic [ref=e17]:
+          - generic [ref=e18]: UMBRAL user
+          - generic [ref=e19]: Operator
+      - button "Cerrar sesión" [ref=e20] [cursor=pointer]
+  - generic:
+    - banner [ref=e21]:
+      - heading "Espacio del Operador" [level=2] [ref=e22]
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic:
+          - heading "Estado de servicios" [level=3] [ref=e25]
+          - button "Verificar" [ref=e26] [cursor=pointer]
+        - generic:
+          - generic [ref=e27]:
+            - generic [ref=e29]: Keycloak OIDC
+            - generic [ref=e31]: 200 OK
+          - generic [ref=e32]:
+            - generic [ref=e34]: Mission Design
+            - generic [ref=e36]: Verificando...
+          - generic [ref=e37]:
+            - generic [ref=e39]: Session Operations
+            - generic [ref=e41]: Verificando...
+          - generic [ref=e42]:
+            - generic [ref=e44]: Scoring & Audit
+            - generic [ref=e46]: Verificando...
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: Operaciones de sesión
+            - heading "Espacio de trabajo de programación de LiveSession" [level=2] [ref=e51]
+          - paragraph [ref=e52]: El operador selecciona una Misión activa, recorta el Flujo de Etapas de Sesión a etapas activas, reordena la ejecución efectiva y persiste una captura de LiveSession Programada sin modificar el Diseño de la Misión.
+        - generic [ref=e53]:
+          - generic:
+            - generic [ref=e54]:
+              - strong [ref=e55]: Misiones elegibles
+              - paragraph: "0"
+            - generic [ref=e56]:
+              - strong [ref=e57]: Etapas de misión activas
+              - paragraph: "0"
+            - generic [ref=e58]:
+              - strong [ref=e59]: LiveSessions programadas
+              - paragraph: "0"
+          - generic:
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e62]:
+                  - generic [ref=e63]: Origen de la misión
+                  - heading "Misiones elegibles" [level=3] [ref=e64]
+                - button "Actualizar" [ref=e65] [cursor=pointer]
+              - paragraph [ref=e66]: Cargando misiones elegibles.
+            - generic [ref=e67]:
+              - generic [ref=e69]:
+                - generic [ref=e70]: Crear
+                - heading "LiveSession programada" [level=3] [ref=e71]
+              - generic [ref=e72]:
+                - strong [ref=e73]: Seleccione una misión elegible.
+                - paragraph [ref=e74]: La programación del operador comienza a partir de una captura de Misión activa expuesta por el Diseño de Misión.
+          - generic [ref=e75]:
+            - generic:
+              - generic [ref=e76]:
+                - generic [ref=e77]: Salida programada
+                - heading "LiveSessions persistidas" [level=3] [ref=e78]
+              - button "Actualizar" [ref=e79] [cursor=pointer]
+            - paragraph: Cargando LiveSessions.
+            - generic [ref=e80]:
+              - generic [ref=e82]:
+                - generic [ref=e83]: Detalle de la captura
+                - heading "LiveSession programada" [level=3] [ref=e84]
+              - generic [ref=e85]:
+                - strong [ref=e86]: Seleccione una LiveSession programada.
+                - paragraph [ref=e87]: El detalle de la captura muestra el flujo de etapas de la sesión copiado de la misión de origen.

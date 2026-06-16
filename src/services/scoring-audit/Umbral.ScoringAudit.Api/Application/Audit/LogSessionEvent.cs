@@ -10,7 +10,7 @@ public sealed record LogSessionEventCommand(
     string EventType,
     string Description) : IRequest<SessionEventLogPayload>, IAuthorizableRequest
 {
-    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
+    public RequestAuthorizationMetadata Authorization => new([UmbralRoles.Administrator, UmbralRoles.Operator, UmbralRoles.Participant]);
 }
 
 public sealed class LogSessionEventHandler(

@@ -112,7 +112,7 @@ authorizedApi.MapPost(
             $"/api/scoring-audit/sessions/{liveSessionId}/event-log/{payload.Id}",
             payload);
     })
-    .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator));
+    .RequireAuthorization(policy => policy.RequireRole(UmbralRoles.Administrator, UmbralRoles.Operator, UmbralRoles.Participant));
 authorizedApi.MapUmbralRoleSmokeRoutes(serviceIdentity);
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))

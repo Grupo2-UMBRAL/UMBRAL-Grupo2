@@ -524,8 +524,7 @@ code {
    6. DASHBOARD LAYOUT
    ---------------------------------------------------------------- */
 .dashboard {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  display: block;
   min-height: 100dvh;
 }
 
@@ -1315,6 +1314,12 @@ tr.clickable {
   gap: var(--space-lg);
 }
 
+.card .detail-panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 .detail-row {
   display: flex;
   justify-content: space-between;
@@ -1439,7 +1444,7 @@ tr.clickable {
    ---------------------------------------------------------------- */
 .split-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 350px 1fr;
   gap: var(--space-lg);
 }
 

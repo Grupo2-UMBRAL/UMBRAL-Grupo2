@@ -1343,6 +1343,44 @@ export function MissionsAdminWorkspace({
     }
   }
 
+  async function handleActivate() {
+    if (!selectedMissionId) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        `${missionsUrl}/${selectedMissionId}/activate`,
+        {
+          method: "POST",
+          headers: createAuthorizedHeaders(accessToken),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      const mission = (await response.json()) as MissionDetail;
+      setSelectedMission(mission);
+      setDraft(toDraft(mission));
+      setFeedback("Misión activada.");
+      await loadMissions(mission.id);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo activar la Misión.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="workspace-section">
       <div className="workspace-section-header">
@@ -1694,15 +1732,26 @@ export function MissionsAdminWorkspace({
                     : "Guardar cambios"}
                 </button>
 
-                {selectedMission?.isActive ? (
-                  <button
-                    className="btn btn-danger"
-                    disabled={isSubmitting}
-                    onClick={handleDeactivate}
-                    type="button"
-                  >
-                    Desactivar
-                  </button>
+                {selectedMission ? (
+                  selectedMission.isActive ? (
+                    <button
+                      className="btn btn-danger"
+                      disabled={isSubmitting}
+                      onClick={handleDeactivate}
+                      type="button"
+                    >
+                      Desactivar
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-success"
+                      disabled={isSubmitting}
+                      onClick={handleActivate}
+                      type="button"
+                    >
+                      Activar
+                    </button>
+                  )
                 ) : null}
               </div>
             </form>
