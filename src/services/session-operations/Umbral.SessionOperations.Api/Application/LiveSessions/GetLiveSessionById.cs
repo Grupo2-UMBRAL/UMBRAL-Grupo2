@@ -5,9 +5,8 @@ using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.LiveSessions;
 
-public sealed record GetLiveSessionByIdQuery(Guid LiveSessionId) : IRequest<LiveSessionResponse>, IAuthorizableRequest
+public sealed record GetLiveSessionByIdQuery(Guid LiveSessionId) : IRequest<LiveSessionResponse>
 {
-    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
 public sealed class GetLiveSessionByIdQueryHandler(SessionOperationsDbContext dbContext)

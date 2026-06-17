@@ -1,8 +1,5 @@
-using MediatR;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,19 +24,17 @@ public static class ServiceCollectionExtensions
         services.AddEndpointsApiExplorer();
         services.AddHttpContextAccessor();
         services.AddHealthChecks();
-        services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestAuthorizationBehavior<,>));
-        services.AddSingleton<IClaimsTransformation, KeycloakRoleClaimsTransformation>();
+        services.AddControllers();
         services.AddAuthorization(options =>
         {
             options.AddPolicy(
-                UmbralAuthorizationPolicies.Administrator,
+                UmbralRoles.Administrator,
                 policy => policy.RequireRole(UmbralRoles.Administrator));
             options.AddPolicy(
-                UmbralAuthorizationPolicies.Operator,
+                UmbralRoles.Operator,
                 policy => policy.RequireRole(UmbralRoles.Operator));
             options.AddPolicy(
-                UmbralAuthorizationPolicies.Participant,
+                UmbralRoles.Participant,
                 policy => policy.RequireRole(UmbralRoles.Participant));
         });
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

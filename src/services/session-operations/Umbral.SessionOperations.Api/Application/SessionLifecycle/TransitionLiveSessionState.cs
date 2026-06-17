@@ -21,9 +21,8 @@ public enum LiveSessionLifecycleAction
 
 public sealed record TransitionLiveSessionStateCommand(
     Guid LiveSessionId,
-    LiveSessionLifecycleAction Action) : IRequest<LiveSessionStateResponse>, IAuthorizableRequest
+    LiveSessionLifecycleAction Action) : IRequest<LiveSessionStateResponse>
 {
-    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
 public sealed class TransitionLiveSessionStateCommandHandler(

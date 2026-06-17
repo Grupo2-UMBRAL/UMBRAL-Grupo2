@@ -8,9 +8,8 @@ namespace Umbral.ScoringAudit.Api.Application.Audit;
 public sealed record LogSessionEventCommand(
     Guid LiveSessionId,
     string EventType,
-    string Description) : IRequest<SessionEventLogPayload>, IAuthorizableRequest
+    string Description) : IRequest<SessionEventLogPayload>
 {
-    public RequestAuthorizationMetadata Authorization => new([UmbralRoles.Administrator, UmbralRoles.Operator, UmbralRoles.Participant]);
 }
 
 public sealed class LogSessionEventHandler(
