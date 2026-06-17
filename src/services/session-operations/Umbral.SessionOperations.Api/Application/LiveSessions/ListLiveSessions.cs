@@ -5,9 +5,8 @@ using Umbral.SessionOperations.Api.Infrastructure;
 
 namespace Umbral.SessionOperations.Api.Application.LiveSessions;
 
-public sealed record ListLiveSessionsQuery : IRequest<IReadOnlyList<LiveSessionResponse>>, IAuthorizableRequest
+public sealed record ListLiveSessionsQuery : IRequest<IReadOnlyList<LiveSessionResponse>>
 {
-    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
 public sealed class ListLiveSessionsQueryHandler(SessionOperationsDbContext dbContext)

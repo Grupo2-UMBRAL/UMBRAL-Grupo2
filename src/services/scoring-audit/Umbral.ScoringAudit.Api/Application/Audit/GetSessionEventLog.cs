@@ -5,9 +5,8 @@ using Umbral.ServiceDefaults;
 namespace Umbral.ScoringAudit.Api.Application.Audit;
 
 public sealed record GetSessionEventLogQuery(Guid LiveSessionId)
-    : IRequest<IReadOnlyList<SessionEventLogPayload>>, IAuthorizableRequest
+    : IRequest<IReadOnlyList<SessionEventLogPayload>>
 {
-    public RequestAuthorizationMetadata Authorization => UmbralRequestAuthorizations.AdministratorOrOperator;
 }
 
 public sealed class GetSessionEventLogHandler(IScoringAuditDbContext dbContext)

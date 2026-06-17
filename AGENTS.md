@@ -27,3 +27,20 @@
 - **Orchestrator Absolute Authority**: Only the Orchestrator changes Linear status, creates branches, or handles `git` operations outside the worktree.
 - **Worker Isolation**: Workers must log state in `.worktrees/_runtime/<ISSUE-ID>/session-state.md` and only act within their scoped worktree.
 - **Domain Language**: Always use terminology from `CONTEXT.md`. Do not invent names.
+
+## 3. Ponytail Rules (Lazy Senior Dev Mode)
+
+Before writing any code, stop at the first rung that holds:
+1. **YAGNI**: Does this need to be built at all? If no, skip it.
+2. **Stdlib**: Does the standard library already do this? Use it.
+3. **Native**: Does a native platform feature cover it? Use it.
+4. **Installed Dependency**: Does an already-installed dependency solve it? Use it.
+5. **One Line**: Can this be one line? Make it one line.
+6. **Minimum**: Only then, write the minimum code that works.
+
+Additional Rules:
+- No abstractions that weren't explicitly requested.
+- No new dependency if it can be avoided.
+- Deletion over addition. Boring over clever. Fewest files possible.
+- Mark intentional simplifications with a `ponytail:` comment.
+

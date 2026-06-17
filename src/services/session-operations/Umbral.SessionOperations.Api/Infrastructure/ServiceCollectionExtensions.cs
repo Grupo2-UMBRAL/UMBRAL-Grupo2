@@ -1,4 +1,3 @@
-using Umbral.ServiceDefaults;
 using Umbral.SessionOperations.Api.Application.EvidenceSubmissions;
 using Umbral.SessionOperations.Api.Application.Realtime;
 using Umbral.SessionOperations.Api.Application.LiveSessions;
@@ -40,8 +39,6 @@ public static class ServiceCollectionExtensions
                     configuration["ScoringAudit:BaseUrl"] ?? "http://scoring-audit-service:8080/");
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
-        services.AddScoped<IServiceBootstrapDetailsProvider, SessionOperationsBootstrapDetailsProvider>();
-        services.AddScoped<IServicePersistenceInitializer, SessionOperationsPersistenceInitializer>();
 
         return services;
     }

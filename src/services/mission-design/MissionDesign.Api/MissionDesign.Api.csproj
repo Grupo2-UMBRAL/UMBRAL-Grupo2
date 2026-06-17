@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MissionDesign.Application\MissionDesign.Application.csproj" />
+    <ProjectReference Include="..\MissionDesign.Infrastructure\MissionDesign.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\shared\Umbral.ServiceDefaults\Umbral.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>
