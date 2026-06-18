@@ -129,5 +129,10 @@
 - [x] Deleted UserManagement.slnx (replaced by root Umbral.sln)
 - [x] Verified Program.cs had no ServiceIdentity usage
 
-## Phase 6: Root solution + package alignment
-- [ ] Not started
+## Phase 6: Root solution + package alignment ✅ COMPLETE
+- [x] Generada solución maestra `Umbral.sln` en la raíz del repositorio.
+- [x] Agregados los 23 proyectos al `Umbral.sln` con estructura de carpetas lógica replicando los directorios.
+- [x] Implementado Central Package Management (CPM) vía `Directory.Packages.props`.
+- [x] Implementado Central Build Properties vía `Directory.Build.props` (net10.0, ImplicitUsings, Nullable).
+- [x] Se eliminó el atributo `Version="..."` y propiedades genéricas de compilación en los 23 archivos `.csproj`.
+- [x] Todas las dependencias alineadas: `MediatR` (12.4.0), `Microsoft.EntityFrameworkCore` y web (10.0.0).
