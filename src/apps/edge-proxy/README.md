@@ -22,7 +22,7 @@
 - `/mission-management/*` -> `Mission Management`
 - `/session-operations/*` -> `Session Operations`
 - `/session-hub/*` -> `Session Operations` realtime hub
-- `/scoring-audit/*` -> `Scoring and Audit`
+- `/scoring-monitoring/*` -> `Scoring and Monitoring`
 
 ## Trust model
 

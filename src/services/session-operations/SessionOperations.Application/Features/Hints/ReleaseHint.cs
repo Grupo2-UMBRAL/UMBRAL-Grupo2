@@ -19,7 +19,7 @@ public sealed class ReleaseHintHandler(
     ISessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier,
-    IScoringAuditClient scoringAuditClient)
+    IScoringMonitoringClient scoringAuditClient)
     : IRequestHandler<ReleaseHintCommand, IReadOnlyList<VisibleHintSnapshot>>
 {
     public async Task<IReadOnlyList<VisibleHintSnapshot>> Handle(

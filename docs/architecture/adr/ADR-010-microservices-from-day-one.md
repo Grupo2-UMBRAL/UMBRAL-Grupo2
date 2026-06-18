@@ -16,7 +16,7 @@ Esto impacta despliegue, contratos, mensajeria, persistencia, observabilidad y e
 - Los servicios se alinean inicialmente con:
   - `Mission Design`
   - `Session Operations`
-  - `Scoring and Audit`
+  - `Scoring and Monitoring`
   - `Identity and Access`
 - `Identity and Access` es la capacidad logica; `Keycloak` es su implementacion inicial.
 - `RabbitMQ` se usa para comunicacion asincrona entre servicios.

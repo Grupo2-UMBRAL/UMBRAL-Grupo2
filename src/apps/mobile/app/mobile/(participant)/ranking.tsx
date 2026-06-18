@@ -43,7 +43,7 @@ function readErrorMessage(error: unknown) {
 }
 
 function getRankingUrl(edgeProxyPublicBaseUrl: string, liveSessionId: string) {
-  return `${edgeProxyPublicBaseUrl}/scoring-audit/api/scoring-audit/sessions/${liveSessionId}/ranking`;
+  return `${edgeProxyPublicBaseUrl}/scoring-monitoring/api/scoring-monitoring/sessions/${liveSessionId}/ranking`;
 }
 
 function formatResolutionTime(value: string) {
@@ -296,7 +296,7 @@ export default function RankingPage() {
     <ScreenShell
       eyebrow="Ranking"
       title={snapshot ? `${snapshot.teamName} standings` : "Session Team standings"}
-      description="Scoreboard publishes ranking updates from Scoring and Audit without making the mobile client a scoring source."
+      description="Scoreboard publishes ranking updates from Scoring and Monitoring without making the mobile client a scoring source."
     >
       <View style={shellStyles.card}>
         <View style={shellStyles.row}>
@@ -306,7 +306,7 @@ export default function RankingPage() {
         <Text style={shellStyles.cardText}>
           {ownRanking
             ? `Tu equipo va en puesto #${ownRanking.rank} con ${ownRanking.visibleScore} pts.`
-            : "Ranking listo cuando Scoreboard registre crédito de etapa."}
+            : "Ranking listo cuando Scoreboard registre crÃ©dito de etapa."}
         </Text>
         {rankingError ? <Text style={styles.error}>{rankingError}</Text> : null}
         <Pressable

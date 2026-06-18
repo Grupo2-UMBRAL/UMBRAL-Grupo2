@@ -7,7 +7,7 @@ Este directorio contiene el baseline backend ejecutable para los bounded context
 - `identity-access/Umbral.IdentityAccess.Api`
 - `mission-management/MissionManagement.Api`
 - `session-operations/Umbral.SessionOperations.Api`
-- `scoring-audit/ScoringAudit.Api`
+- `scoring-monitoring/ScoringMonitoring.Api`
 
 ## Capas esperadas por servicio
 
@@ -51,11 +51,11 @@ dotnet build src/services/session-operations/Umbral.SessionOperations.Api/Umbral
 dotnet test src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj
 ```
 
-### Scoring and Audit
+### Scoring and Monitoring
 
 ```powershell
-dotnet build src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj
-dotnet test src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj
+dotnet build src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj
+dotnet test src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj
 ```
 
 ### Shared technical defaults
@@ -69,7 +69,7 @@ dotnet test src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests
 Cada servicio deja preparado:
 
 - `DbContext` con schema propio
-- factory de diseño `IDesignTimeDbContextFactory`
+- factory de diseÃ±o `IDesignTimeDbContextFactory`
 - historial de migraciones en el schema del servicio
 - flag `Persistence:ApplyMigrationsOnStartup`
 
@@ -78,7 +78,7 @@ Ejemplos:
 ```powershell
 dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-management/MissionManagement.Infrastructure/MissionManagement.Infrastructure.csproj --startup-project src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj --startup-project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
-dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-audit/ScoringAudit.Infrastructure/ScoringAudit.Infrastructure.csproj --startup-project src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj
+dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-monitoring/ScoringMonitoring.Infrastructure/ScoringMonitoring.Infrastructure.csproj --startup-project src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj
 ```
 
 ## Validacion integrada

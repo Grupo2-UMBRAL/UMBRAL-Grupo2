@@ -3,7 +3,7 @@ using SessionOperations.Application.Scoring;
 
 namespace SessionOperations.Infrastructure;
 
-public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAuditClient
+public sealed class ScoringMonitoringHttpClient(HttpClient httpClient) : IScoringMonitoringClient
 {
     public async Task RecordStageCreditAsync(
         RecordStageCreditRequest request,
@@ -12,7 +12,7 @@ public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAudi
         ArgumentNullException.ThrowIfNull(request);
 
         using var response = await httpClient.PostAsJsonAsync(
-            $"/api/scoring-audit/sessions/{request.LiveSessionId}/scores",
+            $"/api/scoring-monitoring/sessions/{request.LiveSessionId}/scores",
             new
             {
                 request.SessionTeamId,
@@ -43,7 +43,7 @@ public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAudi
         ArgumentNullException.ThrowIfNull(request);
 
         using var response = await httpClient.PostAsJsonAsync(
-            $"/api/scoring-audit/sessions/{request.LiveSessionId}/penalties",
+            $"/api/scoring-monitoring/sessions/{request.LiveSessionId}/penalties",
             new
             {
                 request.SessionTeamId,
@@ -76,7 +76,7 @@ public sealed class ScoringAuditHttpClient(HttpClient httpClient) : IScoringAudi
         CancellationToken cancellationToken)
     {
         using var response = await httpClient.PostAsJsonAsync(
-            $"/api/scoring-audit/sessions/{liveSessionId}/event-log",
+            $"/api/scoring-monitoring/sessions/{liveSessionId}/event-log",
             new
             {
                 EventType = eventType,

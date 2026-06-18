@@ -36,7 +36,7 @@ public sealed class OverrideValidationOutcomeHandler(
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
-    IScoringAuditClient scoringAuditClient)
+    IScoringMonitoringClient scoringAuditClient)
     : IRequestHandler<OverrideValidationOutcomeCommand, OverrideValidationOutcomeResponse>
 {
     public async Task<OverrideValidationOutcomeResponse> Handle(

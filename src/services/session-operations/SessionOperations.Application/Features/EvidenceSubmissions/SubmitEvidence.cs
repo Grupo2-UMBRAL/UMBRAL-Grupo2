@@ -31,7 +31,7 @@ public sealed class SubmitEvidenceCommandHandler(
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
-    IScoringAuditClient scoringAuditClient)
+    IScoringMonitoringClient scoringAuditClient)
     : IRequestHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>
 {
     public async Task<SubmitEvidenceResponse> Handle(

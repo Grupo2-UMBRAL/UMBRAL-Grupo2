@@ -8,13 +8,13 @@ Accepted
 
 UMBRAL necesita recalcular puntaje, aplicar penalizaciones, explicar trazabilidad y mostrar ranking en tiempo real. Si el ranking se trata como fuente de verdad, se debilita la trazabilidad del puntaje acumulado.
 
-El contexto de `Scoring and Audit` ya distingue entre cambios atómicos de puntaje y la proyección observable del ranking.
+El contexto de `Scoring and Monitoring` ya distingue entre cambios atÃ³micos de puntaje y la proyecciÃ³n observable del ranking.
 
 ## Decision
 
-- `Scoreboard` es la fuente de verdad del puntaje acumulado por sesión.
-- `Score Entry` registra cambios atómicos del puntaje.
-- `Ranking` es una proyección derivada del `Scoreboard`.
+- `Scoreboard` es la fuente de verdad del puntaje acumulado por sesiÃ³n.
+- `Score Entry` registra cambios atÃ³micos del puntaje.
+- `Ranking` es una proyecciÃ³n derivada del `Scoreboard`.
 
 ## Consequences
 

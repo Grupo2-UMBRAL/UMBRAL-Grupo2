@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -25,17 +25,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Domain", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Infrastructure", "src\services\mission-management\MissionManagement.Infrastructure\MissionManagement.Infrastructure.csproj", "{AF1120C4-AE5A-4154-A294-8F09564E0669}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scoring-audit", "scoring-audit", "{EEA345D3-8267-4DD5-B49A-0039D08DCC04}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scoring-monitoring", "scoring-monitoring", "{EEA345D3-8267-4DD5-B49A-0039D08DCC04}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringAudit.Api", "src\services\scoring-audit\ScoringAudit.Api\ScoringAudit.Api.csproj", "{3FBF498F-44E4-4D5E-A762-92C5466C1679}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Api", "src\services\scoring-monitoring\ScoringMonitoring.Api\ScoringMonitoring.Api.csproj", "{3FBF498F-44E4-4D5E-A762-92C5466C1679}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringAudit.Api.Tests", "src\services\scoring-audit\ScoringAudit.Api.Tests\ScoringAudit.Api.Tests.csproj", "{2260766C-E45E-4F6F-8389-1151CDE2C411}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Api.Tests", "src\services\scoring-monitoring\ScoringMonitoring.Api.Tests\ScoringMonitoring.Api.Tests.csproj", "{2260766C-E45E-4F6F-8389-1151CDE2C411}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringAudit.Application", "src\services\scoring-audit\ScoringAudit.Application\ScoringAudit.Application.csproj", "{698E62C1-E91E-43CE-AF42-A24420F6C2EE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Application", "src\services\scoring-monitoring\ScoringMonitoring.Application\ScoringMonitoring.Application.csproj", "{698E62C1-E91E-43CE-AF42-A24420F6C2EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringAudit.Domain", "src\services\scoring-audit\ScoringAudit.Domain\ScoringAudit.Domain.csproj", "{D532C7EC-4BBE-4ADC-9C93-C345F5427F22}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Domain", "src\services\scoring-monitoring\ScoringMonitoring.Domain\ScoringMonitoring.Domain.csproj", "{D532C7EC-4BBE-4ADC-9C93-C345F5427F22}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringAudit.Infrastructure", "src\services\scoring-audit\ScoringAudit.Infrastructure\ScoringAudit.Infrastructure.csproj", "{EAB70862-8888-4374-B437-9114AD1274CD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Infrastructure", "src\services\scoring-monitoring\ScoringMonitoring.Infrastructure\ScoringMonitoring.Infrastructure.csproj", "{EAB70862-8888-4374-B437-9114AD1274CD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "session-operations", "session-operations", "{F983A58E-E065-4DFC-91BB-F81A53D8293C}"
 EndProject

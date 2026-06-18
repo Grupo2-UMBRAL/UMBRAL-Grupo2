@@ -1,0 +1,9 @@
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Umbral.ServiceDefaults;
+global using ScoringMonitoring.Application.Abstractions;
+global using ScoringMonitoring.Application.Features.SessionEventLogs;
+global using ScoringMonitoring.Application.Features.Rankings;
+global using ScoringMonitoring.Application.Features.Scoreboards;
+global using ScoringMonitoring.Application.Hubs;
+global using ScoringMonitoring.Infrastructure.Persistence;

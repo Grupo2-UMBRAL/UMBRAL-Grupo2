@@ -33,7 +33,7 @@ Existen dos superficies principales:
 
 - `Mission Design`
 - `Session Operations`
-- `Scoring and Audit`
+- `Scoring and Monitoring`
 - `Identity and Access`
 
 ## Reglas de negocio transversales

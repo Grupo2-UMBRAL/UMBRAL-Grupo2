@@ -35,7 +35,7 @@ public sealed class ApplyPenaltyHandler(
     ISessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
-    IScoringAuditClient scoringAuditClient)
+    IScoringMonitoringClient scoringAuditClient)
     : IRequestHandler<ApplyPenaltyCommand, ApplyPenaltyResponse>
 {
     public async Task<ApplyPenaltyResponse> Handle(

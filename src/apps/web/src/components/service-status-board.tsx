@@ -42,7 +42,7 @@ export function ServiceStatusBoard({
       },
       {
         label: "Scoring & Audit",
-        url: `${base}/scoring-audit/api/scoring-audit/smoke/${role}`,
+        url: `${base}/scoring-monitoring/api/scoring-monitoring/smoke/${role}`,
         auth: true,
       },
     ];
@@ -69,7 +69,7 @@ export function ServiceStatusBoard({
         results[i] = {
           label: ep.label,
           status: "error",
-          detail: err instanceof Error ? err.message : "Error de conexión",
+          detail: err instanceof Error ? err.message : "Error de conexiÃ³n",
         };
       }
       setChecks([...results]);

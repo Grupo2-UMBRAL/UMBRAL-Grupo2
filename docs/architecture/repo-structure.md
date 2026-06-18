@@ -24,7 +24,7 @@ Estructura real actual del repositorio.
 |  `- services/
 |     |- identity-access/
 |     |- mission-management/
-|     |- scoring-audit/
+|     |- scoring-monitoring/
 |     `- session-operations/
 `- .agents/
    |- agents/

@@ -3,7 +3,7 @@ const defaults = {
   edgeProxyPublicBaseUrl: "http://localhost:7500",
   keycloakPublicBaseUrl: "http://localhost:7500/auth",
   sessionHubPath: "/session-hub/hubs/session",
-  scoringHubPath: "/scoring-audit/hub/scoring",
+  scoringHubPath: "/scoring-monitoring/hub/scoring",
   keycloakRealm: "umbral",
   keycloakClientId: "umbral-web"
 };
@@ -23,7 +23,7 @@ export function getServerConfig() {
     keycloakRealm: process.env.KEYCLOAK_REALM ?? defaults.keycloakRealm,
     keycloakClientId: process.env.KEYCLOAK_WEB_CLIENT_ID ?? defaults.keycloakClientId,
     sessionHubPath: process.env.NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH ?? defaults.sessionHubPath,
-    scoringHubPath: process.env.NEXT_PUBLIC_SCORING_AUDIT_HUB_PATH ?? defaults.scoringHubPath
+    scoringHubPath: process.env.NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH ?? defaults.scoringHubPath
   };
 }
 

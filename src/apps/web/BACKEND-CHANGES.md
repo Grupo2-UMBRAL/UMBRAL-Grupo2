@@ -1,12 +1,12 @@
 # Cambios Pendientes en el Backend
 
-Cambios que el backend necesita para completar la integración con el nuevo frontend SPA.
+Cambios que el backend necesita para completar la integraciÃ³n con el nuevo frontend SPA.
 
 ---
 
-## 1. Keycloak — Cliente `umbral-web`
+## 1. Keycloak â€” Cliente `umbral-web`
 
-El flujo cambió de `grant_type: password` (BFF) a **Authorization Code Flow con PKCE** directo desde el navegador.
+El flujo cambiÃ³ de `grant_type: password` (BFF) a **Authorization Code Flow con PKCE** directo desde el navegador.
 
 ### Verificar/configurar:
 - **Standard Flow Enabled**: `true`
@@ -19,18 +19,18 @@ El flujo cambió de `grant_type: password` (BFF) a **Authorization Code Flow con
 
 ---
 
-## 2. Edge Proxy — CORS
+## 2. Edge Proxy â€” CORS
 
 ### Verificar:
-- `AllowedOrigins` en la configuración de YARP debe incluir:
+- `AllowedOrigins` en la configuraciÃ³n de YARP debe incluir:
   - `http://localhost:3000`
   - `http://localhost:5173`
 
-> El docker-compose.dev.yml ya tiene `AllowedOrigins__0: http://localhost:5173`. Verificar que `http://localhost:3000` también esté.
+> El docker-compose.dev.yml ya tiene `AllowedOrigins__0: http://localhost:5173`. Verificar que `http://localhost:3000` tambiÃ©n estÃ©.
 
 ---
 
-## 3. Docker Compose — Servicio `web`
+## 3. Docker Compose â€” Servicio `web`
 
 ### Cambios en `docker-compose.dev.yml`:
 
@@ -43,10 +43,10 @@ El flujo cambió de `grant_type: password` (BFF) a **Authorization Code Flow con
    environment:
 -    - WATCHPACK_POLLING=true
      - NODE_ENV=development
-     # Las demás variables se mantienen igual
+     # Las demÃ¡s variables se mantienen igual
 ```
 
-El Dockerfile ya está ajustado para Vite. El `server.host: true` en vite.config.ts reemplaza `--hostname 0.0.0.0`.
+El Dockerfile ya estÃ¡ ajustado para Vite. El `server.host: true` en vite.config.ts reemplaza `--hostname 0.0.0.0`.
 
 ---
 
@@ -56,12 +56,12 @@ El frontend SPA usa las mismas variables de entorno que antes, inyectadas via `v
 
 | Variable | Uso |
 |---|---|
-| `NEXT_PUBLIC_EDGE_PROXY_BASE_URL` | URL pública del edge-proxy (default: `http://localhost:7500`) |
-| `NEXT_PUBLIC_KEYCLOAK_BASE_URL` | URL pública de Keycloak (default: `http://localhost:7500/auth`) |
+| `NEXT_PUBLIC_EDGE_PROXY_BASE_URL` | URL pÃºblica del edge-proxy (default: `http://localhost:7500`) |
+| `NEXT_PUBLIC_KEYCLOAK_BASE_URL` | URL pÃºblica de Keycloak (default: `http://localhost:7500/auth`) |
 | `KEYCLOAK_REALM` | Realm de Keycloak (default: `umbral`) |
 | `KEYCLOAK_WEB_CLIENT_ID` | Client ID (default: `umbral-web`) |
 | `NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH` | Path del hub SignalR de sesiones |
-| `NEXT_PUBLIC_SCORING_AUDIT_HUB_PATH` | Path del hub SignalR de scoring |
+| `NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH` | Path del hub SignalR de scoring |
 
 > Los nombres `NEXT_PUBLIC_*` se mantienen por compatibilidad con el stack actual. Se pueden renombrar a `VITE_*` en un futuro refactor.
 
@@ -69,13 +69,13 @@ El frontend SPA usa las mismas variables de entorno que antes, inyectadas via `v
 
 ## 5. Endpoints que NO cambian
 
-Todos los endpoints de API documentados en el plan de implementación siguen siendo consumidos de la misma forma. El frontend hace fetch directo al edge-proxy con `Authorization: Bearer <token>`.
+Todos los endpoints de API documentados en el plan de implementaciÃ³n siguen siendo consumidos de la misma forma. El frontend hace fetch directo al edge-proxy con `Authorization: Bearer <token>`.
 
 No hay cambios requeridos en:
 - identity-access-service
 - mission-management-service
 - session-operations-service
-- scoring-audit-service
+- scoring-monitoring-service
 - edge-proxy routing rules
 
 ---
@@ -83,9 +83,9 @@ No hay cambios requeridos en:
 ## 6. Archivos eliminados del frontend (ya no existen)
 
 Estos archivos del Next.js original ya no son necesarios:
-- `middleware.ts` — el enrutamiento es client-side
-- `src/app/api/auth/login/route.ts` — el login es directo a Keycloak
-- `src/app/api/auth/logout/route.ts` — el logout es directo a Keycloak
-- `src/lib/session-cookie.ts` — ya no hay cookies de sesión
-- `src/lib/session.ts` — reemplazado por auth-context con keycloak-js
-- `next.config.ts` — reemplazado por vite.config.ts
+- `middleware.ts` â€” el enrutamiento es client-side
+- `src/app/api/auth/login/route.ts` â€” el login es directo a Keycloak
+- `src/app/api/auth/logout/route.ts` â€” el logout es directo a Keycloak
+- `src/lib/session-cookie.ts` â€” ya no hay cookies de sesiÃ³n
+- `src/lib/session.ts` â€” reemplazado por auth-context con keycloak-js
+- `next.config.ts` â€” reemplazado por vite.config.ts

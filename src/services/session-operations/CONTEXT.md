@@ -73,7 +73,7 @@ Capacidad operativa que controla que **Hints** quedan visibles para cada **Sessi
 _Avoid_: mission design hint authoring, generic notification
 
 **Penalty Application**:
-Accion operativa por la que el **Operator** sanciona a un **Session Team** dentro de una **LiveSession** eligiendo una severidad predefinida y registrando el motivo. Esta accion origina una **Penalty** para `Scoring and Audit`, pero no decide por si misma el recalculo interno del **Scoreboard**.
+Accion operativa por la que el **Operator** sanciona a un **Session Team** dentro de una **LiveSession** eligiendo una severidad predefinida y registrando el motivo. Esta accion origina una **Penalty** para `Scoring and Monitoring`, pero no decide por si misma el recalculo interno del **Scoreboard**.
 _Avoid_: descuento libre de puntos como decision operativa, recalculo de ranking dentro de Session Operations
 
 **Penalty Command Idempotency**:
@@ -106,8 +106,8 @@ Queda descartado por ahora como concepto del dominio central. El lenguaje actual
 
 ## Example Dialogue
 
-Dev: "¿El grupo con el que juego existe en todo el sistema?"
-Experto de dominio: "No. El Session Team nace dentro de una LiveSession y vale solo para esa ejecución."
+Dev: "Â¿El grupo con el que juego existe en todo el sistema?"
+Experto de dominio: "No. El Session Team nace dentro de una LiveSession y vale solo para esa ejecuciÃ³n."
 
 Dev: "Cual es el agregado principal de Session Operations?"
 Experto de dominio: "LiveSession. Ahi viven las invariantes que coordinan estado, equipos y progreso."
@@ -134,7 +134,7 @@ Dev: "Las pistas son solo un atributo mas de la sesion?"
 Experto de dominio: "No. Hint Release tiene reglas propias dentro de Session Operations, aunque siga perteneciendo al mismo bounded context."
 
 Dev: "Cuando penalizo a un equipo, escribo cualquier numero?"
-Experto de dominio: "No. En la operacion eliges una severidad predefinida y dejas el motivo; el descuento lo resuelve Scoring and Audit."
+Experto de dominio: "No. En la operacion eliges una severidad predefinida y dejas el motivo; el descuento lo resuelve Scoring and Monitoring."
 
 Dev: "Desactivar una etapa cambia la Mission Stage?"
 Experto de dominio: "No. Cambia el Session Stage Flow de esta LiveSession."
