@@ -119,11 +119,15 @@
 - **DbContext direct reference**: Application handlers reference `SessionOperationsDbContext` directly (same pragmatic compromise as original code). A future refinement could introduce an `ISessionOperationsDbContext` abstraction, but the plan prioritizes structural decomposition first.
 - **No controllers exist**: The old service had no controllers or minimal-API endpoints — only MediatR handlers invoked through SignalR. `MapControllers()` retained for future additions.
 - **Migrations namespace update**: Migrations moved from `Umbral.SessionOperations.Api.Infrastructure.Migrations` to `SessionOperations.Infrastructure.Persistence.Migrations`; entity type references in Designer files updated from `Umbral.SessionOperations.Api.Domain.LiveSessions.*` to `SessionOperations.Domain.LiveSessions.*`.
-- **Old project preserved**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories remain for reference and should be deleted after successful validation.
+- **Old project preserved**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories han sido eliminados de manera permanente.
 
 
-## Phase 5: Clean user-management
-- [ ] Not started
+## Phase 5: Clean user-management ✅ COMPLETE
+- [x] Deleted WeatherForecastController.cs (template junk)
+- [x] Deleted WeatherForecast.cs (template junk)
+- [x] Deleted UnitTest1.cs (empty template test)
+- [x] Deleted UserManagement.slnx (replaced by root Umbral.sln)
+- [x] Verified Program.cs had no ServiceIdentity usage
 
 ## Phase 6: Root solution + package alignment
 - [ ] Not started
