@@ -36,10 +36,10 @@ $backendProjects = @(
     "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.IdentityAccess.Api.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
-    "src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj",
-    "src/services/mission-design/Umbral.MissionDesign.Api.Tests/Umbral.MissionDesign.Api.Tests.csproj",
-    "src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj",
-    "src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj",
+    "src/services/mission-design/MissionDesign.Api/MissionDesign.Api.csproj",
+    "src/services/mission-design/MissionDesign.Api.Tests/MissionDesign.Api.Tests.csproj",
+    "src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj",
+    "src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj",
     "src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj",
     "src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj"
 )
@@ -47,8 +47,8 @@ $backendProjects = @(
 $backendTestProjects = @(
     "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
-    "src/services/mission-design/Umbral.MissionDesign.Api.Tests/Umbral.MissionDesign.Api.Tests.csproj",
-    "src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj",
+    "src/services/mission-design/MissionDesign.Api.Tests/MissionDesign.Api.Tests.csproj",
+    "src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj",
     "src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj"
 )
 

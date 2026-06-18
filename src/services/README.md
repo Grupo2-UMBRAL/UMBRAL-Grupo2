@@ -7,7 +7,7 @@ Este directorio contiene el baseline backend ejecutable para los bounded context
 - `identity-access/Umbral.IdentityAccess.Api`
 - `mission-design/Umbral.MissionDesign.Api`
 - `session-operations/Umbral.SessionOperations.Api`
-- `scoring-audit/Umbral.ScoringAudit.Api`
+- `scoring-audit/ScoringAudit.Api`
 
 ## Capas esperadas por servicio
 
@@ -54,8 +54,8 @@ dotnet test src/services/session-operations/Umbral.SessionOperations.Api.Tests/U
 ### Scoring and Audit
 
 ```powershell
-dotnet build src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj
-dotnet test src/services/scoring-audit/Umbral.ScoringAudit.Api.Tests/Umbral.ScoringAudit.Api.Tests.csproj
+dotnet build src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj
+dotnet test src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj
 ```
 
 ### Shared technical defaults
@@ -78,7 +78,7 @@ Ejemplos:
 ```powershell
 dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj --startup-project src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj --startup-project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
-dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj --startup-project src/services/scoring-audit/Umbral.ScoringAudit.Api/Umbral.ScoringAudit.Api.csproj
+dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-audit/ScoringAudit.Infrastructure/ScoringAudit.Infrastructure.csproj --startup-project src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj
 ```
 
 ## Validacion integrada
