@@ -13,7 +13,7 @@ Resumen operativo de las rutas que consume hoy el front web y que sirven como ba
 
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
-- Login hace exchange contra Keycloak y guarda la sesión web.
+- Login hace exchange contra Keycloak y guarda la sesiÃ³n web.
 
 ## Identity and Access
 
@@ -67,7 +67,7 @@ Base: `/session-operations/api/session-operations`
 - `POST /live-sessions/{liveSessionId}/stages/{missionStageId}/hints`
 - `POST /live-sessions/{liveSessionId}/hints/{hintId}/release`
 
-### Operación de envíos
+### OperaciÃ³n de envÃ­os
 
 - `POST /submissions/{submissionId}/override`
 
@@ -79,9 +79,9 @@ Base: `/session-operations/api/session-operations`
 - `POST /session-enrollment/join`
 - `GET /session-teams/{sessionTeamId}/snapshot`
 
-## Scoring and Audit
+## Scoring and Monitoring
 
-Base: `/scoring-audit/api/scoring-audit`
+Base: `/scoring-monitoring/api/scoring-monitoring`
 
 - `GET /bootstrap`
 - `POST /sessions/{liveSessionId}/scores`
@@ -93,10 +93,10 @@ Base: `/scoring-audit/api/scoring-audit`
 ## Realtime
 
 - Session hub: `/session-hub/hubs/session`
-- Scoring hub: `/scoring-audit/hub/scoring`
+- Scoring hub: `/scoring-monitoring/hub/scoring`
 
 ## Smoke checks
 
 - `GET /mission-management/api/mission-management/smoke/{administrator|operator}`
 - `GET /session-operations/api/session-operations/smoke/{administrator|operator}`
-- `GET /scoring-audit/api/scoring-audit/smoke/{administrator|operator}`
+- `GET /scoring-monitoring/api/scoring-monitoring/smoke/{administrator|operator}`

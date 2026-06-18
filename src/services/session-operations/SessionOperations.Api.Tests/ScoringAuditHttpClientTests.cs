@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SessionOperations.Api.Tests;
 
-public sealed class ScoringAuditHttpClientTests
+public sealed class ScoringMonitoringHttpClientTests
 {
     [Fact]
     public async Task LogSessionEventAsync_PostsMinimumSafePayloadToSessionEventLogEndpoint()
@@ -15,9 +15,9 @@ public sealed class ScoringAuditHttpClientTests
         var handler = new CapturingHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.Created));
         var httpClient = new HttpClient(handler)
         {
-            BaseAddress = new Uri("https://scoring-audit.test")
+            BaseAddress = new Uri("https://scoring-monitoring.test")
         };
-        var scoringAuditClient = new ScoringAuditHttpClient(httpClient);
+        var scoringAuditClient = new ScoringMonitoringHttpClient(httpClient);
 
         await scoringAuditClient.LogSessionEventAsync(
             liveSessionId,
@@ -26,7 +26,7 @@ public sealed class ScoringAuditHttpClientTests
             CancellationToken.None);
 
         Assert.Equal(HttpMethod.Post, handler.RequestMethod);
-        Assert.Equal($"/api/scoring-audit/sessions/{liveSessionId}/event-log", handler.RequestPath);
+        Assert.Equal($"/api/scoring-monitoring/sessions/{liveSessionId}/event-log", handler.RequestPath);
         using var document = JsonDocument.Parse(handler.RequestContent);
         var root = document.RootElement;
         Assert.Equal(2, root.EnumerateObject().Count());

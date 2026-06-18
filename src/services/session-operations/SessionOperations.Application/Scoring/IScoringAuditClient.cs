@@ -1,6 +1,6 @@
 namespace SessionOperations.Application.Scoring;
 
-public interface IScoringAuditClient
+public interface IScoringMonitoringClient
 {
     Task RecordStageCreditAsync(
         RecordStageCreditRequest request,

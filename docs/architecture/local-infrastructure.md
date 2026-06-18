@@ -14,7 +14,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `keycloak`
 - `mission-management-service`
 - `session-operations-service`
-- `scoring-audit-service`
+- `scoring-monitoring-service`
 - `edge-proxy`
 
 ## Puertos locales
@@ -23,7 +23,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `keycloak`: `8080`
 - `mission-management-service`: `7101`
 - `session-operations-service`: `7102`
-- `scoring-audit-service`: `7103`
+- `scoring-monitoring-service`: `7103`
 - `postgres`: `5432`
 - `rabbitmq`: `5672`
 - `rabbitmq management`: `16672`
@@ -33,7 +33,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `/mission-management/*` -> `mission-management-service`
 - `/session-operations/*` -> `session-operations-service`
 - `/session-hub/*` -> hub `SignalR` de `session-operations-service`
-- `/scoring-audit/*` -> `scoring-audit-service`
+- `/scoring-monitoring/*` -> `scoring-monitoring-service`
 - `/auth/*` -> `Keycloak`
 
 Para trafico de clientes locales, el host preferido es `http://localhost:7500` y no las URLs directas de cada servicio. Las URLs directas siguen siendo utiles para debugging puntual o trafico interno dentro de Docker, pero no son el borde publico recomendado para `web` ni `mobile`.
@@ -78,7 +78,7 @@ Se usa una sola instancia de `PostgreSQL` con esquemas separados:
 
 - `mission_management`
 - `session_operations`
-- `scoring_audit`
+- `scoring_monitoring`
 
 Eso mantiene alineacion con `ADR-006` sin abrir complejidad operativa innecesaria en esta fase.
 

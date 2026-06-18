@@ -117,7 +117,7 @@ public sealed class HintReleaseQaTests
         var liveSession = CreateRunningLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
         var realtimeNotifier = new RecordingSessionRealtimeNotifier();
-        var scoringAuditClient = new RecordingScoringAuditClient();
+        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ReleaseHintHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
@@ -386,7 +386,7 @@ public sealed class HintReleaseQaTests
         }
     }
 
-    private sealed class RecordingScoringAuditClient : IScoringAuditClient
+    private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
     {
         public List<RecordedSessionEvent> SessionEvents { get; } = [];
 

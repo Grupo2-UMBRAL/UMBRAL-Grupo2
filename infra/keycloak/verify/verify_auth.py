@@ -21,18 +21,18 @@ EXPECTED_API_AUDIENCES = {
     "umbral-identity-access-api",
     "umbral-mission-management-api",
     "umbral-session-operations-api",
-    "umbral-scoring-audit-api",
+    "umbral-scoring-monitoring-api",
 }
 BOOTSTRAP_PATHS = [
     "/identity-access/api/identity-access/bootstrap",
     "/mission-management/api/mission-management/bootstrap",
     "/session-operations/api/session-operations/bootstrap",
-    "/scoring-audit/api/scoring-audit/bootstrap",
+    "/scoring-monitoring/api/scoring-monitoring/bootstrap",
 ]
 ROLE_SMOKE_PATHS = {
     "admin": "/mission-management/api/mission-management/smoke/administrator",
     "operator": "/session-operations/api/session-operations/smoke/operator",
-    "participant": "/scoring-audit/api/scoring-audit/smoke/participant",
+    "participant": "/scoring-monitoring/api/scoring-monitoring/smoke/participant",
 }
 SEED_USERS = {
     "admin": "admin123!",

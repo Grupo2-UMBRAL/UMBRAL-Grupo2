@@ -26,7 +26,7 @@ public sealed class EvidenceSubmissionAuditEventTests
     {
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
-        var scoringAuditClient = new RecordingScoringAuditClient();
+        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new SubmitEvidenceCommandHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
@@ -124,7 +124,7 @@ public sealed class EvidenceSubmissionAuditEventTests
         public ParticipantUserId GetRequiredParticipantUserId() => ParticipantUserId.Parse(participantUserId);
     }
 
-    private sealed class RecordingScoringAuditClient : IScoringAuditClient
+    private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
     {
         public List<RecordStageCreditRequest> StageCreditRequests { get; } = [];
 

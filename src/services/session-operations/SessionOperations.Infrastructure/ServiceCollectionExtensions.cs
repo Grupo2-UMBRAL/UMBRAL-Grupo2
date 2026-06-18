@@ -37,10 +37,10 @@ public static class ServiceCollectionExtensions
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
         services
-            .AddHttpClient<IScoringAuditClient, ScoringAuditHttpClient>(client =>
+            .AddHttpClient<IScoringMonitoringClient, ScoringMonitoringHttpClient>(client =>
             {
                 client.BaseAddress = new Uri(
-                    configuration["ScoringAudit:BaseUrl"] ?? "http://scoring-audit-service:8080/");
+                    configuration["ScoringMonitoring:BaseUrl"] ?? "http://scoring-monitoring-service:8080/");
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
 

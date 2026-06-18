@@ -21,7 +21,7 @@ public sealed class SubmitTriviaAnswerHandler(
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
-    IScoringAuditClient scoringAuditClient)
+    IScoringMonitoringClient scoringAuditClient)
     : IRequestHandler<SubmitTriviaAnswerCommand, SubmitEvidenceResponse>
 {
     public async Task<SubmitEvidenceResponse> Handle(

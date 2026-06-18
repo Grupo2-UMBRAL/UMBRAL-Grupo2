@@ -6,17 +6,17 @@ Accepted
 
 ## Context
 
-UMBRAL combina diseño reusable de misiones, operación en vivo, puntaje auditable e identidad. Tratar todo eso como un único modelo hace más fácil mezclar lenguaje, reglas e invariantes distintas.
+UMBRAL combina diseÃ±o reusable de misiones, operaciÃ³n en vivo, puntaje auditable e identidad. Tratar todo eso como un Ãºnico modelo hace mÃ¡s fÃ¡cil mezclar lenguaje, reglas e invariantes distintas.
 
-El enunciado académico pide al menos tres bounded contexts o subáreas con lenguaje propio. El modelo actual ya distingue cuatro áreas con responsabilidades diferentes.
+El enunciado acadÃ©mico pide al menos tres bounded contexts o subÃ¡reas con lenguaje propio. El modelo actual ya distingue cuatro Ã¡reas con responsabilidades diferentes.
 
 ## Decision
 
-La solución se modela con estos cuatro bounded contexts:
+La soluciÃ³n se modela con estos cuatro bounded contexts:
 
 - `Mission Design`
 - `Session Operations`
-- `Scoring and Audit`
+- `Scoring and Monitoring`
 - `Identity and Access`
 
 Las relaciones entre ellos se documentan en `CONTEXT-MAP.md`.
@@ -24,6 +24,6 @@ Las relaciones entre ellos se documentan en `CONTEXT-MAP.md`.
 ## Consequences
 
 - El lenguaje del dominio queda particionado por contexto.
-- Las decisiones de implementación deben respetar estos límites antes de definir módulos o despliegue.
+- Las decisiones de implementaciÃ³n deben respetar estos lÃ­mites antes de definir mÃ³dulos o despliegue.
 - `CONTEXT.md` por contexto pasa a ser la referencia de vocabulario.
-- Cualquier propuesta que cruce conceptos entre contextos debe justificarse explícitamente.
+- Cualquier propuesta que cruce conceptos entre contextos debe justificarse explÃ­citamente.

@@ -11,7 +11,7 @@ Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a l
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
 - [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
 - [../../src/session-operations/CONTEXT.md](../../src/session-operations/CONTEXT.md)
-- [../../src/scoring-audit/CONTEXT.md](../../src/scoring-audit/CONTEXT.md)
+- [../../src/scoring-monitoring/CONTEXT.md](../../src/scoring-monitoring/CONTEXT.md)
 - [../../src/identity-access/CONTEXT.md](../../src/identity-access/CONTEXT.md)
 - [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)
 

@@ -140,15 +140,15 @@
       "secret": "session-operations-secret"
     },
     {
-      "clientId": "umbral-scoring-audit-api",
-      "name": "Scoring and Audit API",
+      "clientId": "umbral-scoring-monitoring-api",
+      "name": "Scoring and Monitoring API",
       "enabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "secret": "scoring-audit-secret"
+      "secret": "scoring-monitoring-secret"
     },
     {
       "clientId": "umbral-edge-proxy",
@@ -231,12 +231,12 @@
           }
         },
         {
-          "name": "audience-scoring-audit-api",
+          "name": "audience-scoring-monitoring-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "umbral-scoring-audit-api",
+            "included.client.audience": "umbral-scoring-monitoring-api",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "lightweight.claim": "false"

@@ -21,7 +21,7 @@ Los microservicios del sistema se alinean con los bounded contexts y capacidades
 
 - `Mission Design Service`
 - `Session Operations Service`
-- `Scoring and Audit Service`
+- `Scoring and Monitoring Service`
 - `Identity and Access Service`
 
 La implementacion actual de `Identity and Access Service` se apoya en `Keycloak` como proveedor de identidad.
@@ -60,7 +60,7 @@ Tecnologia esperada:
 - `SignalR`
 - `EF Core`
 
-### 3. Scoring and Audit Service
+### 3. Scoring and Monitoring Service
 
 Responsabilidad:
 
@@ -159,7 +159,7 @@ flowchart LR
     Gateway[API Gateway or BFF]
     Mission[Mission Design Service]
     Session[Session Operations Service]
-    Score[Scoring and Audit Service]
+    Score[Scoring and Monitoring Service]
     Identity[Identity and Access Service]
     KC[Keycloak]
     MQ[RabbitMQ]
@@ -188,7 +188,7 @@ flowchart TD
         GW[gateway optional]
         MS[mission-management-service]
         SS[session-operations-service]
-        SA[scoring-audit-service]
+        SA[scoring-monitoring-service]
         KC[keycloak]
         DB[postgres]
         MQ[rabbitmq]
@@ -255,7 +255,7 @@ Sirve cuando:
 Ejemplo:
 
 - `Session Operations Service` publica `EvidenceValidated`
-- `Scoring and Audit Service` recalcula puntaje
+- `Scoring and Monitoring Service` recalcula puntaje
 
 ### Orquestacion
 
@@ -306,7 +306,7 @@ Ejemplo posible:
 
 ### Servicios <-> PostgreSQL
 
-- cada servicio debe tender a ser dueño de sus datos
+- cada servicio debe tender a ser dueÃ±o de sus datos
 - si comparten una sola instancia al inicio, deben seguir manteniendo separacion logica
 
 ### Servicios <-> RabbitMQ
@@ -315,7 +315,7 @@ Ejemplo posible:
 - procesamiento asincrono
 - desacoplamiento de responsabilidades
 
-### Session Operations <-> Scoring and Audit
+### Session Operations <-> Scoring and Monitoring
 
 - preferir integracion sincronica si el flujo necesita respuesta inmediata
 - usar eventos cuando la operacion pueda resolverse en segundo plano
@@ -378,7 +378,7 @@ Eventos de tiempo real a cerrar:
 - `Auth__Audience`
 - `SignalR__Enabled`
 
-### Scoring and Audit Service
+### Scoring and Monitoring Service
 
 - `ConnectionStrings__Postgres`
 - `RabbitMQ__Host`
@@ -435,7 +435,7 @@ sequenceDiagram
     participant Client
     participant Session as Session Operations
     participant MQ as RabbitMQ
-    participant Score as Scoring and Audit
+    participant Score as Scoring and Monitoring
 
     Client->>Session: command
     Session->>Session: aplica caso de uso

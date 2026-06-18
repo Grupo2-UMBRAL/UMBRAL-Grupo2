@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj src/services/scoring-monitoring/ScoringMonitoring.Api/
+RUN dotnet restore src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj
+
+COPY src/services/scoring-monitoring/ScoringMonitoring.Api/ src/services/scoring-monitoring/ScoringMonitoring.Api/
+RUN dotnet publish src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "ScoringMonitoring.Api.dll"]

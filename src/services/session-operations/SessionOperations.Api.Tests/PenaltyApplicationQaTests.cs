@@ -18,11 +18,11 @@ public sealed class PenaltyApplicationQaTests
     private static readonly Guid TeamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
-    public async Task ApplyPenalty_ForwardsOperatorIdentityAndClockTimestampToScoringAudit()
+    public async Task ApplyPenalty_ForwardsOperatorIdentityAndClockTimestampToScoringMonitoring()
     {
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
-        var scoringAuditClient = new RecordingScoringAuditClient();
+        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
@@ -52,11 +52,11 @@ public sealed class PenaltyApplicationQaTests
     }
 
     [Fact]
-    public async Task ApplyPenalty_RejectsBlankReasonBeforeCallingScoringAudit()
+    public async Task ApplyPenalty_RejectsBlankReasonBeforeCallingScoringMonitoring()
     {
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
-        var scoringAuditClient = new RecordingScoringAuditClient();
+        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
@@ -82,7 +82,7 @@ public sealed class PenaltyApplicationQaTests
     {
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateScheduledLiveSession());
-        var scoringAuditClient = new RecordingScoringAuditClient();
+        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
@@ -171,7 +171,7 @@ public sealed class PenaltyApplicationQaTests
         public string GetRequiredOperatorUserId() => operatorUserId;
     }
 
-    private sealed class RecordingScoringAuditClient : IScoringAuditClient
+    private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
     {
         public List<Application.Scoring.ApplyPenaltyRequest> Requests { get; } = [];
 

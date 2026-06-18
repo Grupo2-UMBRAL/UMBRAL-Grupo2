@@ -36,7 +36,7 @@ The public `edge-proxy` may be the preferred client entry, but this matrix is st
 | Identity and Access | `CreateOperatorCommand` | `Administrator` | None |
 | Identity and Access | `DeactivateOperatorCommand` | `Administrator` | None |
 | Identity and Access | `RotateOperatorPasswordCommand` | `Administrator` | None |
-| Scoring and Audit | `GetScoringAuditBootstrapDetailsQuery` | Any authenticated role | None |
+| Scoring and Monitoring | `GetScoringMonitoringBootstrapDetailsQuery` | Any authenticated role | None |
 
 ## Scope rule for future participant requests
 

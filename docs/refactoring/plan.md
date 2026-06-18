@@ -1,11 +1,11 @@
-# 🏗️ Backend Refactoring Plan — Final (v2)
+# ðŸ—ï¸ Backend Refactoring Plan â€” Final (v2)
 
 ## Decisions Locked In
 
 | Question | Decision |
 |----------|----------|
 | Target Framework | `net10.0` for everything |
-| Shared Library name | Keep `Umbral.ServiceDefaults` — it IS a real shared class library |
+| Shared Library name | Keep `Umbral.ServiceDefaults` â€” it IS a real shared class library |
 | `CurrentUser` abstraction | **Delete it.** Replace with direct `ClaimsPrincipal` usage. Rewrite `RequestAuthorizationBehavior` to use `IHttpContextAccessor` + `ClaimsPrincipal` directly |
 | Bootstrap logic | **Move out of Application layer.** Migrations belong in Infrastructure or directly in `Program.cs`. Keep bootstrap tests but rewrite them against the new location |
 | Test strategy | **Unit tests for handlers.** Test handlers directly with injected dependencies (real or faked DbContext, no MediatR mocking). Keep existing integration tests too |
@@ -17,56 +17,56 @@
 
 ```
 src/
-├── shared/
-│   └── Umbral.ServiceDefaults/               (Class Library — net10.0)
-│       ├── AuthConfiguration.cs
-│       ├── BaseController.cs
-│       ├── ServiceConfiguration.cs
-│       ├── UmbralExceptionHandler.cs
-│       ├── UmbralServiceException.cs
-│       ├── UmbralDomainException.cs
-│       ├── UmbralTechnicalException.cs
-│       ├── UmbralFailureCategory.cs
-│       └── UmbralRoles.cs                    (merged with AuthorizationPolicies)
-│
-├── services/
-│   ├── mission-design/
-│   │   ├── MissionDesign.Domain/             (Class Library)
-│   │   │   └── Missions/                    (Entities, Value Objects, Enums)
-│   │   ├── MissionDesign.Application/        (Class Library)
-│   │   │   ├── Abstractions/                (IMissionDesignDbContext)
-│   │   │   └── Features/
-│   │   │       ├── Missions/
-│   │   │       │   ├── Commands/
-│   │   │       │   │   └── CreateMission/
-│   │   │       │   │       ├── CreateMissionCommand.cs
-│   │   │       │   │       └── CreateMissionCommandHandler.cs
-│   │   │       │   └── Queries/
-│   │   │       │       └── ListMissions/
-│   │   │       └── MissionStages/
-│   │   │           ├── Commands/
-│   │   │           └── Queries/
-│   │   ├── MissionDesign.Infrastructure/     (Class Library)
-│   │   │   ├── Persistence/
-│   │   │   │   ├── MissionDesignDbContext.cs
-│   │   │   │   ├── Configurations/          (Fluent API)
-│   │   │   │   └── Migrations/
-│   │   │   └── ServiceCollectionExtensions.cs
-│   │   └── MissionDesign.Api/                (Web API)
-│   │       ├── Controllers/
-│   │       └── Program.cs
-│   │
-│   ├── scoring-audit/                        (same 4-project pattern)
-│   ├── session-operations/                   (same 4-project pattern)
-│   └── user-management/                      (already split — just cleanup)
-│
-└── tests/
-    ├── MissionDesign.Api.Tests/
-    ├── ScoringAudit.Api.Tests/
-    ├── SessionOperations.Api.Tests/
-    └── UserManagement.Api.Tests/
+â”œâ”€â”€ shared/
+â”‚   â””â”€â”€ Umbral.ServiceDefaults/               (Class Library â€” net10.0)
+â”‚       â”œâ”€â”€ AuthConfiguration.cs
+â”‚       â”œâ”€â”€ BaseController.cs
+â”‚       â”œâ”€â”€ ServiceConfiguration.cs
+â”‚       â”œâ”€â”€ UmbralExceptionHandler.cs
+â”‚       â”œâ”€â”€ UmbralServiceException.cs
+â”‚       â”œâ”€â”€ UmbralDomainException.cs
+â”‚       â”œâ”€â”€ UmbralTechnicalException.cs
+â”‚       â”œâ”€â”€ UmbralFailureCategory.cs
+â”‚       â””â”€â”€ UmbralRoles.cs                    (merged with AuthorizationPolicies)
+â”‚
+â”œâ”€â”€ services/
+â”‚   â”œâ”€â”€ mission-design/
+â”‚   â”‚   â”œâ”€â”€ MissionDesign.Domain/             (Class Library)
+â”‚   â”‚   â”‚   â””â”€â”€ Missions/                    (Entities, Value Objects, Enums)
+â”‚   â”‚   â”œâ”€â”€ MissionDesign.Application/        (Class Library)
+â”‚   â”‚   â”‚   â”œâ”€â”€ Abstractions/                (IMissionDesignDbContext)
+â”‚   â”‚   â”‚   â””â”€â”€ Features/
+â”‚   â”‚   â”‚       â”œâ”€â”€ Missions/
+â”‚   â”‚   â”‚       â”‚   â”œâ”€â”€ Commands/
+â”‚   â”‚   â”‚       â”‚   â”‚   â””â”€â”€ CreateMission/
+â”‚   â”‚   â”‚       â”‚   â”‚       â”œâ”€â”€ CreateMissionCommand.cs
+â”‚   â”‚   â”‚       â”‚   â”‚       â””â”€â”€ CreateMissionCommandHandler.cs
+â”‚   â”‚   â”‚       â”‚   â””â”€â”€ Queries/
+â”‚   â”‚   â”‚       â”‚       â””â”€â”€ ListMissions/
+â”‚   â”‚   â”‚       â””â”€â”€ MissionStages/
+â”‚   â”‚   â”‚           â”œâ”€â”€ Commands/
+â”‚   â”‚   â”‚           â””â”€â”€ Queries/
+â”‚   â”‚   â”œâ”€â”€ MissionDesign.Infrastructure/     (Class Library)
+â”‚   â”‚   â”‚   â”œâ”€â”€ Persistence/
+â”‚   â”‚   â”‚   â”‚   â”œâ”€â”€ MissionDesignDbContext.cs
+â”‚   â”‚   â”‚   â”‚   â”œâ”€â”€ Configurations/          (Fluent API)
+â”‚   â”‚   â”‚   â”‚   â””â”€â”€ Migrations/
+â”‚   â”‚   â”‚   â””â”€â”€ ServiceCollectionExtensions.cs
+â”‚   â”‚   â””â”€â”€ MissionDesign.Api/                (Web API)
+â”‚   â”‚       â”œâ”€â”€ Controllers/
+â”‚   â”‚       â””â”€â”€ Program.cs
+â”‚   â”‚
+â”‚   â”œâ”€â”€ scoring-monitoring/                        (same 4-project pattern)
+â”‚   â”œâ”€â”€ session-operations/                   (same 4-project pattern)
+â”‚   â””â”€â”€ user-management/                      (already split â€” just cleanup)
+â”‚
+â””â”€â”€ tests/
+    â”œâ”€â”€ MissionDesign.Api.Tests/
+    â”œâ”€â”€ ScoringMonitoring.Api.Tests/
+    â”œâ”€â”€ SessionOperations.Api.Tests/
+    â””â”€â”€ UserManagement.Api.Tests/
 
-Umbral.sln                                    (root — one solution for everything)
+Umbral.sln                                    (root â€” one solution for everything)
 ```
 
 ---
@@ -76,18 +76,18 @@ Umbral.sln                                    (root — one solution for everyth
 > ~15 files affected. Estimated: 1-2 hours.
 
 ### Delete (YAGNI)
-- [ServiceIdentity.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ServiceIdentity.cs) — constructed in every Program.cs, never consumed
-- [IServiceBootstrapDetailsProvider.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/IServiceBootstrapDetailsProvider.cs) — one implementation per service, ceremony only
-- [ServiceBootstrapDetails.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ServiceBootstrapDetails.cs) — carries trivially-available config
-- [IServicePersistenceInitializer.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/IServicePersistenceInitializer.cs) — wraps a single `MigrateAsync()` call
+- [ServiceIdentity.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ServiceIdentity.cs) â€” constructed in every Program.cs, never consumed
+- [IServiceBootstrapDetailsProvider.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/IServiceBootstrapDetailsProvider.cs) â€” one implementation per service, ceremony only
+- [ServiceBootstrapDetails.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ServiceBootstrapDetails.cs) â€” carries trivially-available config
+- [IServicePersistenceInitializer.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/IServicePersistenceInitializer.cs) â€” wraps a single `MigrateAsync()` call
 
 ### Delete (Replace with framework)
-- [CurrentUser.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/CurrentUser.cs) — replaced by `ClaimsPrincipal`
-- [ICurrentUserAccessor.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ICurrentUserAccessor.cs) — replaced by `IHttpContextAccessor`
-- [HttpContextCurrentUserAccessor.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/HttpContextCurrentUserAccessor.cs) — framework already provides this
+- [CurrentUser.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/CurrentUser.cs) â€” replaced by `ClaimsPrincipal`
+- [ICurrentUserAccessor.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ICurrentUserAccessor.cs) â€” replaced by `IHttpContextAccessor`
+- [HttpContextCurrentUserAccessor.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/HttpContextCurrentUserAccessor.cs) â€” framework already provides this
 
 ### Merge
-- Merge [UmbralAuthorizationPolicies.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/UmbralAuthorizationPolicies.cs) into [UmbralRoles.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/UmbralRoles.cs) — same string constants duplicated
+- Merge [UmbralAuthorizationPolicies.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/UmbralAuthorizationPolicies.cs) into [UmbralRoles.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/UmbralRoles.cs) â€” same string constants duplicated
 
 ### Modify
 - [ServiceCollectionExtensions.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/shared/Umbral.ServiceDefaults/ServiceCollectionExtensions.cs):
@@ -103,7 +103,7 @@ Umbral.sln                                    (root — one solution for everyth
 - Rewrite `RequestAuthorizationBehaviorTests` to use `ClaimsPrincipal` directly instead of `CurrentUser`
 
 > [!WARNING]  
-> The `RequestAuthorizationBehavior` in `session-operations` uses `ICurrentUserAccessor` and `CurrentUser`. This pipeline will be rewritten to use `IHttpContextAccessor` → `HttpContext.User` (a `ClaimsPrincipal`) directly, with role checks via `ClaimsPrincipal.IsInRole()`.
+> The `RequestAuthorizationBehavior` in `session-operations` uses `ICurrentUserAccessor` and `CurrentUser`. This pipeline will be rewritten to use `IHttpContextAccessor` â†’ `HttpContext.User` (a `ClaimsPrincipal`) directly, with role checks via `ClaimsPrincipal.IsInRole()`.
 
 ---
 
@@ -115,24 +115,24 @@ Umbral.sln                                    (root — one solution for everyth
 - Move from `Umbral.MissionDesign.Api/Domain/Missions/`:
   - `Mission.cs`, `MissionGameType.cs`, `MissionHint.cs`, `MissionNode.cs`, `MissionStage.cs`, `MissionStageDifficulty.cs`, `MissionStageHint.cs`
 - Namespace: `MissionDesign.Domain.Missions`
-- Dependencies: **None** (pure domain — not even `Umbral.ServiceDefaults`)
+- Dependencies: **None** (pure domain â€” not even `Umbral.ServiceDefaults`)
 
 > [!IMPORTANT]
 > Domain entities currently reference `UmbralDomainException` from the shared library. This is the ONE acceptable shared dependency for Domain, since the exception hierarchy is a genuine cross-cutting concern. The Domain project will reference `Umbral.ServiceDefaults` only for this.
 
 ### [NEW] `MissionDesign.Application` (Class Library)
 - Move from `Umbral.MissionDesign.Api/Application/`:
-  - `IMissionDesignDbContext.cs` → `Abstractions/`
-  - All feature files → split into separate Command/Handler/Validator files under `Features/`
-  - `MissionContracts.cs`, `MissionStageContracts.cs` → `Features/` (DTOs/Responses)
+  - `IMissionDesignDbContext.cs` â†’ `Abstractions/`
+  - All feature files â†’ split into separate Command/Handler/Validator files under `Features/`
+  - `MissionContracts.cs`, `MissionStageContracts.cs` â†’ `Features/` (DTOs/Responses)
 - Delete: `Application/Bootstrap/` folder entirely
 - Dependencies: `MissionDesign.Domain`, `Umbral.ServiceDefaults`, `MediatR`
 
 ### [NEW] `MissionDesign.Infrastructure` (Class Library)
 - Move from `Umbral.MissionDesign.Api/Infrastructure/`:
-  - `MissionDesignDbContext.cs` → `Persistence/`
-  - All migrations → `Persistence/Migrations/`
-  - `MissionDesignPersistence.cs`, `MissionDesignPersistenceInitializer.cs` → `Persistence/`
+  - `MissionDesignDbContext.cs` â†’ `Persistence/`
+  - All migrations â†’ `Persistence/Migrations/`
+  - `MissionDesignPersistence.cs`, `MissionDesignPersistenceInitializer.cs` â†’ `Persistence/`
   - `ServiceCollectionExtensions.cs`
 - Delete: `MissionDesignBootstrapDetailsProvider.cs` (YAGNI)
 - Dependencies: `MissionDesign.Application`, `MissionDesign.Domain`, `Umbral.ServiceDefaults`, EF Core, Npgsql
@@ -143,20 +143,20 @@ Umbral.sln                                    (root — one solution for everyth
   - Remove `ServiceIdentity` construction
   - Remove `Bootstrap` command usage
   - Inline migration: `await dbContext.Database.MigrateAsync()`
-  - Drop all `Umbral.MissionDesign.Api.*` using statements → replace with new namespaces
+  - Drop all `Umbral.MissionDesign.Api.*` using statements â†’ replace with new namespaces
 - Dependencies: `MissionDesign.Application`, `MissionDesign.Infrastructure`, `Umbral.ServiceDefaults`
 
-### [DELETE] `MissionDesign.slnx` (if any) — replaced by root `Umbral.sln`
+### [DELETE] `MissionDesign.slnx` (if any) â€” replaced by root `Umbral.sln`
 
 ---
 
-## Phase 3: Split `scoring-audit` into 4 Projects
+## Phase 3: Split `scoring-monitoring` into 4 Projects
 
 > Same pattern as Phase 2. ~25 files moved/renamed.
 
 Same decomposition. Additional considerations:
-- Has SignalR hub (`ScoringAuditHub.cs`) — stays in the Api project under `Hubs/`
-- Has `Presentation/Realtime/SignalRScoringAuditUpdatesPublisher.cs` — this is Infrastructure, move to `ScoringAudit.Infrastructure`
+- Has SignalR hub (`ScoringMonitoringHub.cs`) â€” stays in the Api project under `Hubs/`
+- Has `Presentation/Realtime/SignalRScoringMonitoringUpdatesPublisher.cs` â€” this is Infrastructure, move to `ScoringMonitoring.Infrastructure`
 - Split all combined CQRS files in `Application/`
 
 ---
@@ -166,11 +166,11 @@ Same decomposition. Additional considerations:
 > Largest service. ~50+ files moved/renamed. Estimated: 3-4 hours.
 
 Same decomposition. Additional considerations:
-- Has SignalR hub — stays in Api
-- Has `ISessionRealtimeNotifier` abstraction — stays in Application (it's a port)
-- `SignalRLiveSessionStateNotifier` — moves to Infrastructure (it's an adapter)
-- `HttpContextCurrentOperatorIdentity` / `HttpContextCurrentParticipantIdentity` — moves to Infrastructure
-- `AuthHeaderForwardingHandler`, `ScoringAuditHttpClient`, `MissionDesignLiveSessionCatalog` — all Infrastructure
+- Has SignalR hub â€” stays in Api
+- Has `ISessionRealtimeNotifier` abstraction â€” stays in Application (it's a port)
+- `SignalRLiveSessionStateNotifier` â€” moves to Infrastructure (it's an adapter)
+- `HttpContextCurrentOperatorIdentity` / `HttpContextCurrentParticipantIdentity` â€” moves to Infrastructure
+- `AuthHeaderForwardingHandler`, `ScoringMonitoringHttpClient`, `MissionDesignLiveSessionCatalog` â€” all Infrastructure
 - **Rewrite `RequestAuthorizationBehavior`** to use `ClaimsPrincipal` directly instead of `CurrentUser`
 
 ---
@@ -180,14 +180,14 @@ Same decomposition. Additional considerations:
 > Small cleanup. ~5 files affected.
 
 ### Delete
-- [WeatherForecastController.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api/Controllers/WeatherForecastController.cs) — template junk
-- [WeatherForecast.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api/WeatherForecast.cs) — template junk
-- [UnitTest1.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api.Tests/UnitTest1.cs) — empty template
-- [UserManagement.slnx](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.slnx) — replaced by root `Umbral.sln`
+- [WeatherForecastController.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api/Controllers/WeatherForecastController.cs) â€” template junk
+- [WeatherForecast.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api/WeatherForecast.cs) â€” template junk
+- [UnitTest1.cs](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.Api.Tests/UnitTest1.cs) â€” empty template
+- [UserManagement.slnx](file:///c:/Users/sebav/OneDrive/Documentos/Proyectos%20desarrollo/UMBRAL-Grupo2/src/services/user-management/UserManagement.slnx) â€” replaced by root `Umbral.sln`
 
 ### Modify
-- All `.csproj` files — already on `net10.0`, verify no stale references
-- `Program.cs` — remove `ServiceIdentity` construction
+- All `.csproj` files â€” already on `net10.0`, verify no stale references
+- `Program.cs` â€” remove `ServiceIdentity` construction
 
 ---
 
@@ -226,7 +226,7 @@ docker-compose -f docker-compose.dev.yml up --build
 
 ### Unit Test Coverage Goals
 - Every handler gets at least 2 unit tests (happy path + primary error case)
-- Handlers tested by instantiating them directly with a faked `DbContext` (EF InMemory) — **no MediatR mocking**
+- Handlers tested by instantiating them directly with a faked `DbContext` (EF InMemory) â€” **no MediatR mocking**
 - Controller tests via `WebApplicationFactory` for integration coverage
 
 ---
@@ -235,7 +235,7 @@ docker-compose -f docker-compose.dev.yml up --build
 
 | Metric | Count |
 |--------|-------|
-| Projects created | 9 new `.csproj` (3 services × 3 new layers each) |
+| Projects created | 9 new `.csproj` (3 services Ã— 3 new layers each) |
 | Projects modified | 8 existing projects (4 Api + 4 test) |
 | Files deleted | ~25 (YAGNI, template junk, duplicate solutions) |
 | Files moved/renamed | ~100 (namespace changes across 3 services) |
