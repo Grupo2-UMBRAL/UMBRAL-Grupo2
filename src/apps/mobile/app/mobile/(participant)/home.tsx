@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+﻿import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { RouteCard } from "../../../src/components/route-card";
@@ -6,7 +6,7 @@ import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { StatusChip } from "../../../src/components/status-chip";
 import { createAuthorizedApiClient, type ApiProbeResult } from "../../../src/lib/api-client";
 import { getClientConfig } from "../../../src/lib/config";
-import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useSession } from "../../../src/providers/session-provider";
 
 function resolveConnectionTone(kind: string) {
@@ -36,7 +36,7 @@ export default function HomePage() {
 
   const config = getClientConfig();
   const apiClient = createAuthorizedApiClient(session.accessToken);
-  const connectionState = useSessionOperationsConnection({
+  const connectionState = useSessionManagementConnection({
     accessToken: session.accessToken,
     hubUrl: config.sessionHubUrl,
     onResync: () => setResyncCount((current) => current + 1)

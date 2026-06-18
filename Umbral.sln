@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -37,17 +37,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Domain", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScoringMonitoring.Infrastructure", "src\services\scoring-monitoring\ScoringMonitoring.Infrastructure\ScoringMonitoring.Infrastructure.csproj", "{EAB70862-8888-4374-B437-9114AD1274CD}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "session-operations", "session-operations", "{F983A58E-E065-4DFC-91BB-F81A53D8293C}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "session-management", "session-management", "{F983A58E-E065-4DFC-91BB-F81A53D8293C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionOperations.Api", "src\services\session-operations\SessionOperations.Api\SessionOperations.Api.csproj", "{2975BCBB-C6AD-4417-96BB-2264E1BC9B6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagement.Api", "src\services\session-management\SessionManagement.Api\SessionManagement.Api.csproj", "{2975BCBB-C6AD-4417-96BB-2264E1BC9B6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionOperations.Api.Tests", "src\services\session-operations\SessionOperations.Api.Tests\SessionOperations.Api.Tests.csproj", "{E3AFB681-4C51-4E75-813B-AEFBA6079999}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagement.Api.Tests", "src\services\session-management\SessionManagement.Api.Tests\SessionManagement.Api.Tests.csproj", "{E3AFB681-4C51-4E75-813B-AEFBA6079999}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionOperations.Application", "src\services\session-operations\SessionOperations.Application\SessionOperations.Application.csproj", "{4D54E0B3-D29E-449F-A9DA-DFAB37EA83FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagement.Application", "src\services\session-management\SessionManagement.Application\SessionManagement.Application.csproj", "{4D54E0B3-D29E-449F-A9DA-DFAB37EA83FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionOperations.Domain", "src\services\session-operations\SessionOperations.Domain\SessionOperations.Domain.csproj", "{9FAAC6CC-422F-4B44-B3BC-963E28B40A7E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagement.Domain", "src\services\session-management\SessionManagement.Domain\SessionManagement.Domain.csproj", "{9FAAC6CC-422F-4B44-B3BC-963E28B40A7E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionOperations.Infrastructure", "src\services\session-operations\SessionOperations.Infrastructure\SessionOperations.Infrastructure.csproj", "{2E87B1DE-7053-41BD-AA1B-BC2E30B04FAA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SessionManagement.Infrastructure", "src\services\session-management\SessionManagement.Infrastructure\SessionManagement.Infrastructure.csproj", "{2E87B1DE-7053-41BD-AA1B-BC2E30B04FAA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "user-management", "user-management", "{1F0C66ED-AD18-42E7-BAD1-3661BFFA923B}"
 EndProject

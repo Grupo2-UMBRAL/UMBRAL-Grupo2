@@ -1,4 +1,4 @@
-# Domain Docs
+﻿# Domain Docs
 
 Este repo usa un unico conjunto compartido de documentos de dominio para varios bounded contexts.
 
@@ -7,7 +7,7 @@ Este repo usa un unico conjunto compartido de documentos de dominio para varios 
 - [../../docs/product/ers.md](../../docs/product/ers.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
 - [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
-- [../../src/services/session-operations/CONTEXT.md](../../src/services/session-operations/CONTEXT.md)
+- [../../src/services/session-management/CONTEXT.md](../../src/services/session-management/CONTEXT.md)
 - [../../src/services/scoring-monitoring/CONTEXT.md](../../src/services/scoring-monitoring/CONTEXT.md)
 - [../../src/services/identity-access/CONTEXT.md](../../src/services/identity-access/CONTEXT.md)
 - `docs/architecture/adr/` cuando exista y sea relevante

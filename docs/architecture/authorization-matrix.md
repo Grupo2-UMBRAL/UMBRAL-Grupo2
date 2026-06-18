@@ -1,4 +1,4 @@
-# Authorization Matrix
+﻿# Authorization Matrix
 
 `UMB-31` moves authorization to the MediatR request boundary so each command/query declares its allowed roles explicitly, beyond HTTP route guards.
 
@@ -28,7 +28,7 @@ The public `edge-proxy` may be the preferred client entry, but this matrix is st
 | Mission Design | `CreateMissionStageCommand` | `Administrator` | None |
 | Mission Design | `CreateMissionStageHintCommand` | `Administrator` | None |
 | Mission Design | `DeactivateMissionStageCommand` | `Administrator` | None |
-| Session Operations | `GetSessionOperationsBootstrapDetailsQuery` | Any authenticated role | None |
+| Session Operations | `GetSessionManagementBootstrapDetailsQuery` | Any authenticated role | None |
 | Session Operations | `ListLiveSessionsQuery` | `Administrator`, `Operator` | None |
 | Session Operations | `GetLiveSessionByIdQuery` | `Administrator`, `Operator` | None |
 | Session Operations | `CreateLiveSessionCommand` | `Administrator`, `Operator` | None |

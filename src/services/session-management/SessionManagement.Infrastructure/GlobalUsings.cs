@@ -1,0 +1,13 @@
+﻿global using Microsoft.AspNetCore.Http;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Umbral.ServiceDefaults;
+global using SessionManagement.Application.Abstractions;
+global using SessionManagement.Application.Features.EvidenceSubmissions;
+global using SessionManagement.Application.Features.LiveSessions;
+global using SessionManagement.Application.Features.SessionLifecycle;
+global using SessionManagement.Application.Features.SessionEnrollment;
+global using SessionManagement.Application.Hubs;
+global using SessionManagement.Application.Realtime;
+global using SessionManagement.Application.Scoring;
+global using SessionManagement.Infrastructure.Persistence;

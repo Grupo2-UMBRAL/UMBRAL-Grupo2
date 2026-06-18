@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { getClientConfig } from "@/lib/config";
 import type { WebShellRole } from "@/lib/roles";
 
@@ -37,7 +37,7 @@ export function ServiceStatusBoard({
       },
       {
         label: "Session Operations",
-        url: `${base}/session-operations/api/session-operations/smoke/${role}`,
+        url: `${base}/session-management/api/session-management/smoke/${role}`,
         auth: true,
       },
       {

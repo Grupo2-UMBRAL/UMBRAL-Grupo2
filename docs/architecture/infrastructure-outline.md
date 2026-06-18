@@ -1,4 +1,4 @@
-# Infrastructure Outline
+﻿# Infrastructure Outline
 
 Bosquejo inicial de la infraestructura de UMBRAL para una arquitectura de microservicios real desde el dia uno, con integracion hibrida: comunicacion sincronica como mecanismo principal y mensajeria asincrona solo para responsabilidades secundarias. Incluye desarrollo local en `docker-compose` y evolucion futura hacia despliegue en nube y `CI/CD`.
 
@@ -187,7 +187,7 @@ flowchart TD
     subgraph DockerCompose
         GW[gateway optional]
         MS[mission-management-service]
-        SS[session-operations-service]
+        SS[session-management-service]
         SA[scoring-monitoring-service]
         KC[keycloak]
         DB[postgres]

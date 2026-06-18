@@ -1,4 +1,4 @@
-# Front Endpoints Summary
+﻿# Front Endpoints Summary
 
 Resumen operativo de las rutas que consume hoy el front web y que sirven como base para rehacerlo en Vite + React puro.
 
@@ -46,7 +46,7 @@ Base: `/mission-management/api/mission-management`
 
 ## Session Operations
 
-Base: `/session-operations/api/session-operations`
+Base: `/session-management/api/session-management`
 
 - `GET /bootstrap`
 
@@ -98,5 +98,5 @@ Base: `/scoring-monitoring/api/scoring-monitoring`
 ## Smoke checks
 
 - `GET /mission-management/api/mission-management/smoke/{administrator|operator}`
-- `GET /session-operations/api/session-operations/smoke/{administrator|operator}`
+- `GET /session-management/api/session-management/smoke/{administrator|operator}`
 - `GET /scoring-monitoring/api/scoring-monitoring/smoke/{administrator|operator}`

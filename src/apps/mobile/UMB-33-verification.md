@@ -2,13 +2,13 @@
 
 ## Preconditions
 
-- Backend `session-operations` is running through the edge proxy.
+- Backend `session-management` is running through the edge proxy.
 - Participant user is authenticated in mobile app with role `Participant`.
 - UMB-40 endpoints are available:
-  - `GET /api/session-operations/session-enrollment/{joinCode}/validate`
-  - `GET /api/session-operations/session-enrollment/{joinCode}/teams`
-  - `POST /api/session-operations/session-enrollment/join`
-  - `POST /api/session-operations/session-enrollment/teams`
+  - `GET /api/session-management/session-enrollment/{joinCode}/validate`
+  - `GET /api/session-management/session-enrollment/{joinCode}/teams`
+  - `POST /api/session-management/session-enrollment/join`
+  - `POST /api/session-management/session-enrollment/teams`
 - Operator has generated a Session Join Code and opened Team Assignment Window for target LiveSession.
 
 ## Automated Evidence
@@ -38,7 +38,7 @@ Expected:
 6. Tap a Session Team.
 7. Tap `Join selected team`.
 8. Expected result:
-   - App calls `POST /api/session-operations/session-enrollment/join` with `{ joinCode, sessionTeamId }`.
+   - App calls `POST /api/session-management/session-enrollment/join` with `{ joinCode, sessionTeamId }`.
    - App stores `{ joinCode, teamId, teamName }` in AsyncStorage.
    - App redirects to `/board`.
    - Board displays restored Team context.
@@ -52,7 +52,7 @@ Expected:
 5. Enter a Session Team name with at least 3 characters.
 6. Tap `Create Session Team`.
 7. Expected result:
-   - App calls `POST /api/session-operations/session-enrollment/teams` with `{ joinCode, teamName }`.
+   - App calls `POST /api/session-management/session-enrollment/teams` with `{ joinCode, teamName }`.
    - App stores `{ joinCode, teamId, teamName }` in AsyncStorage.
    - App redirects to `/board`.
 

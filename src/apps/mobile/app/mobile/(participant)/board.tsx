@@ -1,4 +1,4 @@
-import { CameraView } from "expo-camera";
+﻿import { CameraView } from "expo-camera";
 import { Redirect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -29,7 +29,7 @@ import {
   loadStoredEnrollment,
   type StoredEnrollment
 } from "../../../src/lib/session-storage";
-import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useSession } from "../../../src/providers/session-provider";
 
 type SubmissionFeedback =
@@ -170,7 +170,7 @@ export default function BoardPage() {
     void refreshSnapshot();
   }, [refreshSnapshot, storedEnrollment]);
 
-  const connectionState = useSessionOperationsConnection({
+  const connectionState = useSessionManagementConnection({
     accessToken: session?.accessToken ?? "",
     hubUrl: config.sessionHubUrl,
     onResync: () => {

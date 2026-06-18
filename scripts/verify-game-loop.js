@@ -1,6 +1,6 @@
-const { execSync } = require("child_process");
+﻿const { execSync } = require("child_process");
 
-const EDGE_PROXY_URL = "http://localhost:7500/session-operations";
+const EDGE_PROXY_URL = "http://localhost:7500/session-management";
 const SESSION_ID = "032b3c2e-e593-4589-92f3-73338499f16f";
 const TEAM_ID = "84b6f342-ff80-444a-9628-4d968e77fb18";
 
@@ -31,7 +31,7 @@ async function run() {
   // 1. Start the LiveSession
   console.log("\n🎬 Step 1: Starting LiveSession from Operator role...");
   const startRes = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/live-sessions/${SESSION_ID}/lifecycle/start`,
+    `${EDGE_PROXY_URL}/api/session-management/live-sessions/${SESSION_ID}/lifecycle/start`,
     {
       method: "POST",
       headers: {
@@ -52,7 +52,7 @@ async function run() {
   // 2. Fetch Participant Snapshot
   console.log("\n📋 Step 2: Fetching Participant Snapshot...");
   const snapshotRes1 = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/snapshot`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/snapshot`,
     {
       headers: { Authorization: `Bearer ${participantToken}` },
     },
@@ -65,7 +65,7 @@ async function run() {
   // 3. Submit wrong answer for Stage 1
   console.log('\n❌ Step 3: Submitting WRONG answer ("Londres")...');
   const wrongRes = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/trivia-submissions`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/trivia-submissions`,
     {
       method: "POST",
       headers: {
@@ -82,7 +82,7 @@ async function run() {
   // 4. Submit correct answer for Stage 1
   console.log('\n✅ Step 4: Submitting CORRECT answer ("París")...');
   const correctRes1 = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/trivia-submissions`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/trivia-submissions`,
     {
       method: "POST",
       headers: {
@@ -99,7 +99,7 @@ async function run() {
   // 5. Fetch Participant Snapshot for Stage 2
   console.log("\n📋 Step 5: Fetching Participant Snapshot again...");
   const snapshotRes2 = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/snapshot`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/snapshot`,
     {
       headers: { Authorization: `Bearer ${participantToken}` },
     },
@@ -114,7 +114,7 @@ async function run() {
     '\n✅ Step 6: Submitting CORRECT answer ("Mercurio") for Stage 2...',
   );
   const correctRes2 = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/trivia-submissions`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/trivia-submissions`,
     {
       method: "POST",
       headers: {
@@ -131,7 +131,7 @@ async function run() {
   // 7. Finalize LiveSession from Operator role
   console.log("\n🏁 Step 7: Finalizing LiveSession from Operator role...");
   const finalizeRes = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/live-sessions/${SESSION_ID}/lifecycle/finalize`,
+    `${EDGE_PROXY_URL}/api/session-management/live-sessions/${SESSION_ID}/lifecycle/finalize`,
     {
       method: "POST",
       headers: {
@@ -152,7 +152,7 @@ async function run() {
   // 8. Fetch Final Participant Snapshot
   console.log("\n📋 Step 8: Fetching Final Participant Snapshot...");
   const snapshotRes3 = await fetch(
-    `${EDGE_PROXY_URL}/api/session-operations/session-teams/${TEAM_ID}/snapshot`,
+    `${EDGE_PROXY_URL}/api/session-management/session-teams/${TEAM_ID}/snapshot`,
     {
       headers: { Authorization: `Bearer ${participantToken}` },
     },

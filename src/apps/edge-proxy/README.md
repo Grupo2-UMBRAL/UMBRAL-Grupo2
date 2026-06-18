@@ -1,4 +1,4 @@
-# Edge Proxy
+﻿# Edge Proxy
 
 `edge-proxy` is the preferred public entry for local web and mobile clients.
 
@@ -20,7 +20,7 @@
 - `/auth/*` -> `Keycloak`
 - `/identity-access/*` -> `Identity and Access`
 - `/mission-management/*` -> `Mission Management`
-- `/session-operations/*` -> `Session Operations`
+- `/session-management/*` -> `Session Operations`
 - `/session-hub/*` -> `Session Operations` realtime hub
 - `/scoring-monitoring/*` -> `Scoring and Monitoring`
 

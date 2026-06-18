@@ -1,4 +1,4 @@
-{
+﻿{
   "realm": "umbral",
   "enabled": true,
   "displayName": "UMBRAL",
@@ -129,7 +129,7 @@
       "secret": "mission-management-secret"
     },
     {
-      "clientId": "umbral-session-operations-api",
+      "clientId": "umbral-session-management-api",
       "name": "Session Operations API",
       "enabled": true,
       "publicClient": false,
@@ -137,7 +137,7 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "secret": "session-operations-secret"
+      "secret": "session-management-secret"
     },
     {
       "clientId": "umbral-scoring-monitoring-api",
@@ -219,12 +219,12 @@
           }
         },
         {
-          "name": "audience-session-operations-api",
+          "name": "audience-session-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "umbral-session-operations-api",
+            "included.client.audience": "umbral-session-management-api",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "lightweight.claim": "false"

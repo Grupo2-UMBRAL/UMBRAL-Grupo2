@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Umbral.ServiceDefaults;
 using Xunit;
 
@@ -12,14 +12,14 @@ public sealed class ServiceConfigurationTests
         var configuration = CreateConfiguration(new Dictionary<string, string?>
         {
             ["Auth:Authority"] = "http://localhost:8080/realms/umbral",
-            ["Auth:Audience"] = "umbral-session-operations-api",
+            ["Auth:Audience"] = "umbral-session-management-api",
             ["Auth:RequireHttpsMetadata"] = "false"
         });
 
         var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
 
         Assert.Equal("http://localhost:8080/realms/umbral", authConfiguration.Authority);
-        Assert.Equal("umbral-session-operations-api", authConfiguration.Audience);
+        Assert.Equal("umbral-session-management-api", authConfiguration.Audience);
         Assert.False(authConfiguration.RequireHttpsMetadata);
     }
 
@@ -28,7 +28,7 @@ public sealed class ServiceConfigurationTests
     {
         var configuration = CreateConfiguration(new Dictionary<string, string?>
         {
-            ["Auth:Audience"] = "umbral-session-operations-api"
+            ["Auth:Audience"] = "umbral-session-management-api"
         });
 
         var exception = Assert.Throws<InvalidOperationException>(

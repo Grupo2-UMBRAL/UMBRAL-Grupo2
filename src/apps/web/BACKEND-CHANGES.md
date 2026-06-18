@@ -1,4 +1,4 @@
-# Cambios Pendientes en el Backend
+﻿# Cambios Pendientes en el Backend
 
 Cambios que el backend necesita para completar la integraciÃ³n con el nuevo frontend SPA.
 
@@ -74,7 +74,7 @@ Todos los endpoints de API documentados en el plan de implementaciÃ³n siguen s
 No hay cambios requeridos en:
 - identity-access-service
 - mission-management-service
-- session-operations-service
+- session-management-service
 - scoring-monitoring-service
 - edge-proxy routing rules
 

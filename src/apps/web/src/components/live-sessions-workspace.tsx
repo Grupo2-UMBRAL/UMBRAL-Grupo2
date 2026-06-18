@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -1463,13 +1463,13 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/mission-management/api/mission-management/missions/eligible-for-live-session`,
     []
   );
-  const sessionOperationsUrl = useMemo(
-    () => `${getClientConfig().edgeProxyPublicBaseUrl}/session-operations/api/session-operations`,
+  const SessionManagementUrl = useMemo(
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/session-management/api/session-management`,
     []
   );
   const liveSessionsUrl = useMemo(
-    () => `${sessionOperationsUrl}/live-sessions`,
-    [sessionOperationsUrl]
+    () => `${SessionManagementUrl}/live-sessions`,
+    [SessionManagementUrl]
   );
   const sessionHubUrl = useMemo(() => getClientConfig().sessionHubUrl, []);
   const scoringAuditSessionsUrl = useMemo(
@@ -2540,7 +2540,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     setFeedback(null);
 
     try {
-      const response = await fetch(`${sessionOperationsUrl}/submissions/${submissionId}/override`, {
+      const response = await fetch(`${SessionManagementUrl}/submissions/${submissionId}/override`, {
         method: "POST",
         headers: {
           ...createAuthorizedHeaders(accessToken),

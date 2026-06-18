@@ -1,4 +1,4 @@
-# Backend Foundation
+﻿# Backend Foundation
 
 Este directorio contiene el baseline backend ejecutable para los bounded contexts que hoy se implementan con servicios `.NET`.
 
@@ -6,7 +6,7 @@ Este directorio contiene el baseline backend ejecutable para los bounded context
 
 - `identity-access/Umbral.IdentityAccess.Api`
 - `mission-management/MissionManagement.Api`
-- `session-operations/Umbral.SessionOperations.Api`
+- `session-management/Umbral.SessionManagement.Api`
 - `scoring-monitoring/ScoringMonitoring.Api`
 
 ## Capas esperadas por servicio
@@ -47,8 +47,8 @@ dotnet test src/services/mission-management/MissionManagement.Api.Tests/MissionM
 ### Session Operations
 
 ```powershell
-dotnet build src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
-dotnet test src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj
+dotnet build src/services/session-management/Umbral.SessionManagement.Api/Umbral.SessionManagement.Api.csproj
+dotnet test src/services/session-management/Umbral.SessionManagement.Api.Tests/Umbral.SessionManagement.Api.Tests.csproj
 ```
 
 ### Scoring and Monitoring
@@ -77,7 +77,7 @@ Ejemplos:
 
 ```powershell
 dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-management/MissionManagement.Infrastructure/MissionManagement.Infrastructure.csproj --startup-project src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj
-dotnet ef migrations add InitialSchemaBaseline --project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj --startup-project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
+dotnet ef migrations add InitialSchemaBaseline --project src/services/session-management/Umbral.SessionManagement.Api/Umbral.SessionManagement.Api.csproj --startup-project src/services/session-management/Umbral.SessionManagement.Api/Umbral.SessionManagement.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-monitoring/ScoringMonitoring.Infrastructure/ScoringMonitoring.Infrastructure.csproj --startup-project src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj
 ```
 
