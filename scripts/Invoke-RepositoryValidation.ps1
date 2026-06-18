@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ArtifactDirectory = "temp/validation",
     [string]$EnvironmentFilePath,
     [switch]$SkipComposeSmoke,
@@ -40,8 +40,8 @@ $backendProjects = @(
     "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj",
-    "src/services/session-operations/SessionOperations.Api/SessionOperations.Api.csproj",
-    "src/services/session-operations/SessionOperations.Api.Tests/SessionOperations.Api.Tests.csproj"
+    "src/services/session-management/SessionManagement.Api/SessionManagement.Api.csproj",
+    "src/services/session-management/SessionManagement.Api.Tests/SessionManagement.Api.Tests.csproj"
 )
 
 $backendTestProjects = @(
@@ -49,7 +49,7 @@ $backendTestProjects = @(
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
     "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj",
-    "src/services/session-operations/SessionOperations.Api.Tests/SessionOperations.Api.Tests.csproj"
+    "src/services/session-management/SessionManagement.Api.Tests/SessionManagement.Api.Tests.csproj"
 )
 
 function Test-Scope {

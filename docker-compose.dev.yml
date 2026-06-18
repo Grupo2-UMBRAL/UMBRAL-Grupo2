@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: postgres:16-alpine
     container_name: umbral-postgres
@@ -105,11 +105,11 @@ services:
       keycloak:
         condition: service_started
 
-  session-operations-service:
+  session-management-service:
     build:
       context: .
-      dockerfile: infra/keycloak/docker/session-operations.Dockerfile
-    container_name: umbral-session-operations-service
+      dockerfile: infra/keycloak/docker/session-management.Dockerfile
+    container_name: umbral-session-management-service
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -121,7 +121,7 @@ services:
       ScoringMonitoring__BaseUrl: http://scoring-monitoring-service:8080/
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
-      Auth__Audience: umbral-session-operations-api
+      Auth__Audience: umbral-session-management-api
       SignalR__Enabled: true
       Persistence__ApplyMigrationsOnStartup: "true"
     ports:
@@ -175,7 +175,7 @@ services:
       COVERAGE_REPORT_PATH: /app/coverage
       ReverseProxy__Clusters__identity-access__Destinations__primary__Address: http://identity-access-service:8080/
       ReverseProxy__Clusters__mission-management__Destinations__primary__Address: http://mission-management-service:8080/
-      ReverseProxy__Clusters__session-operations__Destinations__primary__Address: http://session-operations-service:8080/
+      ReverseProxy__Clusters__session-management__Destinations__primary__Address: http://session-management-service:8080/
       ReverseProxy__Clusters__scoring-monitoring__Destinations__primary__Address: http://scoring-monitoring-service:8080/
       ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080/
       ReverseProxy__Clusters__mobile__Destinations__primary__Address: http://mobile:19006/
@@ -189,7 +189,7 @@ services:
         condition: service_started
       mission-management-service:
         condition: service_started
-      session-operations-service:
+      session-management-service:
         condition: service_started
       scoring-monitoring-service:
         condition: service_started

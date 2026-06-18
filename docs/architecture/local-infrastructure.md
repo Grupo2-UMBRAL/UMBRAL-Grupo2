@@ -1,4 +1,4 @@
-# Local Infrastructure Bootstrap
+﻿# Local Infrastructure Bootstrap
 
 Este documento aterriza la fase local hasta el paso 4 acordado:
 
@@ -13,7 +13,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `rabbitmq`
 - `keycloak`
 - `mission-management-service`
-- `session-operations-service`
+- `session-management-service`
 - `scoring-monitoring-service`
 - `edge-proxy`
 
@@ -22,7 +22,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `edge-proxy`: `7500`
 - `keycloak`: `8080`
 - `mission-management-service`: `7101`
-- `session-operations-service`: `7102`
+- `session-management-service`: `7102`
 - `scoring-monitoring-service`: `7103`
 - `postgres`: `5432`
 - `rabbitmq`: `5672`
@@ -31,8 +31,8 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 ## Rutas del edge proxy
 
 - `/mission-management/*` -> `mission-management-service`
-- `/session-operations/*` -> `session-operations-service`
-- `/session-hub/*` -> hub `SignalR` de `session-operations-service`
+- `/session-management/*` -> `session-management-service`
+- `/session-hub/*` -> hub `SignalR` de `session-management-service`
 - `/scoring-monitoring/*` -> `scoring-monitoring-service`
 - `/auth/*` -> `Keycloak`
 

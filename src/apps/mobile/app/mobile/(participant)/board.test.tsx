@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+ï»¿import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import BoardPage from "./board";
 import {
   createAuthorizedApiClient,
@@ -8,7 +8,7 @@ import {
   type SessionTeamSnapshot
 } from "../../../src/lib/api-client";
 import { loadStoredEnrollment } from "../../../src/lib/session-storage";
-import { useSessionOperationsConnection } from "../../../src/hooks/use-session-operations-connection";
+import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useSession } from "../../../src/providers/session-provider";
 
 jest.mock("expo-router", () => ({
@@ -23,8 +23,8 @@ jest.mock("../../../src/lib/session-storage", () => ({
   loadStoredEnrollment: jest.fn()
 }));
 
-jest.mock("../../../src/hooks/use-session-operations-connection", () => ({
-  useSessionOperationsConnection: jest.fn()
+jest.mock("../../../src/hooks/use-session-management-connection", () => ({
+  useSessionManagementConnection: jest.fn()
 }));
 
 jest.mock("../../../src/lib/config", () => ({
@@ -172,7 +172,7 @@ beforeEach(() => {
     detail: "Realtime participant stream connected.",
     connection: mockConnection
   };
-  (useSessionOperationsConnection as jest.Mock).mockImplementation((options: ConnectionOptions) => {
+  (useSessionManagementConnection as jest.Mock).mockImplementation((options: ConnectionOptions) => {
     latestConnectionOptions = options;
     return mockConnectionState;
   });
@@ -326,7 +326,7 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByText("Resoluciones de la Misión")).toBeTruthy();
+    expect(screen.getByText("Resoluciones de la Misiï¿½n")).toBeTruthy();
   });
 
   expect(screen.getByText("Decode the seal")).toBeTruthy();
@@ -369,7 +369,7 @@ test("keeps final solutions out of live Visible hints before finalization", asyn
     expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
   });
 
-  expect(screen.queryByText("Resoluciones de la Misión")).toBeNull();
+  expect(screen.queryByText("Resoluciones de la Misiï¿½n")).toBeNull();
   expect(screen.queryByText("The answer is aurora.")).toBeNull();
 });
 
@@ -561,7 +561,7 @@ test("submits scanned QR evidence and renders rejected feedback", async () => {
       qrHash: "wrong-hash"
     });
   });
-  expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
+  expect(screen.getByText(/Cï¿½digo incorrecto, intï¿½ntalo de nuevo/)).toBeTruthy();
 });
 
 test("submits Trivia answer and renders accepted feedback", async () => {

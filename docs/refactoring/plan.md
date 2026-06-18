@@ -1,4 +1,4 @@
-# ðŸ—ï¸ Backend Refactoring Plan â€” Final (v2)
+﻿# ðŸ—ï¸ Backend Refactoring Plan â€” Final (v2)
 
 ## Decisions Locked In
 
@@ -57,13 +57,13 @@ src/
 â”‚   â”‚       â””â”€â”€ Program.cs
 â”‚   â”‚
 â”‚   â”œâ”€â”€ scoring-monitoring/                        (same 4-project pattern)
-â”‚   â”œâ”€â”€ session-operations/                   (same 4-project pattern)
+â”‚   â”œâ”€â”€ session-management/                   (same 4-project pattern)
 â”‚   â””â”€â”€ user-management/                      (already split â€” just cleanup)
 â”‚
 â””â”€â”€ tests/
     â”œâ”€â”€ MissionDesign.Api.Tests/
     â”œâ”€â”€ ScoringMonitoring.Api.Tests/
-    â”œâ”€â”€ SessionOperations.Api.Tests/
+    â”œâ”€â”€ SessionManagement.Api.Tests/
     â””â”€â”€ UserManagement.Api.Tests/
 
 Umbral.sln                                    (root â€” one solution for everything)
@@ -103,7 +103,7 @@ Umbral.sln                                    (root â€” one solution for ev
 - Rewrite `RequestAuthorizationBehaviorTests` to use `ClaimsPrincipal` directly instead of `CurrentUser`
 
 > [!WARNING]  
-> The `RequestAuthorizationBehavior` in `session-operations` uses `ICurrentUserAccessor` and `CurrentUser`. This pipeline will be rewritten to use `IHttpContextAccessor` â†’ `HttpContext.User` (a `ClaimsPrincipal`) directly, with role checks via `ClaimsPrincipal.IsInRole()`.
+> The `RequestAuthorizationBehavior` in `session-management` uses `ICurrentUserAccessor` and `CurrentUser`. This pipeline will be rewritten to use `IHttpContextAccessor` â†’ `HttpContext.User` (a `ClaimsPrincipal`) directly, with role checks via `ClaimsPrincipal.IsInRole()`.
 
 ---
 
@@ -161,7 +161,7 @@ Same decomposition. Additional considerations:
 
 ---
 
-## Phase 4: Split `session-operations` into 4 Projects
+## Phase 4: Split `session-management` into 4 Projects
 
 > Largest service. ~50+ files moved/renamed. Estimated: 3-4 hours.
 

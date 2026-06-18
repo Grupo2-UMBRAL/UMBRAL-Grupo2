@@ -1,4 +1,4 @@
-# Examples
+﻿# Examples
 
 ## Example 1
 
@@ -17,7 +17,7 @@ Change: `SignalR` replaces generic WebSockets as a required implementation.
 Change: `Session Team` is renamed.
 
 - Category: domain terminology
-- Edit first: `src/session-operations/CONTEXT.md`
+- Edit first: `src/session-management/CONTEXT.md`
 - Propagate to:
   - `docs/product/glossary.md`
   - `docs/product/ers.md`

@@ -1,4 +1,4 @@
-# Mobile
+﻿# Mobile
 
 Expo shell for `Participant`.
 
@@ -46,7 +46,7 @@ If you want a native phone preview instead of Expo web, see `README.expo-go.md`.
 7. Verify the response shows `200` from `/health` and the outgoing request preview includes `Authorization: Bearer ...`.
 8. Stop `edge-proxy` and verify the probe fails cleanly.
 9. With a valid participant session, observe the SignalR connection state on the home screen.
-10. Stop `session-operations-service` or the network and verify the state moves to `error` or `reconnecting`.
+10. Stop `session-management-service` or the network and verify the state moves to `error` or `reconnecting`.
 11. Restore connectivity and verify the resync counter increments once the hub reconnects.
 
 ## Notes

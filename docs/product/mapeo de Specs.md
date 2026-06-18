@@ -1,4 +1,4 @@
-# Mapeo de Specs
+﻿# Mapeo de Specs
 
 Mapa operativo de la documentacion del proyecto UMBRAL: que vive en cada carpeta, que archivo editar segun el tipo de cambio y como se relacionan `ERS`, `ADR`, `CONTEXT`, agentes, skills y Linear.
 
@@ -27,7 +27,7 @@ Mapa operativo de la documentacion del proyecto UMBRAL: que vive en cada carpeta
 |     |- identity-access/
 |     |- mission-management/
 |     |- scoring-monitoring/
-|     `- session-operations/
+|     `- session-management/
 `- .agents/
    |- agents/
    `- skills/

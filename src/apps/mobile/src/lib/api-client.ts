@@ -1,4 +1,4 @@
-import { getClientConfig } from "./config";
+﻿import { getClientConfig } from "./config";
 
 function normalizePath(path: string) {
   return path.startsWith("/") ? path : `/${path}`;
@@ -262,16 +262,16 @@ export function createAuthorizedApiClient(accessToken: string) {
     },
     validateEnrollmentJoinCode(joinCode: string) {
       return requestJson<ParticipantEnrollmentStatus>(
-        `/api/session-operations/session-enrollment/${encodeURIComponent(joinCode)}/validate`
+        `/api/session-management/session-enrollment/${encodeURIComponent(joinCode)}/validate`
       );
     },
     listEnrollmentTeams(joinCode: string) {
       return requestJson<SessionTeamsResult>(
-        `/api/session-operations/session-enrollment/${encodeURIComponent(joinCode)}/teams`
+        `/api/session-management/session-enrollment/${encodeURIComponent(joinCode)}/teams`
       );
     },
     joinSessionTeam(input: JoinSessionTeamInput) {
-      return requestJson<EnrollmentResult>("/api/session-operations/session-enrollment/join", {
+      return requestJson<EnrollmentResult>("/api/session-management/session-enrollment/join", {
         method: "POST",
         body: JSON.stringify({
           joinCode: input.joinCode,
@@ -280,7 +280,7 @@ export function createAuthorizedApiClient(accessToken: string) {
       });
     },
     createSessionTeam(input: RegisterTeamInput) {
-      return requestJson<EnrollmentResult>("/api/session-operations/session-enrollment/teams", {
+      return requestJson<EnrollmentResult>("/api/session-management/session-enrollment/teams", {
         method: "POST",
         body: JSON.stringify({
           joinCode: input.joinCode,
@@ -290,12 +290,12 @@ export function createAuthorizedApiClient(accessToken: string) {
     },
     getSessionTeamSnapshot(sessionTeamId: string) {
       return requestJson<SessionTeamSnapshot>(
-        `/api/session-operations/session-teams/${encodeURIComponent(sessionTeamId)}/snapshot`
+        `/api/session-management/session-teams/${encodeURIComponent(sessionTeamId)}/snapshot`
       );
     },
     submitEvidence(input: SubmitEvidenceInput) {
       return requestJson<SubmitEvidenceResult>(
-        `/api/session-operations/session-teams/${encodeURIComponent(input.sessionTeamId)}/submissions`,
+        `/api/session-management/session-teams/${encodeURIComponent(input.sessionTeamId)}/submissions`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -306,7 +306,7 @@ export function createAuthorizedApiClient(accessToken: string) {
     },
     submitTriviaAnswer(input: SubmitTriviaAnswerInput) {
       return requestJson<SubmitEvidenceResult>(
-        `/api/session-operations/session-teams/${encodeURIComponent(input.sessionTeamId)}/trivia-submissions`,
+        `/api/session-management/session-teams/${encodeURIComponent(input.sessionTeamId)}/trivia-submissions`,
         {
           method: "POST",
           body: JSON.stringify({

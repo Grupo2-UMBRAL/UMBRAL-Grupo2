@@ -1,4 +1,4 @@
-# Backend Refactoring Progress
+﻿# Backend Refactoring Progress
 
 ## Phase 1: Clean Shared Library âœ… COMPLETE
 - [x] Delete YAGNI files (ServiceIdentity, Bootstrap interfaces, ServiceBootstrapDetails)
@@ -80,11 +80,11 @@
 - **Smoke route tests referenced a non-existent `/api/scoring-monitoring/smoke/participant` route** (no controller or minimal endpoint defined). Following Phase 2 pattern, these tests were deleted.
 - **Migrations namespace update**: Migrations moved from `Umbral.ScoringMonitoring.Api.Infrastructure.Migrations` to `ScoringMonitoring.Infrastructure.Persistence.Migrations`; `ProductVersion` annotation updated to 10.0.0.
 
-## Phase 4: Split session-operations â†’ 4 projects âœ… COMPLETE
-- [x] Created SessionOperations.Domain (14 entity files in LiveSessions/)
+## Phase 4: Split session-management â†’ 4 projects âœ… COMPLETE
+- [x] Created SessionManagement.Domain (14 entity files in LiveSessions/)
   - EnrollmentWindow, EvidenceSubmission, JoinCode, LiveSession (aggregate root, 1123 lines), LiveSessionStage, LiveSessionStageHint, LiveSessionStates, ParticipantUserId, ReleasedHint, SessionTeam, SessionTeamProgress, TeamParticipation, ValidationOutcome, ValidationOverrideLog
-- [x] Created SessionOperations.Application (30 .cs files)
-  - Hubs/SessionOperationsHub.cs + Hubs/Contracts/SessionRealtimeContracts.cs (moved from Api to avoid circular dependency, same pattern as scoring-monitoring Phase 3)
+- [x] Created SessionManagement.Application (30 .cs files)
+  - Hubs/SessionManagementHub.cs + Hubs/Contracts/SessionRealtimeContracts.cs (moved from Api to avoid circular dependency, same pattern as scoring-monitoring Phase 3)
   - Realtime/ISessionRealtimeNotifier.cs (port interface)
   - Scoring/IScoringMonitoringClient.cs (port interface + DTOs)
   - Features/EvidenceSubmissions/ (4 files: contracts + 3 handlers)
@@ -94,18 +94,18 @@
   - Features/SessionEnrollment/ (8 files: contracts + 7 handlers)
   - Features/SessionLifecycle/ (2 files: contracts + TransitionLiveSessionState)
   - Features/SessionSnapshots/ (4 files: contracts + 3 handlers)
-- [x] Created SessionOperations.Infrastructure (22 files)
-  - Persistence/SessionOperationsDbContext.cs + SessionOperationsDbContextFactory.cs + SessionOperationsPersistence.cs
+- [x] Created SessionManagement.Infrastructure (22 files)
+  - Persistence/SessionManagementDbContext.cs + SessionManagementDbContextFactory.cs + SessionManagementPersistence.cs
   - Persistence/Migrations/ (10 migration files with updated namespaces)
   - ServiceCollectionExtensions.cs (DI wiring for all infrastructure services)
   - AuthHeaderForwardingHandler.cs, CryptographicJoinCodeGenerator.cs
   - HttpContextCurrentOperatorIdentity.cs, HttpContextCurrentParticipantIdentity.cs
   - MissionDesignLiveSessionCatalog.cs, ScoringMonitoringHttpClient.cs
   - SignalRLiveSessionRealtimeNotifier.cs (uses Application.Hubs namespace)
-- [x] Created SessionOperations.Api (thin host with Program.cs only)
+- [x] Created SessionManagement.Api (thin host with Program.cs only)
   - Program.cs: SignalR, JwtBearer with access_token query param, MediatR 12.x, direct MigrateAsync
-  - Hub mapping: app.MapHub<SessionOperationsHub>("/hubs/session")
-- [x] Renamed test project: Umbral.SessionOperations.Api.Tests â†’ SessionOperations.Api.Tests
+  - Hub mapping: app.MapHub<SessionManagementHub>("/hubs/session")
+- [x] Renamed test project: Umbral.SessionManagement.Api.Tests â†’ SessionManagement.Api.Tests
   - All 11 test files migrated with updated namespaces
   - Test references updated: Domain, Application.Features, Infrastructure.Persistence
 - [x] TFM upgraded net8.0 â†’ net10.0; all packages upgraded (EF Core 10.0.0, Npgsql 10.0.0, MediatR 12.4.0, JwtBearer 10.0.0)
@@ -115,11 +115,11 @@
 - [ ] Final build + test verification pending (requires .NET 10.0 SDK)
 
 ### Findings / Decisions
-- **Hub location**: Same pattern as scoring-monitoring â€” `SessionOperationsHub` and `ISessionClient` moved to `SessionOperations.Application.Hubs` to prevent Infrastructureâ†’Api circular reference. Api still maps the hub endpoint.
-- **DbContext abstraction**: Application handlers use `ISessionOperationsDbContext` interface (defined in `SessionOperations.Application.Abstractions`). The concrete `SessionOperationsDbContext` lives only in Infrastructure.
+- **Hub location**: Same pattern as scoring-monitoring â€” `SessionManagementHub` and `ISessionClient` moved to `SessionManagement.Application.Hubs` to prevent Infrastructureâ†’Api circular reference. Api still maps the hub endpoint.
+- **DbContext abstraction**: Application handlers use `ISessionManagementDbContext` interface (defined in `SessionManagement.Application.Abstractions`). The concrete `SessionManagementDbContext` lives only in Infrastructure.
 - **No controllers exist**: The old service had no controllers or minimal-API endpoints â€” only MediatR handlers invoked through SignalR. `MapControllers()` retained for future additions.
-- **Migrations namespace update**: Migrations moved from `Umbral.SessionOperations.Api.Infrastructure.Migrations` to `SessionOperations.Infrastructure.Persistence.Migrations`; entity type references in Designer files updated from `Umbral.SessionOperations.Api.Domain.LiveSessions.*` to `SessionOperations.Domain.LiveSessions.*`.
-- **Old project directories**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories have been permanently deleted (source code moved; stale build artifacts cleaned).
+- **Migrations namespace update**: Migrations moved from `Umbral.SessionManagement.Api.Infrastructure.Migrations` to `SessionManagement.Infrastructure.Persistence.Migrations`; entity type references in Designer files updated from `Umbral.SessionManagement.Api.Domain.LiveSessions.*` to `SessionManagement.Domain.LiveSessions.*`.
+- **Old project directories**: `Umbral.SessionManagement.Api/` and `Umbral.SessionManagement.Api.Tests/` directories have been permanently deleted (source code moved; stale build artifacts cleaned).
 
 ### Build & Test Results (post-corrections)
 - `dotnet build` â€” **0 errors, 0 warnings** (all 4 projects)
@@ -128,15 +128,15 @@
   - 67 unit/handler tests: all passing
 
 ### Phase 4 Corrections (post-review audit)
-- **CRITICAL**: MediatR scanned wrong assembly (`SessionOperationsDbContext` in Infrastructure). Fixed to `ISessionOperationsDbContext` (in Application, where handlers live).
-- Created `SessionOperations.Infrastructure/GlobalUsings.cs` (missing â€” `Microsoft.NET.Sdk` + `FrameworkReference` lacks ASP.NET implicit usings; scoring-monitoring had this file, session-ops was missing it).
-- Added `ProjectReference` to `SessionOperations.Infrastructure` in test `.csproj` (was missing â€” tests referenced Infrastructure types directly).
-- Added `using SessionOperations.Infrastructure;` to `ScoringMonitoringHttpClientTests.cs` (class in root Infrastructure namespace, not Persistence sub-namespace).
+- **CRITICAL**: MediatR scanned wrong assembly (`SessionManagementDbContext` in Infrastructure). Fixed to `ISessionManagementDbContext` (in Application, where handlers live).
+- Created `SessionManagement.Infrastructure/GlobalUsings.cs` (missing â€” `Microsoft.NET.Sdk` + `FrameworkReference` lacks ASP.NET implicit usings; scoring-monitoring had this file, session-ops was missing it).
+- Added `ProjectReference` to `SessionManagement.Infrastructure` in test `.csproj` (was missing â€” tests referenced Infrastructure types directly).
+- Added `using SessionManagement.Infrastructure;` to `ScoringMonitoringHttpClientTests.cs` (class in root Infrastructure namespace, not Persistence sub-namespace).
 - Renamed `SignalRLiveSessionStateNotifier.cs` â†’ `SignalRLiveSessionRealtimeNotifier.cs` to match class name.
 - Renamed `SubmitEvidenceHandler` â†’ `SubmitEvidenceCommandHandler` for consistency with other handlers (and updated test reference).
 - Added `.Trim()` on userId in `HttpContextCurrentParticipantIdentity` to match `HttpContextCurrentOperatorIdentity` behavior.
-- Cleaned stale `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories (bin/obj artifacts only, no source remained).
-- Corrected progress note: handlers use `ISessionOperationsDbContext` interface, not concrete type.
+- Cleaned stale `Umbral.SessionManagement.Api/` and `Umbral.SessionManagement.Api.Tests/` directories (bin/obj artifacts only, no source remained).
+- Corrected progress note: handlers use `ISessionManagementDbContext` interface, not concrete type.
 
 ## Phase 5: Clean user-management âœ… COMPLETE
 - [x] Deleted WeatherForecastController.cs (template junk)

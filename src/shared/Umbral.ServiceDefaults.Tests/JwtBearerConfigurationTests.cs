@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -16,7 +16,7 @@ public sealed class JwtBearerConfigurationTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Auth:Authority"] = "http://localhost:8080/realms/umbral",
-                ["Auth:Audience"] = "umbral-session-operations-api",
+                ["Auth:Audience"] = "umbral-session-management-api",
                 ["Auth:RequireHttpsMetadata"] = "false"
             })
             .Build();
@@ -31,7 +31,7 @@ public sealed class JwtBearerConfigurationTests
             .Get(JwtBearerDefaults.AuthenticationScheme);
 
         Assert.Equal("http://localhost:8080/realms/umbral", jwtBearerOptions.Authority);
-        Assert.Equal("umbral-session-operations-api", jwtBearerOptions.TokenValidationParameters.ValidAudience);
+        Assert.Equal("umbral-session-management-api", jwtBearerOptions.TokenValidationParameters.ValidAudience);
         Assert.True(jwtBearerOptions.TokenValidationParameters.ValidateAudience);
         Assert.False(jwtBearerOptions.RequireHttpsMetadata);
     }

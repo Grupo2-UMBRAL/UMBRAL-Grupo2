@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 
 from __future__ import annotations
 
@@ -20,18 +20,18 @@ SCENARIO = os.environ.get("AUTH_SMOKE_SCENARIO", "all")
 EXPECTED_API_AUDIENCES = {
     "umbral-identity-access-api",
     "umbral-mission-management-api",
-    "umbral-session-operations-api",
+    "umbral-session-management-api",
     "umbral-scoring-monitoring-api",
 }
 BOOTSTRAP_PATHS = [
     "/identity-access/api/identity-access/bootstrap",
     "/mission-management/api/mission-management/bootstrap",
-    "/session-operations/api/session-operations/bootstrap",
+    "/session-management/api/session-management/bootstrap",
     "/scoring-monitoring/api/scoring-monitoring/bootstrap",
 ]
 ROLE_SMOKE_PATHS = {
     "admin": "/mission-management/api/mission-management/smoke/administrator",
-    "operator": "/session-operations/api/session-operations/smoke/operator",
+    "operator": "/session-management/api/session-management/smoke/operator",
     "participant": "/scoring-monitoring/api/scoring-monitoring/smoke/participant",
 }
 SEED_USERS = {

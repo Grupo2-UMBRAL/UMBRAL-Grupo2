@@ -2,11 +2,11 @@
 
 ## Preconditions
 
-- Backend `session-operations-service` is running through edge proxy.
+- Backend `session-management-service` is running through edge proxy.
 - Participant user is authenticated in mobile app with role `Participant`.
 - Participant completed UMB-33 Join Flow and AsyncStorage contains `{ joinCode, teamId, teamName }`.
 - UMB-34 endpoint is available:
-  - `GET /api/session-operations/session-teams/{sessionTeamId}/snapshot`
+  - `GET /api/session-management/session-teams/{sessionTeamId}/snapshot`
 - UMB-34 SignalR hub is available through configured `EXPO_PUBLIC_SESSION_OPERATIONS_HUB_PATH`.
 
 ## Automated Evidence
@@ -31,7 +31,7 @@ Expected:
 2. Complete join/enrollment flow for a valid Session Team.
 3. Navigate to `Team board`.
 4. Expected result:
-   - App calls `GET /api/session-operations/session-teams/{sessionTeamId}/snapshot`.
+   - App calls `GET /api/session-management/session-teams/{sessionTeamId}/snapshot`.
    - Board shows Session Team name, Session State, Progress State and Sync metadata.
    - Board shows current playable stage if snapshot includes `currentStage`.
    - Board shows only hints whose `missionStageId` matches current stage.
@@ -66,7 +66,7 @@ docker compose -f docker-compose.dev.yml up -d
 3. Stop Session Operations only:
 
 ```powershell
-docker compose -f docker-compose.dev.yml stop session-operations-service
+docker compose -f docker-compose.dev.yml stop session-management-service
 ```
 
 4. Expected result while stopped:
@@ -75,7 +75,7 @@ docker compose -f docker-compose.dev.yml stop session-operations-service
 5. Start Session Operations again:
 
 ```powershell
-docker compose -f docker-compose.dev.yml start session-operations-service
+docker compose -f docker-compose.dev.yml start session-management-service
 ```
 
 6. Expected result after reconnect:

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$ArtifactDirectory = (Join-Path (Join-Path $PSScriptRoot "..") "temp/validation/compose"),
     [string]$EnvironmentFilePath,
     [switch]$LeaveRunning
@@ -223,7 +223,7 @@ $environmentValues = Get-ComposeEnvironment -Path $envFile
 $edgeProxyPort = $environmentValues["EDGE_PROXY_PORT"]
 $identityAccessPort = $environmentValues["IDENTITY_ACCESS_PORT"]
 $missionManagementPort = $environmentValues["MISSION_MANAGEMENT_PORT"]
-$sessionOperationsPort = $environmentValues["SESSION_OPERATIONS_PORT"]
+$SessionManagementPort = $environmentValues["SESSION_OPERATIONS_PORT"]
 $scoringAuditPort = $environmentValues["SCORING_MONITORING_PORT"]
 $realm = $environmentValues["KEYCLOAK_REALM"]
 
@@ -237,7 +237,7 @@ $reservedContainerNames = @(
     "umbral-keycloak",
     "umbral-identity-access-service",
     "umbral-mission-management-service",
-    "umbral-session-operations-service",
+    "umbral-session-management-service",
     "umbral-scoring-monitoring-service",
     "umbral-edge-proxy"
 )
@@ -249,7 +249,7 @@ $requiredHostPorts = @(
     [int]$edgeProxyPort,
     [int]$identityAccessPort,
     [int]$missionManagementPort,
-    [int]$sessionOperationsPort,
+    [int]$SessionManagementPort,
     [int]$scoringAuditPort
 )
 
@@ -257,7 +257,7 @@ try {
     Assert-ContainerNamesAvailable -ContainerNames $reservedContainerNames
     Assert-HostPortsAvailable -Ports $requiredHostPorts
     Invoke-ComposeCommand -Arguments @("config") | Out-File -FilePath $composeConfigLog -Encoding utf8
-    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "identity-access-service", "mission-management-service", "session-operations-service", "scoring-monitoring-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
+    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "identity-access-service", "mission-management-service", "session-management-service", "scoring-monitoring-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
     Invoke-ComposeCommand -Arguments @("ps") | Out-File -FilePath $composePsLog -Encoding utf8
 
     Wait-ContainerHealthy -ContainerName "umbral-postgres"
@@ -265,14 +265,14 @@ try {
     Wait-ContainerHealthy -ContainerName "umbral-keycloak"
     Wait-ContainerHealthy -ContainerName "umbral-identity-access-service"
     Wait-ContainerHealthy -ContainerName "umbral-mission-management-service"
-    Wait-ContainerHealthy -ContainerName "umbral-session-operations-service"
+    Wait-ContainerHealthy -ContainerName "umbral-session-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-scoring-monitoring-service"
     Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health"
     Wait-HttpOk -Uri "http://localhost:$identityAccessPort/health" -Name "identity-access health"
     Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health"
-    Wait-HttpOk -Uri "http://localhost:$sessionOperationsPort/health" -Name "session-operations health"
+    Wait-HttpOk -Uri "http://localhost:$SessionManagementPort/health" -Name "session-management health"
     Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-monitoring health"
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery"
 
