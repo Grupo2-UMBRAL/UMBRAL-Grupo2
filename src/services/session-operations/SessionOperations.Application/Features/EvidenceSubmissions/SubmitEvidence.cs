@@ -26,7 +26,7 @@ public sealed record SubmitEvidenceResponse(
     long SequenceNumber,
     DateTimeOffset SubmittedAtUtc);
 
-public sealed class SubmitEvidenceHandler(
+public sealed class SubmitEvidenceCommandHandler(
     ISessionOperationsDbContext dbContext,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,

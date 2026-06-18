@@ -15,7 +15,7 @@ public sealed record CreateLiveSessionCommand(
 
 public sealed class CreateLiveSessionCommandHandler(
     ISessionOperationsDbContext dbContext,
-    IMissionDesignLiveSessionCatalog missionDesignLiveSessionCatalog,
+    IMissionManagementLiveSessionCatalog missionManagementLiveSessionCatalog,
     TimeProvider timeProvider)
     : IRequestHandler<CreateLiveSessionCommand, LiveSessionResponse>
 {
@@ -25,7 +25,7 @@ public sealed class CreateLiveSessionCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var eligibleMission = await missionDesignLiveSessionCatalog.GetEligibleMissionForLiveSessionAsync(
+        var eligibleMission = await missionManagementLiveSessionCatalog.GetEligibleMissionForLiveSessionAsync(
             request.MissionId,
             cancellationToken);
         var sessionStageFlow = BuildSessionStageFlow(

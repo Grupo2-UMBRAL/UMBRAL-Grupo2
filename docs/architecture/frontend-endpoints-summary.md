@@ -27,7 +27,7 @@ Base: `/identity-access/api/identity-access`
 
 ## Mission Design
 
-Base: `/mission-design/api/mission-design`
+Base: `/mission-management/api/mission-management`
 
 - `GET /bootstrap`
 - `GET /missions`
@@ -97,6 +97,6 @@ Base: `/scoring-audit/api/scoring-audit`
 
 ## Smoke checks
 
-- `GET /mission-design/api/mission-design/smoke/{administrator|operator}`
+- `GET /mission-management/api/mission-management/smoke/{administrator|operator}`
 - `GET /session-operations/api/session-operations/smoke/{administrator|operator}`
 - `GET /scoring-audit/api/scoring-audit/smoke/{administrator|operator}`

@@ -25,7 +25,7 @@ Mapa operativo de la documentacion del proyecto UMBRAL: que vive en cada carpeta
 |  |  `- web/
 |  `- services/
 |     |- identity-access/
-|     |- mission-design/
+|     |- mission-management/
 |     |- scoring-audit/
 |     `- session-operations/
 `- .agents/

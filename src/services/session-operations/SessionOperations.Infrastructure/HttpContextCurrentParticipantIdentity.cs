@@ -22,6 +22,6 @@ public sealed class HttpContextCurrentParticipantIdentity(IHttpContextAccessor h
                 UmbralFailureCategory.Unauthorized);
         }
 
-        return ParticipantUserId.Parse(userId);
+        return ParticipantUserId.Parse(userId.Trim());
     }
 }

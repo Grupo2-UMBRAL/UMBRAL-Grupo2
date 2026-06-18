@@ -1460,7 +1460,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const eligibleMissionsUrl = useMemo(
-    () => `${getClientConfig().edgeProxyPublicBaseUrl}/mission-design/api/mission-design/missions/eligible-for-live-session`,
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/mission-management/api/mission-management/missions/eligible-for-live-session`,
     []
   );
   const sessionOperationsUrl = useMemo(

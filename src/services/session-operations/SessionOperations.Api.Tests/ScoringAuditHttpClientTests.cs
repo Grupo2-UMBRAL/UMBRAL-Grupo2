@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using SessionOperations.Infrastructure;
 using SessionOperations.Infrastructure.Persistence;
 using Xunit;
 

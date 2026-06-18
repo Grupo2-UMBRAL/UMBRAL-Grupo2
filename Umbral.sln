@@ -13,17 +13,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Umbral.EdgeProxy", "src\app
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "services", "services", "{536D81E8-D696-43F0-8920-2663FAB34F6E}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mission-design", "mission-design", "{023F1B88-7B7A-44D3-92A4-DDC8C19FDDBA}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mission-management", "mission-management", "{023F1B88-7B7A-44D3-92A4-DDC8C19FDDBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionDesign.Api", "src\services\mission-design\MissionDesign.Api\MissionDesign.Api.csproj", "{B41AAE80-5FA5-410B-A05F-7CB39F782EFA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Api", "src\services\mission-management\MissionManagement.Api\MissionManagement.Api.csproj", "{B41AAE80-5FA5-410B-A05F-7CB39F782EFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionDesign.Api.Tests", "src\services\mission-design\MissionDesign.Api.Tests\MissionDesign.Api.Tests.csproj", "{A37EF584-DA70-4F2B-81EB-DDB6DBCE7AB8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Api.Tests", "src\services\mission-management\MissionManagement.Api.Tests\MissionManagement.Api.Tests.csproj", "{A37EF584-DA70-4F2B-81EB-DDB6DBCE7AB8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionDesign.Application", "src\services\mission-design\MissionDesign.Application\MissionDesign.Application.csproj", "{8F4D28D5-87D0-46B1-9932-F7CB0159A31F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Application", "src\services\mission-management\MissionManagement.Application\MissionManagement.Application.csproj", "{8F4D28D5-87D0-46B1-9932-F7CB0159A31F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionDesign.Domain", "src\services\mission-design\MissionDesign.Domain\MissionDesign.Domain.csproj", "{14B79BC3-FF3B-42E5-A580-A9329D0A6B76}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Domain", "src\services\mission-management\MissionManagement.Domain\MissionManagement.Domain.csproj", "{14B79BC3-FF3B-42E5-A580-A9329D0A6B76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionDesign.Infrastructure", "src\services\mission-design\MissionDesign.Infrastructure\MissionDesign.Infrastructure.csproj", "{AF1120C4-AE5A-4154-A294-8F09564E0669}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MissionManagement.Infrastructure", "src\services\mission-management\MissionManagement.Infrastructure\MissionManagement.Infrastructure.csproj", "{AF1120C4-AE5A-4154-A294-8F09564E0669}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scoring-audit", "scoring-audit", "{EEA345D3-8267-4DD5-B49A-0039D08DCC04}"
 EndProject

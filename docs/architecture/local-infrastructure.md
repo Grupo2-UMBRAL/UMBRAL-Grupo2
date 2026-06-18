@@ -12,7 +12,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 - `postgres`
 - `rabbitmq`
 - `keycloak`
-- `mission-design-service`
+- `mission-management-service`
 - `session-operations-service`
 - `scoring-audit-service`
 - `edge-proxy`
@@ -21,7 +21,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 
 - `edge-proxy`: `7500`
 - `keycloak`: `8080`
-- `mission-design-service`: `7101`
+- `mission-management-service`: `7101`
 - `session-operations-service`: `7102`
 - `scoring-audit-service`: `7103`
 - `postgres`: `5432`
@@ -30,7 +30,7 @@ Este documento aterriza la fase local hasta el paso 4 acordado:
 
 ## Rutas del edge proxy
 
-- `/mission-design/*` -> `mission-design-service`
+- `/mission-management/*` -> `mission-management-service`
 - `/session-operations/*` -> `session-operations-service`
 - `/session-hub/*` -> hub `SignalR` de `session-operations-service`
 - `/scoring-audit/*` -> `scoring-audit-service`
@@ -76,7 +76,7 @@ Ese contrato se mantiene hoy en el wiring compartido de `src/shared/Umbral.Servi
 
 Se usa una sola instancia de `PostgreSQL` con esquemas separados:
 
-- `mission_design`
+- `mission_management`
 - `session_operations`
 - `scoring_audit`
 

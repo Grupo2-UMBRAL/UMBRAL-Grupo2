@@ -6,7 +6,7 @@ Este repo usa un unico conjunto compartido de documentos de dominio para varios 
 
 - [../../docs/product/ers.md](../../docs/product/ers.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
-- [../../src/services/mission-design/CONTEXT.md](../../src/services/mission-design/CONTEXT.md)
+- [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
 - [../../src/services/session-operations/CONTEXT.md](../../src/services/session-operations/CONTEXT.md)
 - [../../src/services/scoring-audit/CONTEXT.md](../../src/services/scoring-audit/CONTEXT.md)
 - [../../src/services/identity-access/CONTEXT.md](../../src/services/identity-access/CONTEXT.md)

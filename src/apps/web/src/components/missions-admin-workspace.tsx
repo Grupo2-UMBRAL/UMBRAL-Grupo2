@@ -929,7 +929,7 @@ export function MissionsAdminWorkspace({
   accessToken,
 }: MissionsAdminWorkspaceProps) {
   const config = getClientConfig();
-  const missionsUrl = `${config.edgeProxyPublicBaseUrl}/mission-design/api/mission-design/missions`;
+  const missionsUrl = `${config.edgeProxyPublicBaseUrl}/mission-management/api/mission-management/missions`;
   const listRequestSequenceRef = useRef(0);
   const detailRequestSequenceRef = useRef(0);
   const [missions, setMissions] = useState<MissionSummary[]>([]);
