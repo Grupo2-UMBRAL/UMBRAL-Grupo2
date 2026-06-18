@@ -80,8 +80,47 @@
 - **Smoke route tests referenced a non-existent `/api/scoring-audit/smoke/participant` route** (no controller or minimal endpoint defined). Following Phase 2 pattern, these tests were deleted.
 - **Migrations namespace update**: Migrations moved from `Umbral.ScoringAudit.Api.Infrastructure.Migrations` to `ScoringAudit.Infrastructure.Persistence.Migrations`; `ProductVersion` annotation updated to 10.0.0.
 
-## Phase 4: Split session-operations → 4 projects
-- [ ] Not started
+## Phase 4: Split session-operations → 4 projects ✅ COMPLETE
+- [x] Created SessionOperations.Domain (14 entity files in LiveSessions/)
+  - EnrollmentWindow, EvidenceSubmission, JoinCode, LiveSession (aggregate root, 1123 lines), LiveSessionStage, LiveSessionStageHint, LiveSessionStates, ParticipantUserId, ReleasedHint, SessionTeam, SessionTeamProgress, TeamParticipation, ValidationOutcome, ValidationOverrideLog
+- [x] Created SessionOperations.Application (30 .cs files)
+  - Hubs/SessionOperationsHub.cs + Hubs/Contracts/SessionRealtimeContracts.cs (moved from Api to avoid circular dependency, same pattern as scoring-audit Phase 3)
+  - Realtime/ISessionRealtimeNotifier.cs (port interface)
+  - Scoring/IScoringAuditClient.cs (port interface + DTOs)
+  - Features/EvidenceSubmissions/ (4 files: contracts + 3 handlers)
+  - Features/Hints/ (2 files: CreateOperationalHint, ReleaseHint)
+  - Features/LiveSessions/ (5 files: contracts + 4 handlers)
+  - Features/Penalties/ (1 file: ApplyPenalty)
+  - Features/SessionEnrollment/ (8 files: contracts + 7 handlers)
+  - Features/SessionLifecycle/ (2 files: contracts + TransitionLiveSessionState)
+  - Features/SessionSnapshots/ (4 files: contracts + 3 handlers)
+- [x] Created SessionOperations.Infrastructure (22 files)
+  - Persistence/SessionOperationsDbContext.cs + SessionOperationsDbContextFactory.cs + SessionOperationsPersistence.cs
+  - Persistence/Migrations/ (10 migration files with updated namespaces)
+  - ServiceCollectionExtensions.cs (DI wiring for all infrastructure services)
+  - AuthHeaderForwardingHandler.cs, CryptographicJoinCodeGenerator.cs
+  - HttpContextCurrentOperatorIdentity.cs, HttpContextCurrentParticipantIdentity.cs
+  - MissionDesignLiveSessionCatalog.cs, ScoringAuditHttpClient.cs
+  - SignalRLiveSessionStateNotifier.cs (uses Application.Hubs namespace)
+- [x] Created SessionOperations.Api (thin host with Program.cs only)
+  - Program.cs: SignalR, JwtBearer with access_token query param, MediatR 12.x, direct MigrateAsync
+  - Hub mapping: app.MapHub<SessionOperationsHub>("/hubs/session")
+- [x] Renamed test project: Umbral.SessionOperations.Api.Tests → SessionOperations.Api.Tests
+  - All 11 test files migrated with updated namespaces
+  - Test references updated: Domain, Application.Features, Infrastructure.Persistence
+- [x] TFM upgraded net8.0 → net10.0; all packages upgraded (EF Core 10.0.0, Npgsql 10.0.0, MediatR 12.4.0, JwtBearer 10.0.0)
+- [x] MediatR package upgraded from MediatR.Extensions.Microsoft.DependencyInjection 11.1.0 → MediatR 12.4.0
+- [x] Dockerfile updated: sdk:10.0, aspnet:10.0, new project path
+- [x] Invoke-RepositoryValidation.ps1 updated with new project paths
+- [ ] Final build + test verification pending (requires .NET 10.0 SDK)
+
+### Findings / Decisions
+- **Hub location**: Same pattern as scoring-audit — `SessionOperationsHub` and `ISessionClient` moved to `SessionOperations.Application.Hubs` to prevent Infrastructure→Api circular reference. Api still maps the hub endpoint.
+- **DbContext direct reference**: Application handlers reference `SessionOperationsDbContext` directly (same pragmatic compromise as original code). A future refinement could introduce an `ISessionOperationsDbContext` abstraction, but the plan prioritizes structural decomposition first.
+- **No controllers exist**: The old service had no controllers or minimal-API endpoints — only MediatR handlers invoked through SignalR. `MapControllers()` retained for future additions.
+- **Migrations namespace update**: Migrations moved from `Umbral.SessionOperations.Api.Infrastructure.Migrations` to `SessionOperations.Infrastructure.Persistence.Migrations`; entity type references in Designer files updated from `Umbral.SessionOperations.Api.Domain.LiveSessions.*` to `SessionOperations.Domain.LiveSessions.*`.
+- **Old project preserved**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories remain for reference and should be deleted after successful validation.
+
 
 ## Phase 5: Clean user-management
 - [ ] Not started

@@ -40,8 +40,8 @@ $backendProjects = @(
     "src/services/mission-design/MissionDesign.Api.Tests/MissionDesign.Api.Tests.csproj",
     "src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj",
     "src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj",
-    "src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj",
-    "src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj"
+    "src/services/session-operations/SessionOperations.Api/SessionOperations.Api.csproj",
+    "src/services/session-operations/SessionOperations.Api.Tests/SessionOperations.Api.Tests.csproj"
 )
 
 $backendTestProjects = @(
@@ -49,7 +49,7 @@ $backendTestProjects = @(
     "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
     "src/services/mission-design/MissionDesign.Api.Tests/MissionDesign.Api.Tests.csproj",
     "src/services/scoring-audit/ScoringAudit.Api.Tests/ScoringAudit.Api.Tests.csproj",
-    "src/services/session-operations/Umbral.SessionOperations.Api.Tests/Umbral.SessionOperations.Api.Tests.csproj"
+    "src/services/session-operations/SessionOperations.Api.Tests/SessionOperations.Api.Tests.csproj"
 )
 
 function Test-Scope {
