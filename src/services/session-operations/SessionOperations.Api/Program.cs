@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
+using SessionOperations.Application.Abstractions;
 using SessionOperations.Application.Hubs;
 using SessionOperations.Infrastructure;
 using SessionOperations.Infrastructure.Persistence;
@@ -29,7 +30,7 @@ builder.Services.AddUmbralApiDefaults(
             }
         };
     });
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<SessionOperationsDbContext>());
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ISessionOperationsDbContext>());
 builder.Services.AddSessionOperationsInfrastructure(builder.Configuration);
 
 var app = builder.Build();

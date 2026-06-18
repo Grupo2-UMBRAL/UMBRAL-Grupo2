@@ -9,7 +9,7 @@ Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a l
 - [operating-model.md](operating-model.md)
 - [../product/ers.md](../product/ers.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
-- [../../src/mission-design/CONTEXT.md](../../src/mission-design/CONTEXT.md)
+- [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
 - [../../src/session-operations/CONTEXT.md](../../src/session-operations/CONTEXT.md)
 - [../../src/scoring-audit/CONTEXT.md](../../src/scoring-audit/CONTEXT.md)
 - [../../src/identity-access/CONTEXT.md](../../src/identity-access/CONTEXT.md)

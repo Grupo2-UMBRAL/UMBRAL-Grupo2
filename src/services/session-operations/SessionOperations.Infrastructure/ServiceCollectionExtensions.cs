@@ -30,10 +30,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
-            .AddHttpClient<IMissionDesignLiveSessionCatalog, MissionDesignLiveSessionCatalog>(client =>
+            .AddHttpClient<IMissionManagementLiveSessionCatalog, MissionManagementLiveSessionCatalog>(client =>
             {
                 client.BaseAddress = new Uri(
-                    configuration["MissionDesign:BaseUrl"] ?? "http://mission-design-service:8080/");
+                    configuration["MissionManagement:BaseUrl"] ?? "http://mission-management-service:8080/");
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
         services

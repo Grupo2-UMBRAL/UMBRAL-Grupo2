@@ -186,7 +186,7 @@ flowchart LR
 flowchart TD
     subgraph DockerCompose
         GW[gateway optional]
-        MS[mission-design-service]
+        MS[mission-management-service]
         SS[session-operations-service]
         SA[scoring-audit-service]
         KC[keycloak]

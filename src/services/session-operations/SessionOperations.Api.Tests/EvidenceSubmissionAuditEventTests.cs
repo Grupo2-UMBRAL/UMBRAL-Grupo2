@@ -27,7 +27,7 @@ public sealed class EvidenceSubmissionAuditEventTests
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
         var scoringAuditClient = new RecordingScoringAuditClient();
-        var handler = new SubmitEvidenceHandler(
+        var handler = new SubmitEvidenceCommandHandler(
             dbContext,
             new FixedTimeProvider(NowUtc),
             new StaticParticipantIdentity("participant-alpha"),

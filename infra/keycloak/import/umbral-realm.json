@@ -118,15 +118,15 @@
       "secret": "identity-access-secret"
     },
     {
-      "clientId": "umbral-mission-design-api",
-      "name": "Mission Design API",
+      "clientId": "umbral-mission-management-api",
+      "name": "Mission Management API",
       "enabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "secret": "mission-design-secret"
+      "secret": "mission-management-secret"
     },
     {
       "clientId": "umbral-session-operations-api",
@@ -207,12 +207,12 @@
           }
         },
         {
-          "name": "audience-mission-design-api",
+          "name": "audience-mission-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "umbral-mission-design-api",
+            "included.client.audience": "umbral-mission-management-api",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "lightweight.claim": "false"

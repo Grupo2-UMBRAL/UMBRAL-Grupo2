@@ -222,7 +222,7 @@ function Assert-HostPortsAvailable {
 $environmentValues = Get-ComposeEnvironment -Path $envFile
 $edgeProxyPort = $environmentValues["EDGE_PROXY_PORT"]
 $identityAccessPort = $environmentValues["IDENTITY_ACCESS_PORT"]
-$missionDesignPort = $environmentValues["MISSION_DESIGN_PORT"]
+$missionManagementPort = $environmentValues["MISSION_MANAGEMENT_PORT"]
 $sessionOperationsPort = $environmentValues["SESSION_OPERATIONS_PORT"]
 $scoringAuditPort = $environmentValues["SCORING_AUDIT_PORT"]
 $realm = $environmentValues["KEYCLOAK_REALM"]
@@ -236,7 +236,7 @@ $reservedContainerNames = @(
     "umbral-rabbitmq",
     "umbral-keycloak",
     "umbral-identity-access-service",
-    "umbral-mission-design-service",
+    "umbral-mission-management-service",
     "umbral-session-operations-service",
     "umbral-scoring-audit-service",
     "umbral-edge-proxy"
@@ -248,7 +248,7 @@ $requiredHostPorts = @(
     [int]$environmentValues["KEYCLOAK_PORT"],
     [int]$edgeProxyPort,
     [int]$identityAccessPort,
-    [int]$missionDesignPort,
+    [int]$missionManagementPort,
     [int]$sessionOperationsPort,
     [int]$scoringAuditPort
 )
@@ -257,21 +257,21 @@ try {
     Assert-ContainerNamesAvailable -ContainerNames $reservedContainerNames
     Assert-HostPortsAvailable -Ports $requiredHostPorts
     Invoke-ComposeCommand -Arguments @("config") | Out-File -FilePath $composeConfigLog -Encoding utf8
-    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "identity-access-service", "mission-design-service", "session-operations-service", "scoring-audit-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
+    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "identity-access-service", "mission-management-service", "session-operations-service", "scoring-audit-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
     Invoke-ComposeCommand -Arguments @("ps") | Out-File -FilePath $composePsLog -Encoding utf8
 
     Wait-ContainerHealthy -ContainerName "umbral-postgres"
     Wait-ContainerHealthy -ContainerName "umbral-rabbitmq"
     Wait-ContainerHealthy -ContainerName "umbral-keycloak"
     Wait-ContainerHealthy -ContainerName "umbral-identity-access-service"
-    Wait-ContainerHealthy -ContainerName "umbral-mission-design-service"
+    Wait-ContainerHealthy -ContainerName "umbral-mission-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-session-operations-service"
     Wait-ContainerHealthy -ContainerName "umbral-scoring-audit-service"
     Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health"
     Wait-HttpOk -Uri "http://localhost:$identityAccessPort/health" -Name "identity-access health"
-    Wait-HttpOk -Uri "http://localhost:$missionDesignPort/health" -Name "mission-design health"
+    Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health"
     Wait-HttpOk -Uri "http://localhost:$sessionOperationsPort/health" -Name "session-operations health"
     Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-audit health"
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery"

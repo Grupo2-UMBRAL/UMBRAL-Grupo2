@@ -601,7 +601,7 @@ public sealed class LiveSessionEndpointTests
 internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Program>
 {
     private readonly string databaseName = $"session-operations-tests-{Guid.NewGuid():N}";
-    private readonly FakeMissionDesignLiveSessionCatalog missionDesignLiveSessionCatalog = new();
+    private readonly FakeMissionManagementLiveSessionCatalog missionDesignLiveSessionCatalog = new();
     private readonly FakeLiveSessionStateNotifier liveSessionStateNotifier = new();
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
@@ -615,7 +615,7 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
                 ["Auth:Audience"] = "umbral-session-operations-api",
                 ["RabbitMQ:Host"] = "localhost",
                 ["SignalR:Enabled"] = "true",
-                ["MissionDesign:BaseUrl"] = "http://mission-design-service:8080/",
+                ["MissionManagement:BaseUrl"] = "http://mission-management-service:8080/",
                 ["Persistence:ApplyMigrationsOnStartup"] = "false"
             });
         });
@@ -637,9 +637,9 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
             services.AddDbContext<SessionOperationsDbContext>(options =>
                 options.UseInMemoryDatabase(databaseName));
 
-            services.RemoveAll<IMissionDesignLiveSessionCatalog>();
+            services.RemoveAll<IMissionManagementLiveSessionCatalog>();
             services.AddSingleton(missionDesignLiveSessionCatalog);
-            services.AddSingleton<IMissionDesignLiveSessionCatalog>(missionDesignLiveSessionCatalog);
+            services.AddSingleton<IMissionManagementLiveSessionCatalog>(missionDesignLiveSessionCatalog);
             services.RemoveAll<ILiveSessionStateNotifier>();
             services.AddSingleton(liveSessionStateNotifier);
             services.AddSingleton<ILiveSessionStateNotifier>(liveSessionStateNotifier);
@@ -690,7 +690,7 @@ internal sealed class SessionOperationsApiFactory : WebApplicationFactory<Progra
         return client;
     }
 
-    private sealed class FakeMissionDesignLiveSessionCatalog : IMissionDesignLiveSessionCatalog
+    private sealed class FakeMissionManagementLiveSessionCatalog : IMissionManagementLiveSessionCatalog
     {
         private EligibleMissionForLiveSessionSnapshot? eligibleMission;
         private UmbralServiceException? failure;

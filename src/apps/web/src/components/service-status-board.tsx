@@ -31,8 +31,8 @@ export function ServiceStatusBoard({
         auth: false,
       },
       {
-        label: "Mission Design",
-        url: `${base}/mission-design/api/mission-design/smoke/${role}`,
+        label: "Mission Management",
+        url: `${base}/mission-management/api/mission-management/smoke/${role}`,
         auth: true,
       },
       {

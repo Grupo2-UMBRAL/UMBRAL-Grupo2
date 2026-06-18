@@ -2,7 +2,7 @@
 
 ## Contexts
 
-- [Mission Design](./src/services/mission-design/CONTEXT.md) - define el diseno reusable de misiones, etapas y pistas.
+- [Mission Management](./src/services/mission-management/CONTEXT.md) - define el diseno reusable de misiones, etapas y pistas.
 - [Session Operations](./src/services/session-operations/CONTEXT.md) - opera sesiones en vivo, equipos, estado y flujo efectivo de etapas.
 - [Scoring and Audit](./src/services/scoring-audit/CONTEXT.md) - calcula puntajes, registra penalizaciones, mantiene ranking e historial auditable.
 - [Identity and Access](./src/services/identity-access/CONTEXT.md) - contexto de soporte para autenticacion, autorizacion y administracion de usuarios operativos.

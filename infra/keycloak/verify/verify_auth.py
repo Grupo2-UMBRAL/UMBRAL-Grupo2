@@ -19,18 +19,18 @@ SCENARIO = os.environ.get("AUTH_SMOKE_SCENARIO", "all")
 
 EXPECTED_API_AUDIENCES = {
     "umbral-identity-access-api",
-    "umbral-mission-design-api",
+    "umbral-mission-management-api",
     "umbral-session-operations-api",
     "umbral-scoring-audit-api",
 }
 BOOTSTRAP_PATHS = [
     "/identity-access/api/identity-access/bootstrap",
-    "/mission-design/api/mission-design/bootstrap",
+    "/mission-management/api/mission-management/bootstrap",
     "/session-operations/api/session-operations/bootstrap",
     "/scoring-audit/api/scoring-audit/bootstrap",
 ]
 ROLE_SMOKE_PATHS = {
-    "admin": "/mission-design/api/mission-design/smoke/administrator",
+    "admin": "/mission-management/api/mission-management/smoke/administrator",
     "operator": "/session-operations/api/session-operations/smoke/operator",
     "participant": "/scoring-audit/api/scoring-audit/smoke/participant",
 }

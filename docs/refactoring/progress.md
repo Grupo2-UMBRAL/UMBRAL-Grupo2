@@ -101,7 +101,7 @@
   - AuthHeaderForwardingHandler.cs, CryptographicJoinCodeGenerator.cs
   - HttpContextCurrentOperatorIdentity.cs, HttpContextCurrentParticipantIdentity.cs
   - MissionDesignLiveSessionCatalog.cs, ScoringAuditHttpClient.cs
-  - SignalRLiveSessionStateNotifier.cs (uses Application.Hubs namespace)
+  - SignalRLiveSessionRealtimeNotifier.cs (uses Application.Hubs namespace)
 - [x] Created SessionOperations.Api (thin host with Program.cs only)
   - Program.cs: SignalR, JwtBearer with access_token query param, MediatR 12.x, direct MigrateAsync
   - Hub mapping: app.MapHub<SessionOperationsHub>("/hubs/session")
@@ -116,11 +116,27 @@
 
 ### Findings / Decisions
 - **Hub location**: Same pattern as scoring-audit — `SessionOperationsHub` and `ISessionClient` moved to `SessionOperations.Application.Hubs` to prevent Infrastructure→Api circular reference. Api still maps the hub endpoint.
-- **DbContext direct reference**: Application handlers reference `SessionOperationsDbContext` directly (same pragmatic compromise as original code). A future refinement could introduce an `ISessionOperationsDbContext` abstraction, but the plan prioritizes structural decomposition first.
+- **DbContext abstraction**: Application handlers use `ISessionOperationsDbContext` interface (defined in `SessionOperations.Application.Abstractions`). The concrete `SessionOperationsDbContext` lives only in Infrastructure.
 - **No controllers exist**: The old service had no controllers or minimal-API endpoints — only MediatR handlers invoked through SignalR. `MapControllers()` retained for future additions.
 - **Migrations namespace update**: Migrations moved from `Umbral.SessionOperations.Api.Infrastructure.Migrations` to `SessionOperations.Infrastructure.Persistence.Migrations`; entity type references in Designer files updated from `Umbral.SessionOperations.Api.Domain.LiveSessions.*` to `SessionOperations.Domain.LiveSessions.*`.
-- **Old project preserved**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories han sido eliminados de manera permanente.
+- **Old project directories**: `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories have been permanently deleted (source code moved; stale build artifacts cleaned).
 
+### Build & Test Results (post-corrections)
+- `dotnet build` — **0 errors, 0 warnings** (all 4 projects)
+- `dotnet test` — **67 passed, 14 failed** out of 81 total
+  - 14 failures: all `Auth:Authority` config missing in `WebApplicationFactory` integration tests (pre-existing, not Phase 4 regression)
+  - 67 unit/handler tests: all passing
+
+### Phase 4 Corrections (post-review audit)
+- **CRITICAL**: MediatR scanned wrong assembly (`SessionOperationsDbContext` in Infrastructure). Fixed to `ISessionOperationsDbContext` (in Application, where handlers live).
+- Created `SessionOperations.Infrastructure/GlobalUsings.cs` (missing — `Microsoft.NET.Sdk` + `FrameworkReference` lacks ASP.NET implicit usings; scoring-audit had this file, session-ops was missing it).
+- Added `ProjectReference` to `SessionOperations.Infrastructure` in test `.csproj` (was missing — tests referenced Infrastructure types directly).
+- Added `using SessionOperations.Infrastructure;` to `ScoringAuditHttpClientTests.cs` (class in root Infrastructure namespace, not Persistence sub-namespace).
+- Renamed `SignalRLiveSessionStateNotifier.cs` → `SignalRLiveSessionRealtimeNotifier.cs` to match class name.
+- Renamed `SubmitEvidenceHandler` → `SubmitEvidenceCommandHandler` for consistency with other handlers (and updated test reference).
+- Added `.Trim()` on userId in `HttpContextCurrentParticipantIdentity` to match `HttpContextCurrentOperatorIdentity` behavior.
+- Cleaned stale `Umbral.SessionOperations.Api/` and `Umbral.SessionOperations.Api.Tests/` directories (bin/obj artifacts only, no source remained).
+- Corrected progress note: handlers use `ISessionOperationsDbContext` interface, not concrete type.
 
 ## Phase 5: Clean user-management ✅ COMPLETE
 - [x] Deleted WeatherForecastController.cs (template junk)

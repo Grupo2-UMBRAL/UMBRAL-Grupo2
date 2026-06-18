@@ -73,7 +73,7 @@ Todos los endpoints de API documentados en el plan de implementación siguen sie
 
 No hay cambios requeridos en:
 - identity-access-service
-- mission-design-service
+- mission-management-service
 - session-operations-service
 - scoring-audit-service
 - edge-proxy routing rules

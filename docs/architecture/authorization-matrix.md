@@ -14,7 +14,7 @@ The public `edge-proxy` may be the preferred client entry, but this matrix is st
 
 | Bounded context | Request | Allowed roles | Scope |
 | --- | --- | --- | --- |
-| Mission Design | `GetMissionDesignBootstrapDetailsQuery` | Any authenticated role | None |
+| Mission Design | `GetMissionManagementBootstrapDetailsQuery` | Any authenticated role | None |
 | Mission Design | `ListMissionsQuery` | `Administrator` | None |
 | Mission Design | `GetMissionByIdQuery` | `Administrator` | None |
 | Mission Design | `CreateMissionCommand` | `Administrator` | None |

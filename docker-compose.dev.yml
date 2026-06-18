@@ -84,21 +84,21 @@ services:
       keycloak:
         condition: service_started
 
-  mission-design-service:
+  mission-management-service:
     build:
       context: .
-      dockerfile: infra/keycloak/docker/mission-design.Dockerfile
-    container_name: umbral-mission-design-service
+      dockerfile: infra/keycloak/docker/mission-management.Dockerfile
+    container_name: umbral-mission-management-service
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=mission_design
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=mission_management
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
-      Auth__Audience: umbral-mission-design-api
+      Auth__Audience: umbral-mission-management-api
       Persistence__ApplyMigrationsOnStartup: "true"
     ports:
-      - "${MISSION_DESIGN_PORT}:8080"
+      - "${MISSION_MANAGEMENT_PORT}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -174,7 +174,7 @@ services:
       AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}
       COVERAGE_REPORT_PATH: /app/coverage
       ReverseProxy__Clusters__identity-access__Destinations__primary__Address: http://identity-access-service:8080/
-      ReverseProxy__Clusters__mission-design__Destinations__primary__Address: http://mission-design-service:8080/
+      ReverseProxy__Clusters__mission-management__Destinations__primary__Address: http://mission-management-service:8080/
       ReverseProxy__Clusters__session-operations__Destinations__primary__Address: http://session-operations-service:8080/
       ReverseProxy__Clusters__scoring-audit__Destinations__primary__Address: http://scoring-audit-service:8080/
       ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080/
@@ -187,7 +187,7 @@ services:
     depends_on:
       identity-access-service:
         condition: service_started
-      mission-design-service:
+      mission-management-service:
         condition: service_started
       session-operations-service:
         condition: service_started

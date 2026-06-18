@@ -9,7 +9,7 @@ public sealed class KeycloakRoleClaimsTransformationTests
     private readonly KeycloakRoleClaimsTransformation transformation = new(
         new AuthConfiguration(
             "http://localhost:8080/realms/umbral",
-            "mission-design-api",
+            "mission-management-api",
             false));
 
     [Fact]
@@ -18,8 +18,8 @@ public sealed class KeycloakRoleClaimsTransformationTests
         var principal = CreateAuthenticatedPrincipal(new[]
         {
             new Claim("realm_access", """{"roles":["Administrator"]}"""),
-            new Claim("resource_access", """{"mission-design-api":{"roles":["Operator"]},"mobile-app":{"roles":["Participant"]}}"""),
-            new Claim("aud", "mission-design-api")
+            new Claim("resource_access", """{"mission-management-api":{"roles":["Operator"]},"mobile-app":{"roles":["Participant"]}}"""),
+            new Claim("aud", "mission-management-api")
         });
 
         var transformedPrincipal = await transformation.TransformAsync(principal);

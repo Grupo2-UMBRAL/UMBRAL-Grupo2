@@ -70,7 +70,7 @@ public sealed record EligibleMissionStageHintSnapshot(
     decimal? Latitude,
     decimal? Longitude);
 
-public interface IMissionDesignLiveSessionCatalog
+public interface IMissionManagementLiveSessionCatalog
 {
     Task<EligibleMissionForLiveSessionSnapshot> GetEligibleMissionForLiveSessionAsync(
         Guid missionId,

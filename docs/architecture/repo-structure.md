@@ -23,7 +23,7 @@ Estructura real actual del repositorio.
 |  |- shared/
 |  `- services/
 |     |- identity-access/
-|     |- mission-design/
+|     |- mission-management/
 |     |- scoring-audit/
 |     `- session-operations/
 `- .agents/

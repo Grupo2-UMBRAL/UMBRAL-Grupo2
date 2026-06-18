@@ -19,7 +19,7 @@
 
 - `/auth/*` -> `Keycloak`
 - `/identity-access/*` -> `Identity and Access`
-- `/mission-design/*` -> `Mission Design`
+- `/mission-management/*` -> `Mission Management`
 - `/session-operations/*` -> `Session Operations`
 - `/session-hub/*` -> `Session Operations` realtime hub
 - `/scoring-audit/*` -> `Scoring and Audit`

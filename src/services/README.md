@@ -5,7 +5,7 @@ Este directorio contiene el baseline backend ejecutable para los bounded context
 ## Servicios incluidos
 
 - `identity-access/Umbral.IdentityAccess.Api`
-- `mission-design/Umbral.MissionDesign.Api`
+- `mission-management/MissionManagement.Api`
 - `session-operations/Umbral.SessionOperations.Api`
 - `scoring-audit/ScoringAudit.Api`
 
@@ -37,11 +37,11 @@ dotnet build src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.Ident
 dotnet test src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj
 ```
 
-### Mission Design
+### Mission Management
 
 ```powershell
-dotnet build src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj
-dotnet test src/services/mission-design/Umbral.MissionDesign.Api.Tests/Umbral.MissionDesign.Api.Tests.csproj
+dotnet build src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj
+dotnet test src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj
 ```
 
 ### Session Operations
@@ -76,7 +76,7 @@ Cada servicio deja preparado:
 Ejemplos:
 
 ```powershell
-dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj --startup-project src/services/mission-design/Umbral.MissionDesign.Api/Umbral.MissionDesign.Api.csproj
+dotnet ef migrations add InitialSchemaBaseline --project src/services/mission-management/MissionManagement.Infrastructure/MissionManagement.Infrastructure.csproj --startup-project src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj --startup-project src/services/session-operations/Umbral.SessionOperations.Api/Umbral.SessionOperations.Api.csproj
 dotnet ef migrations add InitialSchemaBaseline --project src/services/scoring-audit/ScoringAudit.Infrastructure/ScoringAudit.Infrastructure.csproj --startup-project src/services/scoring-audit/ScoringAudit.Api/ScoringAudit.Api.csproj
 ```
