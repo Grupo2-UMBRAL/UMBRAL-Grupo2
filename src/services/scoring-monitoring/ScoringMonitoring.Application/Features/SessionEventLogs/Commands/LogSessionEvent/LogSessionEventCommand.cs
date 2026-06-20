@@ -4,3 +4,4 @@ public sealed record LogSessionEventCommand(
     Guid LiveSessionId,
     string EventType,
     string Description) : IRequest<SessionEventLogPayload>;
+

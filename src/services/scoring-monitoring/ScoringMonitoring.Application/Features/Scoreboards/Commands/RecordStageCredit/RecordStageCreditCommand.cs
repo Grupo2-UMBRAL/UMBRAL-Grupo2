@@ -8,3 +8,4 @@ public sealed record RecordStageCreditCommand(
     TimeSpan ResolutionTime,
     DateTimeOffset RecordedAt,
     bool ValidationOverride) : IRequest<RecordStageCreditResponse>;
+

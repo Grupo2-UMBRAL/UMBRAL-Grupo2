@@ -11,7 +11,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Hints;
 
 public sealed class ReleaseHintHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier,
     IScoringMonitoringClient scoringAuditClient)
@@ -23,7 +23,7 @@ public sealed class ReleaseHintHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .Include(session => session.TeamProgressions)
             .Include(session => session.ReleasedHints)
@@ -41,7 +41,7 @@ public sealed class ReleaseHintHandler(
             ? ReleaseForSingleTeam(liveSession, sessionTeamId, request.HintId, releasedAtUtc)
             : ReleaseForEligibleTeams(liveSession, request.HintId, releasedAtUtc);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         foreach (var releasedHint in releasedHints)
         {
@@ -161,3 +161,5 @@ public sealed class ReleaseHintHandler(
             releasedHint.UnlockReason);
     }
 }
+
+

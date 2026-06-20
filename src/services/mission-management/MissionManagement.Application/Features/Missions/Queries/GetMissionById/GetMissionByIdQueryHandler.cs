@@ -1,18 +1,18 @@
-﻿using MediatR;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Queries.GetMissionById;
 
-public sealed class GetMissionByIdQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class GetMissionByIdQueryHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
     : IRequestHandler<GetMissionByIdQuery, MissionResponse>
 {
     public async Task<MissionResponse> Handle(GetMissionByIdQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await dbContext.Missions
-            .AsNoTracking()
+        var mission = await missionRepository
             .SingleOrDefaultAsync(
                 existingMission => existingMission.Id == request.MissionId,
                 cancellationToken);
@@ -27,3 +27,5 @@ public sealed class GetMissionByIdQueryHandler(IMissionManagementDbContext dbCon
         return mission.ToResponse();
     }
 }
+
+

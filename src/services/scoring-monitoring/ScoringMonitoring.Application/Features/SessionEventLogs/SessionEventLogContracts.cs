@@ -23,3 +23,4 @@ public sealed record SessionEventLogPayload(
 }
 
 public sealed record LogSessionEventRequest(string EventType, string Description);
+

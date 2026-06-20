@@ -39,3 +39,4 @@ public sealed class DeactivateOperatorCommandHandler(IOperatorAdministrationPort
         return await port.SetUserEnabledAsync(normalizedUserId, enabled: false, cancellationToken);
     }
 }
+

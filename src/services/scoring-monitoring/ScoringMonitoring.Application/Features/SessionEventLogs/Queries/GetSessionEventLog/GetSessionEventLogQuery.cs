@@ -2,3 +2,4 @@ namespace ScoringMonitoring.Application.Features.SessionEventLogs.Queries.GetSes
 
 public sealed record GetSessionEventLogQuery(Guid LiveSessionId)
     : IRequest<IReadOnlyList<SessionEventLogPayload>>;
+

@@ -12,3 +12,4 @@ public sealed record CreateOperatorCommand(
     string? Password) : IRequest<OperatorUser>
 {
 }
+

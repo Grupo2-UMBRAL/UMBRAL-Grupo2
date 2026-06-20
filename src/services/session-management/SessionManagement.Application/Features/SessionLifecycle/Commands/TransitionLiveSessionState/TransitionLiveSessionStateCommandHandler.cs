@@ -11,7 +11,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionLifecycle;
 
 public sealed class TransitionLiveSessionStateCommandHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<TransitionLiveSessionStateCommand, LiveSessionStateResponse>
@@ -22,7 +22,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(existingLiveSession => existingLiveSession.SessionTeams)
             .Include(existingLiveSession => existingLiveSession.ReleasedHints)
             .SingleOrDefaultAsync(
@@ -41,7 +41,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
 
         var newlyReleasedHints = ApplyTransition(liveSession, request.Action, occurredAtUtc);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = liveSession.ToStateResponse();
 
@@ -119,3 +119,5 @@ public sealed class TransitionLiveSessionStateCommandHandler(
             releasedHint.UnlockReason);
     }
 }
+
+

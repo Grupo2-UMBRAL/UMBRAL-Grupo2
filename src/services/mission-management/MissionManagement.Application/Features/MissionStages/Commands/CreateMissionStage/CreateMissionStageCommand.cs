@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 namespace MissionManagement.Application.Features.MissionStages.Commands.CreateMissionStage;
 
@@ -12,3 +12,4 @@ public sealed record CreateMissionStageCommand(
     string? TriviaValidationCriteria) : IRequest<MissionStageResponse>
 {
 }
+

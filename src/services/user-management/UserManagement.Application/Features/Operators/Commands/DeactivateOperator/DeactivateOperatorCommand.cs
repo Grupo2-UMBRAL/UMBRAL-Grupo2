@@ -7,3 +7,4 @@ namespace UserManagement.Application.Features.Operators.Commands.DeactivateOpera
 public sealed record DeactivateOperatorCommand(string UserId) : IRequest<OperatorUser>
 {
 }
+

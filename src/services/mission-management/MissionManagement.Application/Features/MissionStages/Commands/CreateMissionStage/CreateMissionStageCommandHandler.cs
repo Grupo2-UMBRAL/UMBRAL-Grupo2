@@ -1,18 +1,19 @@
-﻿using MediatR;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MissionManagement.Domain.Missions;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.MissionStages.Commands.CreateMissionStage;
 
-public sealed class CreateMissionStageCommandHandler(IMissionManagementDbContext dbContext)
+public sealed class CreateMissionStageCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository, IRepository<MissionStage> missionStageRepository)
     : IRequestHandler<CreateMissionStageCommand, MissionStageResponse>
 {
     public async Task<MissionStageResponse> Handle(CreateMissionStageCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var missionExists = await dbContext.Missions.AnyAsync(
+        var missionExists = await missionRepository.AnyAsync(
             mission => mission.Id == request.MissionId,
             cancellationToken);
         if (!missionExists)
@@ -23,7 +24,7 @@ public sealed class CreateMissionStageCommandHandler(IMissionManagementDbContext
                 UmbralFailureCategory.NotFound);
         }
 
-        var duplicateOrderExists = await dbContext.MissionStages.AnyAsync(
+        var duplicateOrderExists = await missionStageRepository.AnyAsync(
             missionStage => missionStage.MissionId == request.MissionId && missionStage.Order == request.Order,
             cancellationToken);
         if (duplicateOrderExists)
@@ -44,9 +45,11 @@ public sealed class CreateMissionStageCommandHandler(IMissionManagementDbContext
             request.ExpectedQrHash,
             request.TriviaValidationCriteria);
 
-        dbContext.MissionStages.Add(missionStage);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        missionStageRepository.Add(missionStage);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return missionStage.ToResponse();
     }
 }
+
+

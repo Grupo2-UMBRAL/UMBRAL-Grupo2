@@ -16,3 +16,4 @@ public sealed record TransitionLiveSessionStateCommand(
     LiveSessionLifecycleAction Action) : IRequest<LiveSessionStateResponse>
 {
 }
+

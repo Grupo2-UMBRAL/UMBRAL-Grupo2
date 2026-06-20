@@ -7,3 +7,4 @@ public sealed record RecordStageCreditRequest(
     TimeSpan ResolutionTime,
     DateTimeOffset RecordedAt,
     bool ValidationOverride);
+

@@ -17,3 +17,4 @@ public sealed class ListOperatorsQueryHandler(IOperatorAdministrationPort port)
             .ToArray();
     }
 }
+

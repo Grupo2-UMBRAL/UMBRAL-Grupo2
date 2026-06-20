@@ -13,6 +13,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IApplyPenaltyScoreboardStore, ApplyPenaltyScoreboardStore>();
 
+        
+        services.AddScoped(typeof(ScoringMonitoring.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
+        services.AddScoped<ScoringMonitoring.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.ScoringMonitoringDbContext>());
         return services;
     }
 }
+

@@ -5,7 +5,7 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Infrastructure.Persistence;
 
 public sealed class ScoringMonitoringDbContext(DbContextOptions<ScoringMonitoringDbContext> options)
-    : DbContext(options), IScoringMonitoringDbContext
+    : DbContext(options), IUnitOfWork
 {
     public DbSet<Scoreboard> Scoreboards => Set<Scoreboard>();
 

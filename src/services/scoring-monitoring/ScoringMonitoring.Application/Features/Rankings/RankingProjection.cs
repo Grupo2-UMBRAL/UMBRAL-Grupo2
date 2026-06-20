@@ -53,3 +53,5 @@ public static class RankingProjection
         return TimeSpan.FromTicks(totalTicks);
     }
 }
+
+

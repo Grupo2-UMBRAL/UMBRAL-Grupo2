@@ -49,3 +49,4 @@ public sealed record SessionTeamEvidenceSubmissionDetail(
     string? FailureReason,
     DateTimeOffset SubmittedAtUtc,
     bool IsTriviaCorrectionEligible);
+

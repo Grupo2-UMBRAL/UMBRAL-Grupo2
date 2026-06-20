@@ -1,9 +1,10 @@
-﻿using MediatR;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace MissionManagement.Application.Features.MissionStages.Queries.ListMissionStages;
 
-public sealed class ListMissionStagesQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class ListMissionStagesQueryHandler(IUnitOfWork unitOfWork, IRepository<MissionStage> missionStageRepository)
     : IRequestHandler<ListMissionStagesQuery, IReadOnlyList<MissionStageSummaryResponse>>
 {
     public async Task<IReadOnlyList<MissionStageSummaryResponse>> Handle(
@@ -12,8 +13,7 @@ public sealed class ListMissionStagesQueryHandler(IMissionManagementDbContext db
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var missionStages = await dbContext.MissionStages
-            .AsNoTracking()
+        var missionStages = await missionStageRepository
             .Where(missionStage => missionStage.MissionId == request.MissionId)
             .OrderBy(missionStage => missionStage.Order)
             .ThenBy(missionStage => missionStage.Name)
@@ -25,3 +25,6 @@ public sealed class ListMissionStagesQueryHandler(IMissionManagementDbContext db
             .ToList();
     }
 }
+
+
+

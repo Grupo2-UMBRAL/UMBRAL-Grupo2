@@ -26,3 +26,4 @@ public sealed record ApplyPenaltyResponse(
     int VisibleScore,
     RankingPayload Ranking,
     DateTimeOffset RecordedAtUtc);
+

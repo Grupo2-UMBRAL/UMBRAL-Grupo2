@@ -1,4 +1,4 @@
-﻿using SessionManagement.Domain.LiveSessions;
+using SessionManagement.Domain.LiveSessions;
 
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
@@ -52,3 +52,4 @@ public interface ICurrentParticipantIdentity
 {
     ParticipantUserId GetRequiredParticipantUserId();
 }
+
