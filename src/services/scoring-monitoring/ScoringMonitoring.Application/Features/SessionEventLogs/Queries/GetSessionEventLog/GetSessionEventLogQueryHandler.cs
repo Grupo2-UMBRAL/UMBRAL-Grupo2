@@ -1,3 +1,4 @@
+using ScoringMonitoring.Domain.Entities;
 using ScoringMonitoring.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,6 +34,7 @@ public sealed class GetSessionEventLogHandler(IUnitOfWork unitOfWork, IRepositor
             .ToListAsync(cancellationToken);
     }
 }
+
 
 
 

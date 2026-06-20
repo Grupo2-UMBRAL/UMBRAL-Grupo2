@@ -1,3 +1,4 @@
+using SessionManagement.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -48,5 +49,6 @@ public sealed class JoinSessionTeamHandler(
             enrolledAtUtc);
     }
 }
+
 
 

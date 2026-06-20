@@ -1,3 +1,4 @@
+using SessionManagement.Domain.Entities;
 using MediatR;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;
@@ -81,5 +82,6 @@ public sealed class CreateLiveSessionCommandHandler(
         return sessionStageFlow;
     }
 }
+
 
 

@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public sealed class ListEligibleMissionsForLiveSessionQueryHandler(IUnitOfWork u
             .ToArray();
     }
 }
+
 
 
 

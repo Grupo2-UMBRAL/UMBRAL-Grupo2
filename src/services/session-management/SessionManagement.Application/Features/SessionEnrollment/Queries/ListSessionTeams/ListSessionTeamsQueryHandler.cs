@@ -1,3 +1,4 @@
+using SessionManagement.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -41,5 +42,6 @@ public sealed class ListSessionTeamsHandler(
             "Join Code is invalid for this LiveSession.",
             UmbralFailureCategory.NotFound);
 }
+
 
 

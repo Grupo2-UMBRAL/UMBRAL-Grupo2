@@ -1,3 +1,4 @@
+using SessionManagement.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -30,5 +31,6 @@ public sealed class GetLiveSessionByIdQueryHandler(IUnitOfWork unitOfWork, IRepo
         return liveSession.ToResponse();
     }
 }
+
 
 
