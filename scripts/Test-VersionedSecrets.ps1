@@ -11,9 +11,7 @@ $allowedPaths = @(
     "infra/keycloak/verify/README.md",
     "src/apps/mobile/README.md",
     "src/apps/web/README.md",
-    "src/services/identity-access/README.md",
-    "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/OperatorManagementTests.cs"
-)
+    )
 
 $quotedLiteralPattern = '(?im)^\s*["'']?(?:[A-Za-z0-9_.-]*?(?:password|secret|api[_-]?key)|client[_-]?secret)\b["'']?\s*[:=]\s*["''](?!\$)(?!https?://)[^"'']{8,}["'']'
 $envLiteralPattern = '(?im)^\s*(?:export\s+)?(?:[A-Z0-9_]*?(?:PASSWORD|SECRET|API_KEY)|CLIENT_SECRET)\s*=\s*(?!\$)(?!https?://)[^\s#]{8,}'
@@ -73,3 +71,4 @@ if ($findings.Count -gt 0) {
 }
 
 Write-Output "No unexpected versioned secrets detected."
+
