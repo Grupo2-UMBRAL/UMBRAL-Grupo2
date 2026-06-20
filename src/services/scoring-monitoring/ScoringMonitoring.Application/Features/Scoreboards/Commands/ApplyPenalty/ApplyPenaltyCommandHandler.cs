@@ -93,3 +93,4 @@ public sealed class ApplyPenaltyHandler(
         return $"Penalty of severity '{penalty.Severity}' applied to Session Team '{penalty.SessionTeamId}' by Operator '{penalty.AppliedByOperatorUserId}' for reason: {reason} Score variation: {scoreEntry.Delta} points.";
     }
 }
+

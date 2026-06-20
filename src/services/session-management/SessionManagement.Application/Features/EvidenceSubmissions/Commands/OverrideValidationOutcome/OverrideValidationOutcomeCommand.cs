@@ -22,3 +22,4 @@ public sealed record OverrideValidationOutcomeResponse(
     CurrentSessionStageSnapshot? CurrentStage,
     long SequenceNumber,
     DateTimeOffset OverriddenAtUtc);
+

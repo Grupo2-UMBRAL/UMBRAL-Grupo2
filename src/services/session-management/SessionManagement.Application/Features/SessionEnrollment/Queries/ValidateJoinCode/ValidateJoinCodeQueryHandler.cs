@@ -7,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class ValidateJoinCodeHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<ValidateJoinCodeQuery, ParticipantEnrollmentStatusResponse>
 {
@@ -16,8 +16,7 @@ public sealed class ValidateJoinCodeHandler(
         CancellationToken cancellationToken)
     {
         var joinCode = JoinCode.Parse(request.JoinCode);
-        var liveSession = await dbContext.LiveSessions
-            .AsNoTracking()
+        var liveSession = await liveSessionRepository
             .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
         if (liveSession is null)
         {
@@ -38,3 +37,5 @@ public sealed class ValidateJoinCodeHandler(
             "Join Code is invalid for this LiveSession.",
             UmbralFailureCategory.NotFound);
 }
+
+

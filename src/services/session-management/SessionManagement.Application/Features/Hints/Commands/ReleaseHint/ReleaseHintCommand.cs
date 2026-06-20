@@ -7,3 +7,4 @@ public sealed record ReleaseHintCommand(Guid LiveSessionId, Guid? SessionTeamId,
     : IRequest<IReadOnlyList<VisibleHintSnapshot>>;
 
 public sealed record ReleaseHintRequest(Guid? SessionTeamId);
+

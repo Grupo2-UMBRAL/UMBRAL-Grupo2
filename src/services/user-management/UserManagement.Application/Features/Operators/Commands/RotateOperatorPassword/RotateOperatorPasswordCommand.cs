@@ -7,3 +7,4 @@ namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorP
 public sealed record RotateOperatorPasswordCommand(string UserId, string? Password) : IRequest<OperatorUser>
 {
 }
+

@@ -1,17 +1,18 @@
-﻿using MediatR;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.DeactivateMission;
 
-public sealed class DeactivateMissionCommandHandler(IMissionManagementDbContext dbContext)
+public sealed class DeactivateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
     : IRequestHandler<DeactivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(DeactivateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await dbContext.Missions.SingleOrDefaultAsync(
+        var mission = await missionRepository.SingleOrDefaultAsync(
             existingMission => existingMission.Id == request.MissionId,
             cancellationToken);
         if (mission is null)
@@ -23,8 +24,10 @@ public sealed class DeactivateMissionCommandHandler(IMissionManagementDbContext 
         }
 
         mission.Deactivate();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
 }
+
+

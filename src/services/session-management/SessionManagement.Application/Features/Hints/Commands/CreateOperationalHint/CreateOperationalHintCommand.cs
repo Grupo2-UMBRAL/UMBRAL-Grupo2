@@ -11,3 +11,4 @@ public sealed record CreateOperationalHintCommand(
     double? Longitude) : IRequest<LiveSessionStageHintResponse>;
 
 public sealed record CreateOperationalHintRequest(string Content, double? Latitude, double? Longitude);
+

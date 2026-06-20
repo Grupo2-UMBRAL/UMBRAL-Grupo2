@@ -1,4 +1,4 @@
-﻿using SessionManagement.Application.Features.EvidenceSubmissions;
+using SessionManagement.Application.Features.EvidenceSubmissions;
 using SessionManagement.Application.Realtime;
 using SessionManagement.Application.Features.LiveSessions;
 using SessionManagement.Application.Features.SessionLifecycle;
@@ -44,6 +44,10 @@ public static class ServiceCollectionExtensions
             })
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
 
+        
+        services.AddScoped(typeof(SessionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
+        services.AddScoped<SessionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.SessionManagementDbContext>());
         return services;
     }
 }
+

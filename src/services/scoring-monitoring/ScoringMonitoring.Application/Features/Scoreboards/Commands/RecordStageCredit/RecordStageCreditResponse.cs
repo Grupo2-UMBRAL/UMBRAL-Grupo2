@@ -10,3 +10,4 @@ public sealed record RecordStageCreditResponse(
     bool ScoreEntryCreated,
     int VisibleScore,
     RankingPayload Ranking);
+

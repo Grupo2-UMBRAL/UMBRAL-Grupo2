@@ -7,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class ListSessionTeamsHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<ListSessionTeamsQuery, SessionTeamsResponse>
 {
@@ -16,8 +16,7 @@ public sealed class ListSessionTeamsHandler(
         CancellationToken cancellationToken)
     {
         var joinCode = JoinCode.Parse(request.JoinCode);
-        var liveSession = await dbContext.LiveSessions
-            .AsNoTracking()
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
         if (liveSession is null)
@@ -42,3 +41,5 @@ public sealed class ListSessionTeamsHandler(
             "Join Code is invalid for this LiveSession.",
             UmbralFailureCategory.NotFound);
 }
+
+

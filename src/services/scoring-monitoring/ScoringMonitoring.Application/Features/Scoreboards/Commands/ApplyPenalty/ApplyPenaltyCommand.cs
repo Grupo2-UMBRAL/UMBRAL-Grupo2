@@ -8,3 +8,4 @@ public sealed record ApplyPenaltyCommand(
     string AppliedByOperatorUserId,
     string Reason,
     DateTimeOffset RecordedAt) : IRequest<ApplyPenaltyResponse>;
+

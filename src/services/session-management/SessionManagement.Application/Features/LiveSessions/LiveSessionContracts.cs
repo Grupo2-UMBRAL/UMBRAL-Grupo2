@@ -1,4 +1,4 @@
-﻿using SessionManagement.Domain.LiveSessions;
+using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Features.SessionLifecycle;
 
 namespace SessionManagement.Application.Features.LiveSessions;
@@ -168,3 +168,4 @@ public static class LiveSessionMappings
             hint.Longitude);
     }
 }
+

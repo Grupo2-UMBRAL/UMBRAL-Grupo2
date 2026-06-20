@@ -5,7 +5,7 @@ using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
 
-public sealed class GetLiveSessionByIdQueryHandler(ISessionManagementDbContext dbContext)
+public sealed class GetLiveSessionByIdQueryHandler(IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository)
     : IRequestHandler<GetLiveSessionByIdQuery, LiveSessionResponse>
 {
     public async Task<LiveSessionResponse> Handle(
@@ -14,8 +14,7 @@ public sealed class GetLiveSessionByIdQueryHandler(ISessionManagementDbContext d
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
-            .AsNoTracking()
+        var liveSession = await liveSessionRepository
             .Include(existingLiveSession => existingLiveSession.SessionTeams)
             .SingleOrDefaultAsync(
                 existingLiveSession => existingLiveSession.Id == request.LiveSessionId,
@@ -31,3 +30,5 @@ public sealed class GetLiveSessionByIdQueryHandler(ISessionManagementDbContext d
         return liveSession.ToResponse();
     }
 }
+
+

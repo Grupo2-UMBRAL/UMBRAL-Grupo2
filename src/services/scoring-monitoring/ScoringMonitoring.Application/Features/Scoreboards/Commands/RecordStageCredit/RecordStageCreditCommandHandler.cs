@@ -1,3 +1,4 @@
+using ScoringMonitoring.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using ScoringMonitoring.Application.Features.SessionEventLogs;
 using ScoringMonitoring.Application.Features.Rankings;
@@ -7,7 +8,7 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Application.Features.Scoreboards.Commands.RecordStageCredit;
 
 public sealed class RecordStageCreditHandler(
-    IScoringMonitoringDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<Scoreboard> scoreboardRepository, IRepository<SessionEventLog> sessionEventLogRepository,
     TimeProvider timeProvider,
     IScoringMonitoringUpdatesPublisher updatesPublisher)
     : IRequestHandler<RecordStageCreditCommand, RecordStageCreditResponse>
@@ -18,13 +19,13 @@ public sealed class RecordStageCreditHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await dbContext.Scoreboards
+        var scoreboard = await scoreboardRepository
             .Include(entity => entity.ScoreEntries)
             .SingleOrDefaultAsync(entity => entity.LiveSessionId == request.LiveSessionId, cancellationToken);
         if (scoreboard is null)
         {
             scoreboard = new Scoreboard(request.LiveSessionId);
-            dbContext.Scoreboards.Add(scoreboard);
+            scoreboardRepository.Add(scoreboard);
         }
         else
         {
@@ -48,8 +49,8 @@ public sealed class RecordStageCreditHandler(
                 "StageCredit",
                 CreateStageCreditDescription(request, scoreEntry),
                 request.RecordedAt);
-            dbContext.SessionEventLogs.Add(eventLog);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            sessionEventLogRepository.Add(eventLog);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             scoreboard.RebuildState();
         }
 
@@ -98,3 +99,5 @@ public sealed class RecordStageCreditHandler(
         return $"Session Team '{request.SessionTeamId}' completed Mission Stage '{request.MissionStageId}'{source} and received {scoreEntry.Delta} point(s). Visible score: {scoreEntry.VisibleScoreAfter}.";
     }
 }
+
+

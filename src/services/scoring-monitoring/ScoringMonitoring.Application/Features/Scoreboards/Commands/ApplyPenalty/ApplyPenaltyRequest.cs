@@ -7,3 +7,4 @@ public sealed record ApplyPenaltyRequest(
     string AppliedByOperatorUserId,
     string Reason,
     DateTimeOffset RecordedAt);
+

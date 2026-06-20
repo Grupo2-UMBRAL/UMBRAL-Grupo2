@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Infrastructure.Persistence;
@@ -106,3 +106,4 @@ public sealed class MissionManagementDbContext(DbContextOptions<MissionManagemen
         });
     }
 }
+

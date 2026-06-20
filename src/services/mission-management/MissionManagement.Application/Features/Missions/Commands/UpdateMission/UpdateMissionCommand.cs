@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
 
@@ -12,3 +12,4 @@ public sealed record UpdateMissionCommand(
     IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>
 {
 }
+

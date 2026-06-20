@@ -1,10 +1,11 @@
-﻿using MediatR;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.MissionStages.Commands.CreateMissionStageHint;
 
-public sealed class CreateMissionStageHintCommandHandler(IMissionManagementDbContext dbContext)
+public sealed class CreateMissionStageHintCommandHandler(IUnitOfWork unitOfWork, IRepository<MissionStage> missionStageRepository)
     : IRequestHandler<CreateMissionStageHintCommand, MissionStageHintResponse>
 {
     public async Task<MissionStageHintResponse> Handle(
@@ -13,7 +14,7 @@ public sealed class CreateMissionStageHintCommandHandler(IMissionManagementDbCon
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var missionStage = await dbContext.MissionStages
+        var missionStage = await missionStageRepository
             .Include(missionStage => missionStage.Hints)
             .SingleOrDefaultAsync(
                 existingMissionStage => existingMissionStage.Id == request.MissionStageId,
@@ -33,8 +34,10 @@ public sealed class CreateMissionStageHintCommandHandler(IMissionManagementDbCon
             request.Latitude,
             request.Longitude);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return hint.ToResponse();
     }
 }
+
+

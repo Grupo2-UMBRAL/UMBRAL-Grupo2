@@ -1,4 +1,4 @@
-﻿using MissionManagement.Domain.Missions;
+using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Features.MissionStages;
 
@@ -92,3 +92,4 @@ public static class MissionStageMappings
             hint.Longitude);
     }
 }
+

@@ -1,4 +1,4 @@
-﻿using SessionManagement.Application.Features.SessionSnapshots;
+using SessionManagement.Application.Features.SessionSnapshots;
 
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
@@ -16,3 +16,4 @@ public interface ICurrentOperatorIdentity
 {
     string GetRequiredOperatorUserId();
 }
+

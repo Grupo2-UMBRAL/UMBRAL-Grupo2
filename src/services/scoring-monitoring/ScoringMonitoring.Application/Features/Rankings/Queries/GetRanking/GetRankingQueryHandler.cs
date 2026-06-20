@@ -1,10 +1,11 @@
+using ScoringMonitoring.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using ScoringMonitoring.Domain.Scoreboards;
 
 namespace ScoringMonitoring.Application.Features.Rankings.Queries.GetRanking;
 
 public sealed class GetRankingHandler(
-    IScoringMonitoringDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<Scoreboard> scoreboardRepository,
     TimeProvider timeProvider)
     : IRequestHandler<GetRankingQuery, RankingPayload>
 {
@@ -14,7 +15,7 @@ public sealed class GetRankingHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await dbContext.Scoreboards
+        var scoreboard = await scoreboardRepository
             .Include(entity => entity.ScoreEntries)
             .SingleOrDefaultAsync(entity => entity.LiveSessionId == request.LiveSessionId, cancellationToken);
         if (scoreboard is null)
@@ -29,3 +30,5 @@ public sealed class GetRankingHandler(
         return RankingProjection.Create(scoreboard, timeProvider.GetUtcNow());
     }
 }
+
+

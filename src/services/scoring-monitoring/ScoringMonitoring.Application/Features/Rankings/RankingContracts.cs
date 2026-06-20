@@ -10,3 +10,4 @@ public sealed record RankingItem(
     Guid SessionTeamId,
     int VisibleScore,
     TimeSpan ResolutionTime);
+
