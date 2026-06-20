@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,5 +40,6 @@ public sealed class CreateMissionStageHintCommandHandler(IUnitOfWork unitOfWork,
         return hint.ToResponse();
     }
 }
+
 
 

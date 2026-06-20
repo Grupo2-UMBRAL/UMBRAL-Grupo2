@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -29,5 +30,6 @@ public sealed class ActivateMissionCommandHandler(IUnitOfWork unitOfWork, IRepos
         return mission.ToResponse();
     }
 }
+
 
 

@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,5 +38,6 @@ public sealed class GetEligibleMissionForLiveSessionQueryHandler(IUnitOfWork uni
         return mission.ToEligibleForLiveSessionResponse();
     }
 }
+
 
 

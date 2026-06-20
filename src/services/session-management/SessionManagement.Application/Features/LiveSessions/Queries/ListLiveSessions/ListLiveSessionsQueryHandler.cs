@@ -1,3 +1,4 @@
+using SessionManagement.Domain.Entities;
 using Umbral.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,5 +25,6 @@ public sealed class ListLiveSessionsQueryHandler(IUnitOfWork unitOfWork, IReposi
             .ToArray();
     }
 }
+
 
 

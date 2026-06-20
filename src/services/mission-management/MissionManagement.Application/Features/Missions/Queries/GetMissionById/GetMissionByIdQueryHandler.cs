@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,5 +28,6 @@ public sealed class GetMissionByIdQueryHandler(IUnitOfWork unitOfWork, IReposito
         return mission.ToResponse();
     }
 }
+
 
 

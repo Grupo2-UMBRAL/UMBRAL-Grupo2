@@ -1,3 +1,4 @@
+using MissionManagement.Domain.Entities;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,5 +58,6 @@ public sealed class UpdateMissionCommandHandler(IUnitOfWork unitOfWork, IReposit
         return mission.ToResponse();
     }
 }
+
 
 
