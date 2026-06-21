@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using SessionManagement.Application.Scoring;
 
 namespace SessionManagement.Infrastructure;

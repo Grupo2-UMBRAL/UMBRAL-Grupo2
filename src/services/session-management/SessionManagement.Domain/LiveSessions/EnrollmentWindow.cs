@@ -1,4 +1,4 @@
-﻿namespace SessionManagement.Domain.LiveSessions;
+namespace SessionManagement.Domain.LiveSessions;
 
 public sealed record EnrollmentWindow(DateTimeOffset? OpenedAtUtc, DateTimeOffset? ClosedAtUtc)
 {

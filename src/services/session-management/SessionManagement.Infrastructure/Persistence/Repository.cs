@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
@@ -13,6 +14,13 @@ internal sealed class Repository<T> : IRepository<T> where T : class
         _dbContext = dbContext;
     }
 
+    public Type ElementType => ((IQueryable<T>)_dbContext.Set<T>()).ElementType;
+    public Expression Expression => ((IQueryable<T>)_dbContext.Set<T>()).Expression;
+    public IQueryProvider Provider => ((IQueryable<T>)_dbContext.Set<T>()).Provider;
+    
+    public IEnumerator<T> GetEnumerator() => ((IQueryable<T>)_dbContext.Set<T>()).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_dbContext.Set<T>()).GetEnumerator();
+
     public async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);
@@ -23,7 +31,7 @@ internal sealed class Repository<T> : IRepository<T> where T : class
         return await _dbContext.Set<T>().ToListAsync(cancellationToken);
     }
 
-        public async Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+    public async Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Set<T>().SingleOrDefaultAsync(predicate, cancellationToken);
     }
@@ -53,4 +61,3 @@ internal sealed class Repository<T> : IRepository<T> where T : class
         _dbContext.Set<T>().Remove(entity);
     }
 }
-

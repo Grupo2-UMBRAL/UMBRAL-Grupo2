@@ -4,7 +4,7 @@ using SessionManagement.Domain.LiveSessions;
 
 namespace SessionManagement.Infrastructure.Persistence;
 
-public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options)  : DbContext, IUnitOfWork(options), ISessionManagementDbContext
+public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options) : DbContext(options), IUnitOfWork, ISessionManagementDbContext
 {
     public DbSet<LiveSession> LiveSessions => Set<LiveSession>();
 

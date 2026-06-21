@@ -1,4 +1,4 @@
-using SessionManagement.Domain.Entities;
+using SessionManagement.Domain.LiveSessions;
 using Umbral.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

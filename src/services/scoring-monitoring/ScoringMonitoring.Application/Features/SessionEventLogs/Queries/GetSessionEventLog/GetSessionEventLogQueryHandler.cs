@@ -1,4 +1,4 @@
-using ScoringMonitoring.Domain.Entities;
+using ScoringMonitoring.Domain.Audit;
 using ScoringMonitoring.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 

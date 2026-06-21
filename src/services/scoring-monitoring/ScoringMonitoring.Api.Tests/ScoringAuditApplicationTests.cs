@@ -21,6 +21,7 @@ public sealed class SessionEventLogApplicationTests
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new LogSessionEventHandler(
             dbContext,
+            new Repository<SessionEventLog>(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();
@@ -64,7 +65,7 @@ public sealed class SessionEventLogApplicationTests
             DateTimeOffset.Parse("2026-06-04T02:00:00Z"));
         dbContext.SessionEventLogs.AddRange(oldest, newest, otherSessionEvent);
         await dbContext.SaveChangesAsync();
-        var handler = new GetSessionEventLogHandler(dbContext);
+        var handler = new GetSessionEventLogHandler(dbContext, new Repository<SessionEventLog>(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(liveSessionId), CancellationToken.None);
 
@@ -78,7 +79,7 @@ public sealed class SessionEventLogApplicationTests
     public async Task GetSessionEventLogQuery_ReturnsEmptyListWhenSessionHasNoEvents()
     {
         await using var dbContext = CreateDbContext();
-        var handler = new GetSessionEventLogHandler(dbContext);
+        var handler = new GetSessionEventLogHandler(dbContext, new Repository<SessionEventLog>(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(Guid.NewGuid()), CancellationToken.None);
 
@@ -92,6 +93,8 @@ public sealed class SessionEventLogApplicationTests
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new RecordStageCreditHandler(
             dbContext,
+            new Repository<Scoreboard>(dbContext),
+            new Repository<SessionEventLog>(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();

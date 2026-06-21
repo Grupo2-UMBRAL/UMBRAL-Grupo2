@@ -1,4 +1,4 @@
-using MissionManagement.Domain.Entities;
+using MissionManagement.Domain.Missions;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

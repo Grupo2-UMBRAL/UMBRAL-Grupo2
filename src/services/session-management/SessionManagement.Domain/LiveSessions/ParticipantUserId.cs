@@ -1,4 +1,4 @@
-﻿using Umbral.ServiceDefaults;
+using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Domain.LiveSessions;
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Domain.LiveSessions;
@@ -18,6 +18,7 @@ public sealed class SessionEnrollmentQaTests
         await dbContext.SaveChangesAsync();
         var handler = new GenerateJoinCodeHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new SequenceJoinCodeGenerator("ABC234", "DEF567"));
 
         var first = await handler.Handle(new GenerateJoinCodeCommand(liveSession.Id), CancellationToken.None);

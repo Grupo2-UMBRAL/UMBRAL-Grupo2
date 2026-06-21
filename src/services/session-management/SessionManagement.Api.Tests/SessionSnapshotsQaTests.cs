@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -31,7 +31,7 @@ public sealed class SessionSnapshotsQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new GetLiveSessionOverviewQueryHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new GetLiveSessionOverviewQueryHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var overview = await handler.Handle(new GetLiveSessionOverviewQuery(liveSession.Id), CancellationToken.None);
 
@@ -72,6 +72,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc));
 
@@ -108,6 +109,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(6)));
 
         var detail = await handler.Handle(
@@ -134,6 +136,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 
         var detail = await handler.Handle(
@@ -154,6 +157,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 
         var detail = await handler.Handle(
@@ -173,6 +177,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(8)));
 
         var detail = await handler.Handle(
@@ -199,6 +204,7 @@ public sealed class SessionSnapshotsQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 
         var detail = await handler.Handle(
