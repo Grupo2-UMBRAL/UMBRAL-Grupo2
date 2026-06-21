@@ -10,7 +10,7 @@ $allowedPaths = @(
     "infra/keycloak/import/umbral-realm.json",
     "infra/keycloak/verify/README.md",
     "src/apps/mobile/README.md",
-    "src/apps/web/README.md",
+    "src/apps/web/README.md"
     )
 
 $quotedLiteralPattern = '(?im)^\s*["'']?(?:[A-Za-z0-9_.-]*?(?:password|secret|api[_-]?key)|client[_-]?secret)\b["'']?\s*[:=]\s*["''](?!\$)(?!https?://)[^"'']{8,}["'']'
