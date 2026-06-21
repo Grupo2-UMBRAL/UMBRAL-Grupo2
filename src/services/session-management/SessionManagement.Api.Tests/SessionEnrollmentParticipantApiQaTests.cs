@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Domain.LiveSessions;
@@ -15,7 +15,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
     public async Task ValidateJoinCodeQuery_ReturnsNotFound_WhenJoinCodeIsNotRegistered()
     {
         await using var dbContext = CreateDbContext();
-        var handler = new ValidateJoinCodeHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new ValidateJoinCodeHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             handler.Handle(new ValidateJoinCodeQuery("ABC234"), CancellationToken.None));
@@ -31,7 +31,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new ValidateJoinCodeHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new ValidateJoinCodeHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(new ValidateJoinCodeQuery("ABC234"), CancellationToken.None);
 
@@ -49,7 +49,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(1));
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new ValidateJoinCodeHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new ValidateJoinCodeHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(new ValidateJoinCodeQuery("ABC234"), CancellationToken.None);
 
@@ -66,7 +66,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-10));
         liveSession.CloseEnrollmentWindow(NowUtc.AddMinutes(-1));
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new ValidateJoinCodeHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new ValidateJoinCodeHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(new ValidateJoinCodeQuery("ABC234"), CancellationToken.None);
 
@@ -84,7 +84,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         var zuluTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Zulu Team", "creator-zulu", JoinCode.Parse("ABC234"), NowUtc);
         var alphaTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new ListSessionTeamsHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new ListSessionTeamsHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(new ListSessionTeamsQuery("ABC234"), CancellationToken.None);
 
@@ -114,6 +114,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(1)),
             new StaticParticipantIdentity("participant-1"));
 
@@ -141,6 +142,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticParticipantIdentity("participant-1"));
 
@@ -163,6 +165,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(2)),
             new StaticParticipantIdentity("participant-1"));
 

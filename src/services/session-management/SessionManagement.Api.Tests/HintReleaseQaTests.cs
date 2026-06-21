@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.Hints;
@@ -66,7 +66,7 @@ public sealed class HintReleaseQaTests
         var templateStage = liveSession.SessionStageFlow.Single(stage => stage.MissionStageId == StageOneId);
         var templateHintCount = templateStage.Hints.Count;
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new CreateOperationalHintHandler(dbContext, new FixedTimeProvider(NowUtc));
+        var handler = new CreateOperationalHintHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(
             new CreateOperationalHintCommand(
@@ -94,6 +94,7 @@ public sealed class HintReleaseQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(1)));
 
@@ -120,6 +121,7 @@ public sealed class HintReleaseQaTests
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ReleaseHintHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             realtimeNotifier,
             scoringAuditClient);
@@ -223,6 +225,7 @@ public sealed class HintReleaseQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(3)));
 
@@ -244,6 +247,7 @@ public sealed class HintReleaseQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(6)));
 

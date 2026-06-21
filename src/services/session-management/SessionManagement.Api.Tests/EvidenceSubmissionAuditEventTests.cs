@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Features.EvidenceSubmissions;
 using SessionManagement.Application.Realtime;
@@ -29,6 +29,7 @@ public sealed class EvidenceSubmissionAuditEventTests
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new SubmitEvidenceCommandHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticParticipantIdentity("participant-alpha"),
             new NoopSessionRealtimeNotifier(),

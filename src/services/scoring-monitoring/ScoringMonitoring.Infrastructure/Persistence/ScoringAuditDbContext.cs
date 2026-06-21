@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using ScoringMonitoring.Domain.Audit;
 using ScoringMonitoring.Domain.Scoreboards;
+using ScoringMonitoring.Application.Abstractions;
 
 namespace ScoringMonitoring.Infrastructure.Persistence;
 
 public sealed class ScoringMonitoringDbContext(DbContextOptions<ScoringMonitoringDbContext> options)
-    : DbContext(options), IUnitOfWork
+    : DbContext(options), IUnitOfWork, IScoringMonitoringDbContext
 {
     public DbSet<Scoreboard> Scoreboards => Set<Scoreboard>();
 

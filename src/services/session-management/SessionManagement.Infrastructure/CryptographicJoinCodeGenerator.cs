@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Domain.LiveSessions;
 

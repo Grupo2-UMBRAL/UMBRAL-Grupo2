@@ -1,4 +1,4 @@
-﻿namespace SessionManagement.Application.Scoring;
+namespace SessionManagement.Application.Scoring;
 
 public interface IScoringMonitoringClient
 {

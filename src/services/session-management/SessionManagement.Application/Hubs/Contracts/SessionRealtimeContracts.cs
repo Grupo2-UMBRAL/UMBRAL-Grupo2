@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using SessionManagement.Application.Features.SessionSnapshots;
 
 namespace SessionManagement.Application.Hubs.Contracts;

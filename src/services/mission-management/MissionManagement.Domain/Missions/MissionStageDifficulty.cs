@@ -1,4 +1,4 @@
-﻿namespace MissionManagement.Domain.Missions;
+namespace MissionManagement.Domain.Missions;
 
 public static class MissionStageDifficulty
 {

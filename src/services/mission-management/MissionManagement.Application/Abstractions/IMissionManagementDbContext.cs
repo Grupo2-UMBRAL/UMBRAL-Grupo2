@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Abstractions;

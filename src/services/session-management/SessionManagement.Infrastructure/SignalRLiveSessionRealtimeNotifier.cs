@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Realtime;
 using SessionManagement.Application.Hubs;
