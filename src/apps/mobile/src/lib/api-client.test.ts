@@ -1,4 +1,4 @@
-﻿import { createAuthorizedApiClient } from "./api-client";
+import { createAuthorizedApiClient } from "./api-client";
 
 jest.mock("./config", () => ({
   getClientConfig: () => ({
@@ -35,7 +35,7 @@ test("calls join endpoint with expected network payload", async () => {
   });
 
   expect(fetch).toHaveBeenCalledWith(
-    "https://edge.test/api/session-management/session-enrollment/join",
+    "https://edge.test/session-management/api/session-management/session-enrollment/join",
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({
@@ -58,7 +58,7 @@ test("calls create team endpoint with expected network payload", async () => {
   });
 
   expect(fetch).toHaveBeenCalledWith(
-    "https://edge.test/api/session-management/session-enrollment/teams",
+    "https://edge.test/session-management/api/session-management/session-enrollment/teams",
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({
@@ -78,7 +78,7 @@ test("calls session team snapshot endpoint with participant token", async () => 
   await apiClient.getSessionTeamSnapshot("team-1");
 
   expect(fetch).toHaveBeenCalledWith(
-    "https://edge.test/api/session-management/session-teams/team-1/snapshot",
+    "https://edge.test/session-management/api/session-management/session-teams/team-1/snapshot",
     expect.objectContaining({})
   );
   const [, init] = (fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
@@ -94,7 +94,7 @@ test("calls evidence submission endpoint with QR hash payload", async () => {
   });
 
   expect(fetch).toHaveBeenCalledWith(
-    "https://edge.test/api/session-management/session-teams/team-1/submissions",
+    "https://edge.test/session-management/api/session-management/session-teams/team-1/submissions",
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({

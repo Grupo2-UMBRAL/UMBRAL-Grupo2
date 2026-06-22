@@ -14,7 +14,7 @@ namespace ScoringMonitoring.Api.Controllers;
 
 [ApiController]
 [Route("api/scoring-monitoring/sessions")]
-[Authorize(Roles = $"{UmbralRoles.Administrator},{UmbralRoles.Operator}")]
+[Authorize(Roles = $"{UmbralRoles.Administrator},{UmbralRoles.Operator},{UmbralRoles.Participant}")]
 public sealed class ScoringMonitoringController(ISender sender) : ControllerBase
 {
     [HttpPost("{liveSessionId:guid}/scores")]
@@ -40,6 +40,7 @@ public sealed class ScoringMonitoringController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{liveSessionId:guid}/penalties")]
+    [Authorize(Roles = $"{UmbralRoles.Administrator},{UmbralRoles.Operator}")]
     public async Task<ActionResult<ApplyPenaltyResponse>> ApplyPenalty(
         Guid liveSessionId,
         [FromBody] ApplyPenaltyRequest request,
@@ -71,6 +72,7 @@ public sealed class ScoringMonitoringController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{liveSessionId:guid}/event-log")]
+    [Authorize(Roles = $"{UmbralRoles.Administrator},{UmbralRoles.Operator}")]
     public async Task<ActionResult<IReadOnlyList<SessionEventLogPayload>>> GetSessionEventLog(
         Guid liveSessionId,
         CancellationToken cancellationToken)

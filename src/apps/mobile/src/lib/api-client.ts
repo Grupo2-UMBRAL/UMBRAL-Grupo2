@@ -1,4 +1,4 @@
-﻿import { getClientConfig } from "./config";
+import { getClientConfig } from "./config";
 
 function normalizePath(path: string) {
   return path.startsWith("/") ? path : `/${path}`;
@@ -200,7 +200,7 @@ export function createAuthorizedApiClient(accessToken: string) {
   const config = getClientConfig();
 
   async function request(path: string, init: RequestInit = {}) {
-    const url = `${config.edgeProxyPublicBaseUrl}${normalizePath(path)}`;
+    const url = `${config.edgeProxyPublicBaseUrl}/session-management${normalizePath(path)}`;
     const headers = new Headers(init.headers);
     headers.set("authorization", `Bearer ${accessToken}`);
 

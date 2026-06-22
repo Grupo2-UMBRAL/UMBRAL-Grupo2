@@ -158,7 +158,7 @@ public sealed class ScoringMonitoringControllerTests
         var client = factory.CreateParticipantClient();
 
         var response = await client.GetAsync(
-            $"/api/scoring-monitoring/sessions/{Guid.NewGuid()}/ranking");
+            $"/api/scoring-monitoring/sessions/{Guid.NewGuid()}/event-log");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
