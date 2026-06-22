@@ -326,7 +326,7 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByText("Resoluciones de la Misi�n")).toBeTruthy();
+    expect(screen.getByText("Resoluciones de la Misión")).toBeTruthy();
   });
 
   expect(screen.getByText("Decode the seal")).toBeTruthy();
@@ -369,7 +369,7 @@ test("keeps final solutions out of live Visible hints before finalization", asyn
     expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
   });
 
-  expect(screen.queryByText("Resoluciones de la Misi�n")).toBeNull();
+  expect(screen.queryByText("Resoluciones de la Misión")).toBeNull();
   expect(screen.queryByText("The answer is aurora.")).toBeNull();
 });
 
@@ -561,7 +561,7 @@ test("submits scanned QR evidence and renders rejected feedback", async () => {
       qrHash: "wrong-hash"
     });
   });
-  expect(screen.getByText(/C�digo incorrecto, int�ntalo de nuevo/)).toBeTruthy();
+  expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
 });
 
 test("submits Trivia answer and renders accepted feedback", async () => {

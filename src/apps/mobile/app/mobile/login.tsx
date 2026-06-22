@@ -32,14 +32,14 @@ export default function LoginPage() {
 
   return (
     <ScreenShell
-      eyebrow="UMBRAL mobile shell"
-      title="Friendly auth. Guided routes. Realtime transport."
-      description="Participant enters through Keycloak, then the shell proves protected mobile routes, JWT-backed requests, and SignalR reconnect behavior before any gameplay feature exists."
+      eyebrow="UMBRAL"
+      title="Entra y empieza a jugar"
+      description="Resuelve misiones de trivia y búsqueda de tesoro junto a tu equipo, en tiempo real."
     >
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Participant sign in</Text>
+        <Text style={shellStyles.cardTitle}>Inicia sesión</Text>
         <Text style={shellStyles.cardText}>
-          Use the local seed account or try a non-participant role to verify rejection.
+          Ingresa con tu cuenta de participante para unirte a una sesión.
         </Text>
         <TextInput
           autoCapitalize="none"
@@ -69,17 +69,16 @@ export default function LoginPage() {
           ]}
         >
           <Text style={styles.primaryButtonLabel}>
-            {submitting ? "Signing in..." : "Enter participant shell"}
+            {submitting ? "Entrando..." : "Entrar"}
           </Text>
         </Pressable>
       </View>
 
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Verification hints</Text>
+        <Text style={shellStyles.cardTitle}>Cuenta de prueba</Text>
         <View style={shellStyles.list}>
-          <Text style={shellStyles.cardText}>participant / participant123! enters the shell.</Text>
-          <Text style={shellStyles.cardText}>admin / admin123! is rejected by role.</Text>
-          <Text style={shellStyles.cardText}>operator / operator123! is rejected by role.</Text>
+          <Text style={shellStyles.cardText}>participant / participant123! entra al juego.</Text>
+          <Text style={shellStyles.cardText}>Las cuentas admin u operator se rechazan en móvil.</Text>
         </View>
       </View>
     </ScreenShell>

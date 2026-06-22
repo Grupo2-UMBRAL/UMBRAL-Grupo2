@@ -1,192 +1,278 @@
-﻿import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRouter } from "expo-router";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { RouteCard } from "../../../src/components/route-card";
+import { GameButton } from "../../../src/components/game-button";
+import { LoadingScreen } from "../../../src/components/loading-screen";
+import { ProgressBar } from "../../../src/components/progress-bar";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { StatusChip } from "../../../src/components/status-chip";
-import { createAuthorizedApiClient, type ApiProbeResult } from "../../../src/lib/api-client";
 import { getClientConfig } from "../../../src/lib/config";
+import {
+  basePointsForDifficulty,
+  buildStageProgress,
+  formatDifficulty,
+  formatGameType,
+  isTreasureHunt
+} from "../../../src/lib/stage-progress";
 import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
+import { useTeamSnapshot } from "../../../src/hooks/use-team-snapshot";
 import { useSession } from "../../../src/providers/session-provider";
 
-function resolveConnectionTone(kind: string) {
+function resolveConnection(kind: string) {
   switch (kind) {
     case "connected":
-      return "success";
+      return { label: "En línea", tone: "success" as const };
     case "reconnecting":
-      return "warn";
+      return { label: "Reconectando", tone: "warn" as const };
     case "error":
-      return "error";
+      return { label: "Sin conexión", tone: "error" as const };
+    case "connecting":
+      return { label: "Conectando", tone: "info" as const };
     default:
-      return "info";
+      return { label: "Desconectado", tone: "neutral" as const };
   }
+}
+
+function resolveSessionState(state: string | undefined) {
+  switch (state) {
+    case "Running":
+    case "Active":
+      return { label: "En juego", tone: "success" as const };
+    case "Paused":
+      return { label: "En pausa", tone: "warn" as const };
+    case "Finalized":
+      return { label: "Finalizada", tone: "neutral" as const };
+    case "Canceled":
+      return { label: "Cancelada", tone: "error" as const };
+    default:
+      return { label: state ?? "Por iniciar", tone: "info" as const };
+  }
+}
+
+type HubTileProps = {
+  icon: string;
+  title: string;
+  onPress: () => void;
+};
+
+function HubTile({ icon, title, onPress }: HubTileProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+    >
+      <Text style={styles.tileIcon}>{icon}</Text>
+      <Text style={styles.tileTitle}>{title}</Text>
+    </Pressable>
+  );
 }
 
 export default function HomePage() {
   const router = useRouter();
-  const { session, signOut } = useSession();
-  const [resyncCount, setResyncCount] = useState(0);
-  const [probePending, setProbePending] = useState(false);
-  const [probeResult, setProbeResult] = useState<ApiProbeResult | null>(null);
-  const [probeError, setProbeError] = useState<string | null>(null);
+  const { signOut } = useSession();
+  const { loading, enrollment, snapshot, error, refresh, session } = useTeamSnapshot();
+  const config = useMemo(() => getClientConfig(), []);
 
-  if (!session) {
-    return null;
-  }
-
-  const config = getClientConfig();
-  const apiClient = createAuthorizedApiClient(session.accessToken);
   const connectionState = useSessionManagementConnection({
-    accessToken: session.accessToken,
+    accessToken: session?.accessToken ?? "",
     hubUrl: config.sessionHubUrl,
-    onResync: () => setResyncCount((current) => current + 1)
+    onResync: () => {
+      void refresh();
+    }
   });
 
-  async function handleProbe() {
-    setProbePending(true);
-    setProbeError(null);
+  const progress = useMemo(() => buildStageProgress(snapshot), [snapshot]);
 
-    try {
-      const result = await apiClient.getHealth();
-      setProbeResult(result);
-    } catch (error) {
-      setProbeResult(null);
-      setProbeError(error instanceof Error ? error.message : "Edge proxy probe failed.");
-    } finally {
-      setProbePending(false);
-    }
+  if (loading) {
+    return <LoadingScreen message="Preparando tu misión..." />;
   }
+
+  const connection = resolveConnection(connectionState.kind);
+  const sessionState = resolveSessionState(snapshot?.sessionState);
+  const currentStage = snapshot?.currentStage;
+  const isFinalized = snapshot?.sessionState === "Finalized";
+  const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
 
   return (
     <ScreenShell
-      eyebrow={`Signed in as ${session.displayName}`}
-      title="Participant shell ready for the next game slices."
-      description="The shell already proves route protection, JWT-backed transport and realtime reconnect state before Session Enrollment or the live board exist."
+      eyebrow={`Hola, ${session?.displayName ?? "participante"}`}
+      title="Tu próxima aventura UMBRAL"
+      description="Resuelve etapas de trivia y búsqueda de tesoro, desbloquea pistas y escala en el ranking de tu sesión."
     >
-      <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Connection state</Text>
-        <View style={shellStyles.row}>
-          <StatusChip
-            label={connectionState.kind}
-            tone={resolveConnectionTone(connectionState.kind)}
-          />
-          <StatusChip label={`Resync ${resyncCount}`} tone="info" />
+      <View style={styles.statusRow}>
+        <StatusChip label={connection.label} tone={connection.tone} />
+        {enrollment ? <StatusChip label={sessionState.label} tone={sessionState.tone} /> : null}
+      </View>
+
+      {error ? (
+        <View style={shellStyles.card}>
+          <StatusChip label="No pudimos sincronizar" tone="error" />
+          <Text style={shellStyles.cardText}>{error}</Text>
+          <GameButton label="Reintentar" variant="ghost" icon="↻" onPress={() => void refresh()} />
         </View>
-        <Text style={shellStyles.cardText}>{connectionState.detail}</Text>
-      </View>
+      ) : null}
 
-      <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>API probe</Text>
-        <Text style={shellStyles.cardText}>
-          Calls `GET /health` through the edge proxy with the current participant `JWT`.
-        </Text>
-        <Pressable
-          onPress={() => {
-            void handleProbe();
-          }}
-          style={({ pressed }) => [
-            styles.primaryButton,
-            probePending && styles.buttonDisabled,
-            pressed && styles.buttonPressed
-          ]}
-        >
-          <Text style={styles.primaryButtonLabel}>
-            {probePending ? "Probing edge proxy..." : "Probe edge proxy"}
-          </Text>
-        </Pressable>
-        <Text style={shellStyles.mono}>Authorization: {apiClient.authorizationHeaderPreview}</Text>
-        {probeResult ? (
+      {!enrollment ? (
+        <View style={styles.heroCard}>
+          <Text style={styles.heroEmoji}>🎯</Text>
+          <Text style={styles.heroTitle}>Aún no estás en una sesión</Text>
           <Text style={shellStyles.cardText}>
-            {probeResult.status} from {probeResult.url}
-            {"\n"}
-            {probeResult.body}
+            Pide el código de tu sesión al operador y únete a tu equipo para empezar a jugar.
           </Text>
-        ) : null}
-        {probeError ? <Text style={styles.error}>{probeError}</Text> : null}
-      </View>
+          <GameButton
+            label="Unirse a una sesión"
+            icon="🚪"
+            onPress={() => router.push("/mobile/join")}
+          />
+        </View>
+      ) : (
+        <View style={styles.heroCard}>
+          <View style={shellStyles.row}>
+            <StatusChip label={enrollment.teamName} tone="info" />
+            {currentStage ? (
+              <StatusChip label={formatGameType(currentStage.gameType)} tone="success" />
+            ) : null}
+          </View>
 
-      <View style={shellStyles.section}>
-        <Text style={shellStyles.cardTitle}>Guided navigation</Text>
-        <RouteCard
-          title="Join session"
-          description="Prepare Session Enrollment request shape for join code and Session Team choice."
-          onPress={() => router.push("/mobile/join")}
-        />
-        <RouteCard
-          title="Team board"
-          description="Reserve the participant surface for current stage, team state and evidence CTA."
-          onPress={() => router.push("/mobile/board")}
-        />
-        <RouteCard
-          title="Progress path"
-          description="Keep room for a Duolingo-like guided progression without exposing the whole mission tree."
-          onPress={() => router.push("/mobile/progress")}
-        />
-        <RouteCard
-          title="Ranking"
-          description="Reserve a participant ranking view once Scoreboard is available."
-          onPress={() => router.push("/mobile/ranking")}
-        />
-        <RouteCard
-          title="Hints and solutions"
-          description="Leave a dedicated surface for Hint Release and final revealed resolutions."
-          onPress={() => router.push("/mobile/resolutions")}
-        />
-      </View>
+          {currentStage ? (
+            <>
+              <Text style={styles.stageEyebrow}>
+                Etapa {currentStage.sessionStageOrder}
+                {currentStage.difficulty ? ` · ${formatDifficulty(currentStage.difficulty)}` : ""}
+                {stagePoints ? ` · ${stagePoints} pts` : ""}
+              </Text>
+              <Text style={styles.heroTitle}>{currentStage.name}</Text>
+              {currentStage.prompt ? (
+                <Text style={styles.prompt} numberOfLines={3}>
+                  {currentStage.prompt}
+                </Text>
+              ) : null}
+              <GameButton
+                label={isFinalized ? "Ver resultados" : "Continuar misión"}
+                icon={isFinalized ? "🏁" : isTreasureHunt(currentStage.gameType) ? "🧭" : "🧩"}
+                onPress={() => router.push("/mobile/board")}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.heroTitle}>
+                {isFinalized ? "¡Sesión finalizada!" : "Esperando tu próxima etapa"}
+              </Text>
+              <Text style={shellStyles.cardText}>
+                {isFinalized
+                  ? "Revisa el tablero para ver las soluciones reveladas y tu posición final."
+                  : "El operador aún no habilita una etapa jugable para tu equipo."}
+              </Text>
+              <GameButton
+                label={isFinalized ? "Ver resultados" : "Abrir tablero"}
+                icon={isFinalized ? "🏁" : "🎮"}
+                onPress={() => router.push("/mobile/board")}
+              />
+            </>
+          )}
 
-      <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Active configuration</Text>
-        <Text style={shellStyles.cardText}>Edge proxy: {config.edgeProxyPublicBaseUrl}</Text>
-        <Text style={shellStyles.cardText}>Keycloak: {config.keycloakPublicBaseUrl}</Text>
-        <Text style={shellStyles.cardText}>Session hub: {config.sessionHubUrl}</Text>
-      </View>
+          {progress.nodes.length ? (
+            <ProgressBar
+              completed={progress.completed}
+              total={progress.total}
+              caption={
+                progress.total > 0
+                  ? `${progress.completed}/${progress.total} etapas`
+                  : `${progress.completed} etapas superadas`
+              }
+            />
+          ) : null}
+        </View>
+      )}
+
+      {enrollment ? (
+        <View style={styles.tileRow}>
+          <HubTile icon="🗺️" title="Progreso" onPress={() => router.push("/mobile/progress")} />
+          <HubTile icon="💡" title="Pistas" onPress={() => router.push("/mobile/resolutions")} />
+          <HubTile icon="🏆" title="Ranking" onPress={() => router.push("/mobile/ranking")} />
+        </View>
+      ) : null}
 
       <Pressable
         onPress={() => {
           void signOut().then(() => router.replace("/mobile/login"));
         }}
-        style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+        style={({ pressed }) => [styles.signOut, pressed && styles.tilePressed]}
       >
-        <Text style={styles.secondaryButtonLabel}>Sign out</Text>
+        <Text style={styles.signOutLabel}>Cerrar sesión</Text>
       </Pressable>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  primaryButton: {
-    backgroundColor: "#1e6f8c",
-    borderRadius: 18,
+  statusRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10
+  },
+  heroCard: {
+    backgroundColor: "#fffaf5",
+    borderColor: "#eadcc8",
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 14,
+    padding: 22
+  },
+  heroEmoji: {
+    fontSize: 40
+  },
+  heroTitle: {
+    color: "#17313b",
+    fontSize: 26,
+    fontWeight: "900",
+    lineHeight: 32
+  },
+  stageEyebrow: {
+    color: "#1e6f8c",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase"
+  },
+  prompt: {
+    color: "#4d5e64",
+    fontSize: 16,
+    lineHeight: 23
+  },
+  tileRow: {
+    flexDirection: "row",
+    gap: 12
+  },
+  tile: {
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14
+    backgroundColor: "#fffaf5",
+    borderColor: "#eadcc8",
+    borderRadius: 20,
+    borderWidth: 1,
+    flex: 1,
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 18
   },
-  secondaryButton: {
-    backgroundColor: "#17313b",
-    borderRadius: 18,
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  primaryButtonLabel: {
-    color: "#f7fbfc",
-    fontSize: 15,
-    fontWeight: "700"
-  },
-  secondaryButtonLabel: {
-    color: "#f7fbfc",
-    fontSize: 15,
-    fontWeight: "700"
-  },
-  buttonDisabled: {
-    opacity: 0.7
-  },
-  buttonPressed: {
+  tilePressed: {
     opacity: 0.85
   },
-  error: {
-    color: "#9e2f2f",
+  tileIcon: {
+    fontSize: 26
+  },
+  tileTitle: {
+    color: "#17313b",
     fontSize: 14,
-    lineHeight: 20
+    fontWeight: "800"
+  },
+  signOut: {
+    alignItems: "center",
+    paddingVertical: 14
+  },
+  signOutLabel: {
+    color: "#9e2f2f",
+    fontSize: 15,
+    fontWeight: "700"
   }
 });

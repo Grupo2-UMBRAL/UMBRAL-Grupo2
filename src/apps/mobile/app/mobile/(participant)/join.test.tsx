@@ -106,7 +106,7 @@ test("redirects to board when stored enrollment already exists", async () => {
   renderJoinPage();
 
   await waitFor(() => {
-    expect(mockReplace).toHaveBeenCalledWith("/board");
+    expect(mockReplace).toHaveBeenCalledWith("/mobile/board");
   });
 });
 
@@ -121,7 +121,7 @@ test("shows unavailable session error when join code is invalid", async () => {
   fireEvent.changeText(screen.getByPlaceholderText("ABC234"), "bad999");
 
   await waitFor(() => {
-    expect(screen.getByText("Session Join Code inválido o no registrado.")).toBeTruthy();
+    expect(screen.getByText("Session Join Code invÃ¡lido o no registrado.")).toBeTruthy();
   });
   expect(apiClient.listEnrollmentTeams).not.toHaveBeenCalled();
 });
@@ -136,7 +136,7 @@ test("blocks team actions and shows warning when enrollment window is closed", a
 
   await waitFor(() => {
     expect(
-      screen.getByText("Team Assignment Window está cerrada. No puedes crear ni unirte a equipos ahora.")
+      screen.getByText("Team Assignment Window estÃ¡ cerrada. No puedes crear ni unirte a equipos ahora.")
     ).toBeTruthy();
   });
   expect(screen.queryByText("Join selected team")).toBeNull();
@@ -181,7 +181,7 @@ test("joins existing team and stores enrollment context", async () => {
     teamId: "team-1",
     teamName: "Alpha Team"
   });
-  expect(mockReplace).toHaveBeenCalledWith("/board");
+  expect(mockReplace).toHaveBeenCalledWith("/mobile/board");
 });
 
 test("creates team and stores enrollment context", async () => {
@@ -222,5 +222,5 @@ test("creates team and stores enrollment context", async () => {
     teamId: "team-2",
     teamName: "New Team"
   });
-  expect(mockReplace).toHaveBeenCalledWith("/board");
+  expect(mockReplace).toHaveBeenCalledWith("/mobile/board");
 });
