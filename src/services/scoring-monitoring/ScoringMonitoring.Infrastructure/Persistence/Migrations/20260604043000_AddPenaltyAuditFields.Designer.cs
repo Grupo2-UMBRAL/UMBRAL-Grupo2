@@ -19,7 +19,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("scoring_ops")
+                .HasDefaultSchema("scoring_monitoring")
                 .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -118,7 +118,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ux_score_entries_single_stage_credit")
                         .HasFilter("mission_stage_id IS NOT NULL AND entry_type IN ('StageCredit', 'ValidationOverrideCredit')");
 
-                    b.ToTable("score_entries", "scoring_ops");
+                    b.ToTable("score_entries", "scoring_monitoring");
                 });
 
             modelBuilder.Entity("ScoringMonitoring.Domain.Scoreboards.Scoreboard", b =>
@@ -129,7 +129,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
                     b.HasKey("LiveSessionId");
 
-                    b.ToTable("scoreboards", "scoring_ops");
+                    b.ToTable("scoreboards", "scoring_monitoring");
                 });
 
             modelBuilder.Entity("ScoringMonitoring.Domain.Scoreboards.ScoreEntry", b =>

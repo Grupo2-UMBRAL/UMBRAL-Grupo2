@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
 
         var authConfiguration = ServiceConfiguration.GetRequiredAuthConfiguration(configuration);
         services.AddSingleton(authConfiguration);
+        services.AddSingleton<IClaimsTransformation, KeycloakRoleClaimsTransformation>();
 
         services.AddProblemDetails();
         services.AddExceptionHandler<UmbralExceptionHandler>();

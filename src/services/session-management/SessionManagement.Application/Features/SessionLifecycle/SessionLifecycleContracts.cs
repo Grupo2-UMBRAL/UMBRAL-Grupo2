@@ -15,10 +15,3 @@ public sealed record LiveSessionStateChangedEvent(
     long SequenceNumber,
     string Reason,
     DateTimeOffset OccurredAtUtc);
-
-public interface ILiveSessionStateNotifier
-{
-    Task NotifyStateChangedAsync(
-        LiveSessionStateChangedEvent stateChangedEvent,
-        CancellationToken cancellationToken);
-}

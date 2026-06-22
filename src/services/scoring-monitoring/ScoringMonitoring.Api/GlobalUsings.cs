@@ -4,4 +4,6 @@ global using ScoringMonitoring.Application.Features.SessionEventLogs;
 global using ScoringMonitoring.Application.Features.Rankings;
 global using ScoringMonitoring.Application.Features.Scoreboards;
 global using ScoringMonitoring.Application.Hubs;
+global using ScoringMonitoring.Api.Hubs;
+global using ScoringMonitoring.Api.Realtime;
 global using ScoringMonitoring.Infrastructure.Persistence;

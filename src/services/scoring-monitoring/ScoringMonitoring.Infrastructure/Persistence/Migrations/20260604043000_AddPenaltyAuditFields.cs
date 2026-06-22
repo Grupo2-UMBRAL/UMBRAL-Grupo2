@@ -12,7 +12,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "applied_by_operator_user_id",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 type: "character varying(120)",
                 maxLength: 120,
@@ -20,7 +20,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "penalty_reason",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 type: "character varying(500)",
                 maxLength: 500,
@@ -28,7 +28,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ux_score_entries_penalty_command",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 columns: new[] { "live_session_id", "penalty_command_id" },
                 unique: true,
@@ -40,17 +40,17 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "ux_score_entries_penalty_command",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries");
 
             migrationBuilder.DropColumn(
                 name: "applied_by_operator_user_id",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries");
 
             migrationBuilder.DropColumn(
                 name: "penalty_reason",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries");
         }
     }

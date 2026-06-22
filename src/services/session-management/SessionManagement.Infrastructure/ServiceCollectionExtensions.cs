@@ -1,5 +1,4 @@
 ﻿using SessionManagement.Application.Features.EvidenceSubmissions;
-using SessionManagement.Application.Realtime;
 using SessionManagement.Application.Features.LiveSessions;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Scoring;
@@ -27,10 +26,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
-        services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
-            .AddHttpClient<IMissionManagementLiveSessionCatalog, MissionManagementLiveSessionCatalog>(client =>
+            .AddHttpClient<IEligibleMissionCatalog, MissionManagementLiveSessionCatalog>(client =>
             {
                 client.BaseAddress = new Uri(
                     configuration["MissionManagement:BaseUrl"] ?? "http://mission-management-service:8080/");

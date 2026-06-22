@@ -2,5 +2,5 @@
 
 public static class SessionManagementPersistence
 {
-    public const string SchemaName = "session_operations";
+    public const string SchemaName = "session_management";
 }

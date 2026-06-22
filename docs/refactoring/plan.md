@@ -1,5 +1,10 @@
 ﻿# ðŸ—ï¸ Backend Refactoring Plan â€” Final (v2)
 
+> **Note (2026-06-18):** Bounded contexts were renamed after this plan was written:
+> `mission-design`→`mission-management`, `scoring-audit`→`scoring-monitoring`,
+> `session-operations`→`session-management`. Read `MissionDesign.*` etc. as
+> `MissionManagement.*`. See [remediation-2026-06-18.md](remediation-2026-06-18.md).
+
 ## Decisions Locked In
 
 | Question | Decision |

@@ -1,4 +1,4 @@
-# Session Operations
+# Session Management
 
 Contexto responsable de la ejecucion en vivo de una mision para equipos concretos. Aqui viven el estado operativo de la sesion, el flujo efectivo de etapas y la interaccion en tiempo real con operadores y participantes.
 

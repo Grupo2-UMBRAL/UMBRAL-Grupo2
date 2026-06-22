@@ -652,9 +652,9 @@ internal sealed class SessionManagementApiFactory : WebApplicationFactory<Progra
                     .Options;
             });
 
-            services.RemoveAll<IMissionManagementLiveSessionCatalog>();
+            services.RemoveAll<IEligibleMissionCatalog>();
             services.AddSingleton(missionDesignLiveSessionCatalog);
-            services.AddSingleton<IMissionManagementLiveSessionCatalog>(missionDesignLiveSessionCatalog);
+            services.AddSingleton<IEligibleMissionCatalog>(missionDesignLiveSessionCatalog);
             services.RemoveAll<ISessionRealtimeNotifier>();
             services.AddSingleton(liveSessionStateNotifier);
             services.AddSingleton<ISessionRealtimeNotifier>(liveSessionStateNotifier);
@@ -705,7 +705,7 @@ internal sealed class SessionManagementApiFactory : WebApplicationFactory<Progra
         return client;
     }
 
-    private sealed class FakeMissionManagementLiveSessionCatalog : IMissionManagementLiveSessionCatalog
+    private sealed class FakeMissionManagementLiveSessionCatalog : IEligibleMissionCatalog
     {
         private EligibleMissionForLiveSessionSnapshot? eligibleMission;
         private UmbralServiceException? failure;

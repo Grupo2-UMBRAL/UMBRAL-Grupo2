@@ -17,7 +17,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "live_sessions",
-                schema: "session_operations",
+                schema: "session_management",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -36,13 +36,13 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_live_sessions_CreatedAtUtc",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 column: "CreatedAtUtc");
 
             migrationBuilder.CreateIndex(
                 name: "IX_live_sessions_MissionId",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 column: "MissionId");
         }
@@ -52,7 +52,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "live_sessions",
-                schema: "session_operations");
+                schema: "session_management");
         }
     }
 }

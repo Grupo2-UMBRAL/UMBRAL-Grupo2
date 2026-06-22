@@ -20,7 +20,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("session_operations")
+                .HasDefaultSchema("session_management")
                 .HasAnnotation("ProductVersion", "8.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -69,7 +69,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                     b.HasIndex("LiveSessionId", "SessionTeamId", "MissionStageId")
                         .HasDatabaseName("ix_evidence_submissions_live_session_team_stage");
 
-                    b.ToTable("evidence_submissions", "session_operations");
+                    b.ToTable("evidence_submissions", "session_management");
                 });
 
             modelBuilder.Entity("SessionManagement.Domain.LiveSessions.LiveSession", b =>
@@ -133,7 +133,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("MissionId");
 
-                    b.ToTable("live_sessions", "session_operations");
+                    b.ToTable("live_sessions", "session_management");
                 });
 
             modelBuilder.Entity("SessionManagement.Domain.LiveSessions.SessionTeam", b =>
@@ -163,7 +163,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_session_teams_live_session_id_normalized_name");
 
-                    b.ToTable("session_teams", "session_operations");
+                    b.ToTable("session_teams", "session_management");
                 });
 
             modelBuilder.Entity("SessionManagement.Domain.LiveSessions.SessionTeamProgress", b =>
@@ -196,7 +196,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_session_team_progressions_live_session_id_session_team_id");
 
-                    b.ToTable("session_team_progressions", "session_operations");
+                    b.ToTable("session_team_progressions", "session_management");
                 });
 
             modelBuilder.Entity("SessionManagement.Domain.LiveSessions.TeamParticipation", b =>
@@ -226,7 +226,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_team_participations_live_session_id_participant_user_id");
 
-                    b.ToTable("team_participations", "session_operations");
+                    b.ToTable("team_participations", "session_management");
                 });
 
             modelBuilder.Entity("SessionManagement.Domain.LiveSessions.EvidenceSubmission", b =>

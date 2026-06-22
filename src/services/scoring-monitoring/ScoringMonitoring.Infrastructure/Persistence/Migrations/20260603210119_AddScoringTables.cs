@@ -12,11 +12,11 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
-                name: "scoring_ops");
+                name: "scoring_monitoring");
 
             migrationBuilder.CreateTable(
                 name: "scoreboards",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 columns: table => new
                 {
                     live_session_id = table.Column<Guid>(type: "uuid", nullable: false)
@@ -28,7 +28,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "score_entries",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 columns: table => new
                 {
                     score_entry_id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -53,7 +53,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_score_entries_scoreboards_live_session_id",
                         column: x => x.live_session_id,
-                        principalSchema: "scoring_ops",
+                        principalSchema: "scoring_monitoring",
                         principalTable: "scoreboards",
                         principalColumn: "live_session_id",
                         onDelete: ReferentialAction.Cascade);
@@ -61,19 +61,19 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_score_entries_live_session_id",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 column: "live_session_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_score_entries_live_session_id_session_team_id",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 columns: new[] { "live_session_id", "session_team_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ux_score_entries_single_stage_credit",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "score_entries",
                 columns: new[] { "live_session_id", "session_team_id", "mission_stage_id" },
                 unique: true,
@@ -85,11 +85,11 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "score_entries",
-                schema: "scoring_ops");
+                schema: "scoring_monitoring");
 
             migrationBuilder.DropTable(
                 name: "scoreboards",
-                schema: "scoring_ops");
+                schema: "scoring_monitoring");
         }
     }
 }

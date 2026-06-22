@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
-using ScoringMonitoring.Application.Hubs;
 
-namespace ScoringMonitoring.Infrastructure.Realtime;
+namespace ScoringMonitoring.Api.Realtime;
 
 public sealed class SignalRScoringMonitoringUpdatesPublisher(
     IHubContext<ScoringMonitoringHub, IScoringMonitoringClient> hubContext)

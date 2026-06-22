@@ -7,7 +7,7 @@ namespace SessionManagement.Application.Features.LiveSessions;
 
 public sealed class CreateLiveSessionCommandHandler(
     ISessionManagementDbContext dbContext,
-    IMissionManagementLiveSessionCatalog missionManagementLiveSessionCatalog,
+    IEligibleMissionCatalog missionManagementLiveSessionCatalog,
     TimeProvider timeProvider)
     : IRequestHandler<CreateLiveSessionCommand, LiveSessionResponse>
 {
