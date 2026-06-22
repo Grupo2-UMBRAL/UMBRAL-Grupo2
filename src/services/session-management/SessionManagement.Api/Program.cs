@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
-using SessionManagement.Api.Hubs;
-using SessionManagement.Api.Realtime;
 using SessionManagement.Application.Abstractions;
-using SessionManagement.Application.Realtime;
+using SessionManagement.Application.Hubs;
 using SessionManagement.Infrastructure;
 using SessionManagement.Infrastructure.Persistence;
 using Umbral.ServiceDefaults;
@@ -34,7 +32,6 @@ builder.Services.AddUmbralApiDefaults(
     });
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<ISessionManagementDbContext>());
 builder.Services.AddSessionManagementInfrastructure(builder.Configuration);
-builder.Services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
 
 var app = builder.Build();
 
