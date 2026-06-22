@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Domain.LiveSessions;
 
 namespace SessionManagement.Infrastructure.Persistence;
 
-public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options) : DbContext(options), ISessionManagementDbContext
+public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options) : DbContext(options), IUnitOfWork, ISessionManagementDbContext
 {
     public DbSet<LiveSession> LiveSessions => Set<LiveSession>();
 
@@ -305,3 +305,4 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
         });
     }
 }
+

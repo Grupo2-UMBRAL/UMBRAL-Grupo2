@@ -9,3 +9,4 @@ public sealed record CreateLiveSessionCommand(
     IReadOnlyList<Guid>? SelectedMissionStageIds) : IRequest<LiveSessionResponse>
 {
 }
+

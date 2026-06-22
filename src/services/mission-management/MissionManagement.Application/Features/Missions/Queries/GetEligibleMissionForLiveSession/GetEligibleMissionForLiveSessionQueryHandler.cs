@@ -1,10 +1,12 @@
-﻿using MediatR;
+using MissionManagement.Domain.Missions;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Queries.GetEligibleMissionForLiveSession;
 
-public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class GetEligibleMissionForLiveSessionQueryHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
     : IRequestHandler<GetEligibleMissionForLiveSessionQuery, EligibleMissionForLiveSessionResponse>
 {
     public async Task<EligibleMissionForLiveSessionResponse> Handle(
@@ -13,8 +15,7 @@ public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionManagem
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await dbContext.Missions
-            .AsNoTracking()
+        var mission = await missionRepository
             .SingleOrDefaultAsync(
                 existingMission => existingMission.Id == request.MissionId,
                 cancellationToken);
@@ -37,3 +38,6 @@ public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionManagem
         return mission.ToEligibleForLiveSessionResponse();
     }
 }
+
+
+

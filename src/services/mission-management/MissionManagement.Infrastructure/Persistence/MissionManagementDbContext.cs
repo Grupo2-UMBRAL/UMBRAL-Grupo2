@@ -1,10 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Infrastructure.Persistence;
 
 public sealed class MissionManagementDbContext(DbContextOptions<MissionManagementDbContext> options)
-    : DbContext(options), IMissionManagementDbContext
+    : DbContext(options), MissionManagement.Application.Abstractions.IUnitOfWork, IMissionManagementDbContext
 {
     public DbSet<Mission> Missions => Set<Mission>();
     public DbSet<MissionStage> MissionStages => Set<MissionStage>();
@@ -106,3 +106,4 @@ public sealed class MissionManagementDbContext(DbContextOptions<MissionManagemen
         });
     }
 }
+

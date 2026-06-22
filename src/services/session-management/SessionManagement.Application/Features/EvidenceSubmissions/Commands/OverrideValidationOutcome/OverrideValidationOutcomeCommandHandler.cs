@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -12,7 +13,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public sealed class OverrideValidationOutcomeHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
@@ -25,7 +26,7 @@ public sealed class OverrideValidationOutcomeHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .Include(session => session.TeamProgressions)
             .Include(session => session.EvidenceSubmissions)
@@ -58,7 +59,7 @@ public sealed class OverrideValidationOutcomeHandler(
         var currentStage = liveSession.GetCurrentStageForTeam(evidenceSubmission.SessionTeamId);
         var progressState = liveSession.GetProgressStateForTeam(evidenceSubmission.SessionTeamId);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         await scoringAuditClient.LogSessionEventAsync(
             liveSession.Id,
@@ -242,3 +243,6 @@ public sealed class OverrideValidationOutcomeHandler(
             ? submittedAtUtc - stageStartedAtUtc
             : TimeSpan.Zero;
 }
+
+
+

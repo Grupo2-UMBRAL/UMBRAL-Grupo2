@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -6,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class GenerateJoinCodeHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     IJoinCodeGenerator joinCodeGenerator)
     : IRequestHandler<GenerateJoinCodeCommand, GenerateJoinCodeResponse>
 {
@@ -24,7 +25,7 @@ public sealed class GenerateJoinCodeHandler(
                 UmbralFailureCategory.Validation);
         }
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
@@ -42,7 +43,7 @@ public sealed class GenerateJoinCodeHandler(
         for (var attempt = 0; attempt < MaximumGenerationAttempts; attempt++)
         {
             var joinCode = joinCodeGenerator.Generate();
-            var exists = await dbContext.LiveSessions
+            var exists = await liveSessionRepository
                 .AnyAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
             if (exists)
             {
@@ -50,7 +51,7 @@ public sealed class GenerateJoinCodeHandler(
             }
 
             liveSession.AssignJoinCode(joinCode);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             return new GenerateJoinCodeResponse(liveSession.Id, joinCode.Value);
         }
 
@@ -60,3 +61,6 @@ public sealed class GenerateJoinCodeHandler(
             UmbralFailureCategory.Technical);
     }
 }
+
+
+

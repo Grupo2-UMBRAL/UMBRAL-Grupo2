@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -8,7 +9,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Penalties;
 
 public sealed class ApplyPenaltyHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     IScoringMonitoringClient scoringAuditClient)
@@ -36,7 +37,7 @@ public sealed class ApplyPenaltyHandler(
                 UmbralFailureCategory.Validation);
         }
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
         if (liveSession is null)
@@ -89,3 +90,6 @@ public sealed class ApplyPenaltyHandler(
             recordedAtUtc);
     }
 }
+
+
+

@@ -70,3 +70,4 @@ public sealed class RotateOperatorPasswordCommandHandler(IOperatorAdministration
         return password;
     }
 }
+

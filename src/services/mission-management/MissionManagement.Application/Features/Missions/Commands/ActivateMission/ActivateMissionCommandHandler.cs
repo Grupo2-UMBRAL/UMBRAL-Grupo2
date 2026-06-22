@@ -1,17 +1,19 @@
-﻿using MediatR;
+using MissionManagement.Domain.Missions;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.ActivateMission;
 
-public sealed class ActivateMissionCommandHandler(IMissionManagementDbContext dbContext)
+public sealed class ActivateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
     : IRequestHandler<ActivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(ActivateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await dbContext.Missions.SingleOrDefaultAsync(
+        var mission = await missionRepository.SingleOrDefaultAsync(
             existingMission => existingMission.Id == request.MissionId,
             cancellationToken);
         if (mission is null)
@@ -23,8 +25,11 @@ public sealed class ActivateMissionCommandHandler(IMissionManagementDbContext db
         }
 
         mission.Activate();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
 }
+
+
+

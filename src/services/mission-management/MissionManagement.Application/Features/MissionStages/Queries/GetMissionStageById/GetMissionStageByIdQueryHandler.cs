@@ -1,18 +1,19 @@
-﻿using MediatR;
+using MissionManagement.Domain.Missions;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.MissionStages.Queries.GetMissionStageById;
 
-public sealed class GetMissionStageByIdQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class GetMissionStageByIdQueryHandler(IUnitOfWork unitOfWork, IRepository<MissionStage> missionStageRepository)
     : IRequestHandler<GetMissionStageByIdQuery, MissionStageResponse>
 {
     public async Task<MissionStageResponse> Handle(GetMissionStageByIdQuery request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var missionStage = await dbContext.MissionStages
-            .AsNoTracking()
+        var missionStage = await missionStageRepository
             .Include(missionStage => missionStage.Hints)
             .SingleOrDefaultAsync(
                 existingMissionStage => existingMissionStage.Id == request.MissionStageId,
@@ -28,3 +29,6 @@ public sealed class GetMissionStageByIdQueryHandler(IMissionManagementDbContext 
         return missionStage.ToResponse();
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.EvidenceSubmissions;
 

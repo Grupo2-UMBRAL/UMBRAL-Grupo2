@@ -1,4 +1,4 @@
-﻿namespace SessionManagement.Application.Features.SessionLifecycle;
+namespace SessionManagement.Application.Features.SessionLifecycle;
 
 public sealed record LiveSessionStateResponse(
     Guid LiveSessionId,
@@ -15,3 +15,11 @@ public sealed record LiveSessionStateChangedEvent(
     long SequenceNumber,
     string Reason,
     DateTimeOffset OccurredAtUtc);
+
+public interface ILiveSessionStateNotifier
+{
+    Task NotifyStateChangedAsync(
+        LiveSessionStateChangedEvent stateChangedEvent,
+        CancellationToken cancellationToken);
+}
+

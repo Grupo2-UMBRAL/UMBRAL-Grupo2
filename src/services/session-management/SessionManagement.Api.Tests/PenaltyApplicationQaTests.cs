@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.EvidenceSubmissions;
 using SessionManagement.Application.Features.Penalties;
@@ -25,6 +25,7 @@ public sealed class PenaltyApplicationQaTests
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);
@@ -59,6 +60,7 @@ public sealed class PenaltyApplicationQaTests
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);
@@ -85,6 +87,7 @@ public sealed class PenaltyApplicationQaTests
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
             dbContext,
+            new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);

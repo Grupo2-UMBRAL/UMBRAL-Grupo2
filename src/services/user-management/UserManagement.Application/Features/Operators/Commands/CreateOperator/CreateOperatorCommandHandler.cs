@@ -70,3 +70,4 @@ public sealed class CreateOperatorCommandHandler(IOperatorAdministrationPort por
         return operatorUser;
     }
 }
+

@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;
@@ -6,8 +7,8 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.LiveSessions;
 
 public sealed class CreateLiveSessionCommandHandler(
-    ISessionManagementDbContext dbContext,
-    IEligibleMissionCatalog missionManagementLiveSessionCatalog,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    IMissionManagementLiveSessionCatalog missionManagementLiveSessionCatalog,
     TimeProvider timeProvider)
     : IRequestHandler<CreateLiveSessionCommand, LiveSessionResponse>
 {
@@ -32,8 +33,8 @@ public sealed class CreateLiveSessionCommandHandler(
             timeProvider.GetUtcNow(),
             sessionStageFlow);
 
-        dbContext.LiveSessions.Add(liveSession);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        liveSessionRepository.Add(liveSession);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return liveSession.ToResponse();
     }
@@ -81,3 +82,6 @@ public sealed class CreateLiveSessionCommandHandler(
         return sessionStageFlow;
     }
 }
+
+
+

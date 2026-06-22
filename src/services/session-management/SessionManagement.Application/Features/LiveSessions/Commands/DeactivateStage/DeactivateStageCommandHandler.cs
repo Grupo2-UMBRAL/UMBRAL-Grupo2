@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -9,7 +10,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.LiveSessions;
 
 public sealed class DeactivateStageHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<DeactivateStageCommand, LiveSessionResponse>
@@ -20,7 +21,7 @@ public sealed class DeactivateStageHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .Include(session => session.TeamProgressions)
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
@@ -36,7 +37,7 @@ public sealed class DeactivateStageHandler(
         var updatedAtUtc = timeProvider.GetUtcNow();
         liveSession.DeactivateStage(request.MissionStageId, updatedAtUtc);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
         await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
@@ -51,3 +52,6 @@ public sealed class DeactivateStageHandler(
         return liveSession.ToResponse();
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 
 namespace MissionManagement.Application.Features.Missions.Commands.CreateMission;
 
@@ -11,3 +11,4 @@ public sealed record CreateMissionCommand(
     IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>
 {
 }
+

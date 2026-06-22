@@ -1,4 +1,4 @@
-﻿using MissionManagement.Domain.Missions;
+using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Features.Missions;
 
@@ -291,3 +291,4 @@ public static class MissionMappings
         }
     }
 }
+

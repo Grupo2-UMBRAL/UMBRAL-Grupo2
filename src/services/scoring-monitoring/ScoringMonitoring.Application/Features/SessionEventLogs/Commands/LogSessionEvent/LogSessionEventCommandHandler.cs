@@ -1,9 +1,10 @@
+using ScoringMonitoring.Application.Abstractions;
 using ScoringMonitoring.Domain.Audit;
 
 namespace ScoringMonitoring.Application.Features.SessionEventLogs.Commands.LogSessionEvent;
 
 public sealed class LogSessionEventHandler(
-    IScoringMonitoringDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<SessionEventLog> sessionEventLogRepository,
     TimeProvider timeProvider,
     IScoringMonitoringUpdatesPublisher updatesPublisher)
     : IRequestHandler<LogSessionEventCommand, SessionEventLogPayload>
@@ -21,8 +22,8 @@ public sealed class LogSessionEventHandler(
             request.Description,
             timeProvider.GetUtcNow());
 
-        dbContext.SessionEventLogs.Add(eventLog);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        sessionEventLogRepository.Add(eventLog);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var payload = SessionEventLogPayload.FromEntity(eventLog);
         await updatesPublisher.PublishEventLogUpdatedAsync(payload, cancellationToken);
@@ -30,3 +31,5 @@ public sealed class LogSessionEventHandler(
         return payload;
     }
 }
+
+

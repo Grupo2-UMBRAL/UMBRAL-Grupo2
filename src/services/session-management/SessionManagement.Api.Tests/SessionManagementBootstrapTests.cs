@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -652,9 +652,9 @@ internal sealed class SessionManagementApiFactory : WebApplicationFactory<Progra
                     .Options;
             });
 
-            services.RemoveAll<IEligibleMissionCatalog>();
+            services.RemoveAll<IMissionManagementLiveSessionCatalog>();
             services.AddSingleton(missionDesignLiveSessionCatalog);
-            services.AddSingleton<IEligibleMissionCatalog>(missionDesignLiveSessionCatalog);
+            services.AddSingleton<IMissionManagementLiveSessionCatalog>(missionDesignLiveSessionCatalog);
             services.RemoveAll<ISessionRealtimeNotifier>();
             services.AddSingleton(liveSessionStateNotifier);
             services.AddSingleton<ISessionRealtimeNotifier>(liveSessionStateNotifier);
@@ -705,7 +705,7 @@ internal sealed class SessionManagementApiFactory : WebApplicationFactory<Progra
         return client;
     }
 
-    private sealed class FakeMissionManagementLiveSessionCatalog : IEligibleMissionCatalog
+    private sealed class FakeMissionManagementLiveSessionCatalog : IMissionManagementLiveSessionCatalog
     {
         private EligibleMissionForLiveSessionSnapshot? eligibleMission;
         private UmbralServiceException? failure;

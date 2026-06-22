@@ -1,4 +1,4 @@
-﻿using SessionManagement.Application.Features.SessionLifecycle;
+using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Hubs.Contracts;
 
 namespace SessionManagement.Application.Realtime;

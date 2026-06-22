@@ -1,4 +1,4 @@
-﻿namespace SessionManagement.Infrastructure.Persistence;
+namespace SessionManagement.Infrastructure.Persistence;
 
 public static class SessionManagementPersistence
 {

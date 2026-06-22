@@ -1,8 +1,10 @@
+using ScoringMonitoring.Domain.Audit;
+using ScoringMonitoring.Application.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace ScoringMonitoring.Application.Features.SessionEventLogs.Queries.GetSessionEventLog;
 
-public sealed class GetSessionEventLogHandler(IScoringMonitoringDbContext dbContext)
+public sealed class GetSessionEventLogHandler(IUnitOfWork unitOfWork, IRepository<SessionEventLog> sessionEventLogRepository)
     : IRequestHandler<GetSessionEventLogQuery, IReadOnlyList<SessionEventLogPayload>>
 {
     public async Task<IReadOnlyList<SessionEventLogPayload>> Handle(
@@ -19,8 +21,7 @@ public sealed class GetSessionEventLogHandler(IScoringMonitoringDbContext dbCont
                 UmbralFailureCategory.Validation);
         }
 
-        return await dbContext.SessionEventLogs
-            .AsNoTracking()
+        return await sessionEventLogRepository
             .Where(eventLog => eventLog.LiveSessionId == request.LiveSessionId)
             .OrderByDescending(eventLog => eventLog.Timestamp)
             .ThenByDescending(eventLog => eventLog.Id)
@@ -33,3 +34,7 @@ public sealed class GetSessionEventLogHandler(IScoringMonitoringDbContext dbCont
             .ToListAsync(cancellationToken);
     }
 }
+
+
+
+

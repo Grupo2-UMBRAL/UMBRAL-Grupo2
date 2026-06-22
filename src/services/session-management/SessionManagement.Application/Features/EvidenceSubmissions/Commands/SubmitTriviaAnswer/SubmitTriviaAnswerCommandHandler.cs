@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -13,7 +14,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public sealed class SubmitTriviaAnswerHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
@@ -27,7 +28,7 @@ public sealed class SubmitTriviaAnswerHandler(
         ArgumentNullException.ThrowIfNull(request);
 
         var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .Include(session => session.SessionTeams)
             .Include(session => session.TeamParticipations)
             .Include(session => session.TeamProgressions)
@@ -56,7 +57,7 @@ public sealed class SubmitTriviaAnswerHandler(
         var currentStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
         var progressState = liveSession.GetProgressStateForTeam(request.SessionTeamId);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         await LogEvidenceSubmissionEventsAsync(
             evidenceSubmission,
@@ -272,3 +273,6 @@ public sealed class SubmitTriviaAnswerHandler(
             ? recordedAtUtc - stageStartedAtUtc
             : TimeSpan.Zero;
 }
+
+
+

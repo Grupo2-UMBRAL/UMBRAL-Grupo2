@@ -11,3 +11,4 @@ public sealed record ApplyPenaltyResponse(
     bool PenaltyApplied,
     int VisibleScore,
     RankingPayload Ranking);
+

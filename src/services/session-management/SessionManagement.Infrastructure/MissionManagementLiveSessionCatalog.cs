@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Umbral.ServiceDefaults;
@@ -6,7 +6,7 @@ using SessionManagement.Application.Features.LiveSessions;
 
 namespace SessionManagement.Infrastructure;
 
-public sealed class MissionManagementLiveSessionCatalog(HttpClient httpClient) : IEligibleMissionCatalog
+public sealed class MissionManagementLiveSessionCatalog(HttpClient httpClient) : IMissionManagementLiveSessionCatalog
 {
     public async Task<EligibleMissionForLiveSessionSnapshot> GetEligibleMissionForLiveSessionAsync(
         Guid missionId,

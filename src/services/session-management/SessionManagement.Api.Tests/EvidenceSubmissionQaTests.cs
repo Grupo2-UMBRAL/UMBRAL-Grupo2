@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using System.Reflection;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;

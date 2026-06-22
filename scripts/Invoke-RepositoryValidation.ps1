@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$ArtifactDirectory = "temp/validation",
     [string]$EnvironmentFilePath,
     [switch]$SkipComposeSmoke,
@@ -214,3 +214,4 @@ elseif (-not $SkipComposeSmoke -and $Scope -ne "Full") {
 }
 
 Write-Output "Repository validation passed."
+

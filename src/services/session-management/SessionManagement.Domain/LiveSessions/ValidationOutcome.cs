@@ -1,4 +1,4 @@
-﻿namespace SessionManagement.Domain.LiveSessions;
+namespace SessionManagement.Domain.LiveSessions;
 
 public enum ValidationOutcome
 {

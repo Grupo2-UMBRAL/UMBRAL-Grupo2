@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Umbral.ServiceDefaults;
 
@@ -15,6 +15,10 @@ public static class ServiceCollectionExtensions
 
         services.AddUmbralPostgresDbContext<MissionManagementDbContext>(configuration, MissionManagementPersistence.SchemaName);
 
+        
+        services.AddScoped(typeof(MissionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
+        services.AddScoped<MissionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.MissionManagementDbContext>());
         return services;
     }
 }
+

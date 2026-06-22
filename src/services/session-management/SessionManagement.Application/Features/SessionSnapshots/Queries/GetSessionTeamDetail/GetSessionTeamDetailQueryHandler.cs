@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -7,7 +8,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
 public sealed class GetSessionTeamDetailQueryHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<GetSessionTeamDetailQuery, SessionTeamDetailResponse>
 {
@@ -17,8 +18,7 @@ public sealed class GetSessionTeamDetailQueryHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await dbContext.LiveSessions
-            .AsNoTracking()
+        var liveSession = await liveSessionRepository
             .AsSplitQuery()
             .Include(session => session.SessionTeams.Where(team => team.Id == request.SessionTeamId))
             .Include(session => session.TeamParticipations.Where(participation => participation.SessionTeamId == request.SessionTeamId))
@@ -221,3 +221,7 @@ public sealed class GetSessionTeamDetailQueryHandler(
         => string.Equals(gameType, "Trivia", StringComparison.OrdinalIgnoreCase)
             && outcome == ValidationOutcome.Rejected;
 }
+
+
+
+

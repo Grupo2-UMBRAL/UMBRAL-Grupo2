@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using Umbral.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -5,7 +6,7 @@ using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
 
-public sealed class ListLiveSessionsQueryHandler(ISessionManagementDbContext dbContext)
+public sealed class ListLiveSessionsQueryHandler(IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository)
     : IRequestHandler<ListLiveSessionsQuery, IReadOnlyList<LiveSessionResponse>>
 {
     public async Task<IReadOnlyList<LiveSessionResponse>> Handle(
@@ -14,8 +15,7 @@ public sealed class ListLiveSessionsQueryHandler(ISessionManagementDbContext dbC
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSessions = await dbContext.LiveSessions
-            .AsNoTracking()
+        var liveSessions = await liveSessionRepository
             .Include(liveSession => liveSession.SessionTeams)
             .OrderByDescending(liveSession => liveSession.CreatedAtUtc)
             .ToListAsync(cancellationToken);
@@ -25,3 +25,6 @@ public sealed class ListLiveSessionsQueryHandler(ISessionManagementDbContext dbC
             .ToArray();
     }
 }
+
+
+

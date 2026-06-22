@@ -1,4 +1,4 @@
-﻿using SessionManagement.Domain.LiveSessions;
+using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Features.SessionLifecycle;
 
 namespace SessionManagement.Application.Features.LiveSessions;
@@ -70,7 +70,7 @@ public sealed record EligibleMissionStageHintSnapshot(
     decimal? Latitude,
     decimal? Longitude);
 
-public interface IEligibleMissionCatalog
+public interface IMissionManagementLiveSessionCatalog
 {
     Task<EligibleMissionForLiveSessionSnapshot> GetEligibleMissionForLiveSessionAsync(
         Guid missionId,
@@ -168,3 +168,4 @@ public static class LiveSessionMappings
             hint.Longitude);
     }
 }
+

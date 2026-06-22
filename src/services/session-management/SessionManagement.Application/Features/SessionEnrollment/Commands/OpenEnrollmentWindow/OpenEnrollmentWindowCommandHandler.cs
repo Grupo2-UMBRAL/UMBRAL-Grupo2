@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -6,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class OpenEnrollmentWindowHandler(
-    ISessionManagementDbContext dbContext,
+    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<OpenEnrollmentWindowCommand, EnrollmentWindowResponse>
 {
@@ -22,7 +23,7 @@ public sealed class OpenEnrollmentWindowHandler(
                 UmbralFailureCategory.Validation);
         }
 
-        var liveSession = await dbContext.LiveSessions
+        var liveSession = await liveSessionRepository
             .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
@@ -34,7 +35,7 @@ public sealed class OpenEnrollmentWindowHandler(
 
         var nowUtc = timeProvider.GetUtcNow();
         liveSession.OpenEnrollmentWindow(nowUtc);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new EnrollmentWindowResponse(
             liveSession.Id,
@@ -44,3 +45,6 @@ public sealed class OpenEnrollmentWindowHandler(
             liveSession.IsEnrollmentOpenAt(nowUtc));
     }
 }
+
+
+

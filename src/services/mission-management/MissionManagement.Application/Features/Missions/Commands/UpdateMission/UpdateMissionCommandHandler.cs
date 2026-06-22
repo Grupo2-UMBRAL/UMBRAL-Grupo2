@@ -1,17 +1,19 @@
-﻿using MediatR;
+using MissionManagement.Domain.Missions;
+using MissionManagement.Application.Abstractions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
 
-public sealed class UpdateMissionCommandHandler(IMissionManagementDbContext dbContext)
+public sealed class UpdateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
     : IRequestHandler<UpdateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(UpdateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await dbContext.Missions.SingleOrDefaultAsync(
+        var mission = await missionRepository.SingleOrDefaultAsync(
             existingMission => existingMission.Id == request.MissionId,
             cancellationToken);
         if (mission is null)
@@ -39,7 +41,7 @@ public sealed class UpdateMissionCommandHandler(IMissionManagementDbContext dbCo
             mission.EnsureEligibleForLiveSession();
         }
 
-        var nameAlreadyExists = await dbContext.Missions
+        var nameAlreadyExists = await missionRepository
             .AnyAsync(
                 existingMission => existingMission.Id != request.MissionId && existingMission.Name == mission.Name,
                 cancellationToken);
@@ -51,8 +53,11 @@ public sealed class UpdateMissionCommandHandler(IMissionManagementDbContext dbCo
                 UmbralFailureCategory.Conflict);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
 }
+
+
+

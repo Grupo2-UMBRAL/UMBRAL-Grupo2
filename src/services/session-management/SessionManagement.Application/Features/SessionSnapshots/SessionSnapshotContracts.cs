@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
@@ -63,3 +63,4 @@ public static class SessionSnapshotConstants
     public const long InitialSequenceNumber = 0;
     public const string NotStartedProgressState = "NotStarted";
 }
+

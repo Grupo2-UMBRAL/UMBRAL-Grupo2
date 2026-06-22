@@ -18,3 +18,4 @@ public interface IScoringMonitoringUpdatesPublisher
 
     Task PublishEventLogUpdatedAsync(SessionEventLogPayload eventLog, CancellationToken cancellationToken);
 }
+
