@@ -56,6 +56,19 @@ function shortTeamId(sessionTeamId: string) {
   return sessionTeamId.slice(0, 8);
 }
 
+function resolveMedal(rank: number) {
+  switch (rank) {
+    case 1:
+      return "🥇";
+    case 2:
+      return "🥈";
+    case 3:
+      return "🥉";
+    default:
+      return "";
+  }
+}
+
 function resolveRankingStatus(status: RankingStatus) {
   switch (status) {
     case "fresh":
@@ -296,7 +309,7 @@ export default function RankingPage() {
     <ScreenShell
       eyebrow="Ranking"
       title={snapshot ? `${snapshot.teamName} standings` : "Session Team standings"}
-      description="Scoreboard publishes ranking updates from Scoring and Monitoring without making the mobile client a scoring source."
+      description="Posiciones en vivo de tu sesión. Se ordena por puntaje y, en empate, por tiempo de resolución."
     >
       <View style={shellStyles.card}>
         <View style={shellStyles.row}>
@@ -306,7 +319,7 @@ export default function RankingPage() {
         <Text style={shellStyles.cardText}>
           {ownRanking
             ? `Tu equipo va en puesto #${ownRanking.rank} con ${ownRanking.visibleScore} pts.`
-            : "Ranking listo cuando Scoreboard registre crÃ©dito de etapa."}
+            : "Ranking listo cuando tu equipo sume su primer puntaje."}
         </Text>
         {rankingError ? <Text style={styles.error}>{rankingError}</Text> : null}
         <Pressable
@@ -318,14 +331,14 @@ export default function RankingPage() {
           }}
           style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
         >
-          <Text style={styles.secondaryButtonLabel}>Refresh ranking</Text>
+          <Text style={styles.secondaryButtonLabel}>Actualizar ranking</Text>
         </Pressable>
       </View>
 
       {rankingStatus === "loading" && !ranking ? (
         <View style={styles.inlineStatus}>
           <ActivityIndicator color="#17313b" />
-          <Text style={styles.inlineStatusText}>Loading ranking...</Text>
+          <Text style={styles.inlineStatusText}>Cargando ranking...</Text>
         </View>
       ) : null}
 
@@ -337,14 +350,17 @@ export default function RankingPage() {
             return (
               <View key={entry.sessionTeamId} style={[shellStyles.card, isOwnTeam && styles.ownTeamCard]}>
                 <View style={shellStyles.row}>
+                  {resolveMedal(entry.rank) ? (
+                    <Text style={styles.medal}>{resolveMedal(entry.rank)}</Text>
+                  ) : null}
                   <StatusChip label={`#${entry.rank}`} tone={isOwnTeam ? "success" : "info"} />
                   {isOwnTeam ? <StatusChip label="Tu equipo" tone="success" /> : null}
                 </View>
                 <Text style={shellStyles.cardTitle}>
                   {isOwnTeam ? storedEnrollment.teamName : `Session Team ${shortTeamId(entry.sessionTeamId)}`}
                 </Text>
-                <Text style={shellStyles.cardText}>{entry.visibleScore} pts</Text>
-                <Text style={shellStyles.mono}>Resolution Time {formatResolutionTime(entry.resolutionTime)}</Text>
+                <Text style={styles.score}>{entry.visibleScore} pts</Text>
+                <Text style={shellStyles.mono}>Tiempo {formatResolutionTime(entry.resolutionTime)}</Text>
               </View>
             );
           })
@@ -352,7 +368,7 @@ export default function RankingPage() {
           <View style={shellStyles.card}>
             <StatusChip label="Sin puntaje" tone="warn" />
             <Text style={shellStyles.cardText}>
-              El Ranking aparecera cuando una Evidence Submission aceptada genere Score Entries.
+              El ranking aparecerá cuando una respuesta aceptada sume puntaje.
             </Text>
           </View>
         )}
@@ -365,6 +381,14 @@ const styles = StyleSheet.create({
   ownTeamCard: {
     borderColor: "#74c69d",
     borderWidth: 2
+  },
+  medal: {
+    fontSize: 22
+  },
+  score: {
+    color: "#2d6a4f",
+    fontSize: 22,
+    fontWeight: "900"
   },
   secondaryButton: {
     alignItems: "center",

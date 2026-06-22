@@ -42,15 +42,15 @@ If you want a native phone preview instead of Expo web, see `README.expo-go.md`.
 3. Verify redirect into the participant shell.
 4. Login with `operator / operator123!` or `admin / admin123!`.
 5. Verify mobile role rejection and redirect to the forbidden screen.
-6. Open the home screen and tap `Probe edge proxy`.
-7. Verify the response shows `200` from `/health` and the outgoing request preview includes `Authorization: Bearer ...`.
-8. Stop `edge-proxy` and verify the probe fails cleanly.
-9. With a valid participant session, observe the SignalR connection state on the home screen.
-10. Stop `session-management-service` or the network and verify the state moves to `error` or `reconnecting`.
-11. Restore connectivity and verify the resync counter increments once the hub reconnects.
+6. On the game hub, confirm the connection chip and, if enrolled, the current stage card with its `Continuar misión` CTA.
+7. Join a session by code, then open the board and confirm the stage `Prompt` is shown before submitting evidence.
+8. For a `Trivia` stage submit a text answer; for a `Treasure Hunt` stage scan a QR. Verify immediate accepted/rejected feedback.
+9. Open `Progreso` and confirm the guided stage path; open `Pistas` and confirm released hints (and revealed solutions once finalized).
+10. Open `Ranking` and confirm live standings highlight your team.
+11. Stop `session-management-service` or the network and verify the connection state moves to `error` or `reconnecting`, then restores on reconnect.
 
 ## Notes
 
-- The shell intentionally stops at auth, transport and placeholder navigation. It does not implement QR scan, live team board or ranking logic yet.
+- The participant client implements the full game flow: hub, session join, live board with `Trivia` text answers and `Treasure Hunt` QR scan, guided progress path, hints/solutions and live ranking.
 - `User` identity stays in auth state; it is not treated as `Session Team`.
 - The compose flow keeps dependency install, typecheck and runtime validation inside containers instead of local host commands.

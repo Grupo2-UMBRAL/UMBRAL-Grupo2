@@ -34,12 +34,12 @@ export default function ParticipantLayout() {
         }
       }}
     >
-      <Stack.Screen name="home" options={{ title: "Participant shell" }} />
-      <Stack.Screen name="join" options={{ title: "Join session" }} />
-      <Stack.Screen name="board" options={{ title: "Team board" }} />
-      <Stack.Screen name="progress" options={{ title: "Progress path" }} />
+      <Stack.Screen name="home" options={{ title: "Inicio" }} />
+      <Stack.Screen name="join" options={{ title: "Unirse" }} />
+      <Stack.Screen name="board" options={{ title: "Tablero" }} />
+      <Stack.Screen name="progress" options={{ title: "Progreso" }} />
       <Stack.Screen name="ranking" options={{ title: "Ranking" }} />
-      <Stack.Screen name="resolutions" options={{ title: "Hints and solutions" }} />
+      <Stack.Screen name="resolutions" options={{ title: "Pistas" }} />
     </Stack>
   );
 }

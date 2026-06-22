@@ -26,6 +26,12 @@ import {
 } from "../../../src/lib/api-client";
 import { getClientConfig } from "../../../src/lib/config";
 import {
+  basePointsForDifficulty,
+  formatDifficulty,
+  formatGameType,
+  isTreasureHunt
+} from "../../../src/lib/stage-progress";
+import {
   loadStoredEnrollment,
   type StoredEnrollment
 } from "../../../src/lib/session-storage";
@@ -288,6 +294,8 @@ export default function BoardPage() {
 
   const currentStage = snapshot?.currentStage;
   const completedStages = currentStage ? Math.max(0, currentStage.sessionStageOrder - 1) : 0;
+  const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
+  const treasureHuntStage = isTreasureHunt(currentStage?.gameType);
   const currentSessionState = snapshot?.sessionState ?? null;
   const isFinalized = currentSessionState === "Finalized";
   const actionBlocked = currentSessionState !== "Running" && currentSessionState !== "Active";
@@ -420,9 +428,9 @@ export default function BoardPage() {
 
   return (
     <ScreenShell
-      eyebrow="Participant Stage View"
+      eyebrow="Tablero del equipo"
       title={`${snapshot.teamName} board`}
-      description="Current stage, progress, Hint Release and Evidence Submission stay aligned with Session Operations and realtime updates."
+      description="Resuelve la etapa actual, revisa tus pistas y envía tu evidencia en tiempo real."
     >
       <View style={shellStyles.card}>
         <View style={shellStyles.row}>
@@ -438,24 +446,37 @@ export default function BoardPage() {
       </View>
 
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Session progression</Text>
         <View style={shellStyles.row}>
-          <StatusChip label={`${completedStages} completed`} tone="success" />
+          <StatusChip label={`${completedStages} superadas`} tone="success" />
           <StatusChip
-            label={currentStage ? `Current ${currentStage.sessionStageOrder}` : "No active stage"}
+            label={currentStage ? `Etapa ${currentStage.sessionStageOrder}` : "Sin etapa activa"}
             tone="info"
           />
           {countdown ? <StatusChip label={countdown} tone="warn" /> : null}
         </View>
         {currentStage ? (
           <>
+            <View style={shellStyles.row}>
+              <StatusChip label={formatGameType(currentStage.gameType)} tone="info" />
+              {currentStage.difficulty ? (
+                <StatusChip label={formatDifficulty(currentStage.difficulty)} tone="neutral" />
+              ) : null}
+              {stagePoints ? <StatusChip label={`${stagePoints} pts`} tone="success" /> : null}
+            </View>
             <Text style={styles.stageTitle}>{currentStage.name}</Text>
-            <Text style={shellStyles.cardText}>
-              Stage order {currentStage.sessionStageOrder} | Difficulty {currentStage.difficulty} | Game type {currentStage.gameType}
-            </Text>
+            {currentStage.prompt ? (
+              <View style={styles.promptCard}>
+                <Text style={styles.promptLabel}>
+                  {treasureHuntStage ? "🧭 Tu misión" : "🧩 Pregunta"}
+                </Text>
+                <Text style={styles.promptText}>{currentStage.prompt}</Text>
+              </View>
+            ) : null}
           </>
         ) : (
-          <Text style={shellStyles.cardText}>No current playable stage is visible for this Session Team yet.</Text>
+          <Text style={shellStyles.cardText}>
+            Tu equipo aún no tiene una etapa jugable visible.
+          </Text>
         )}
       </View>
 
@@ -467,9 +488,13 @@ export default function BoardPage() {
       ) : null}
 
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Evidence Submission</Text>
+        <Text style={shellStyles.cardTitle}>
+          {treasureHuntStage ? "Escanea el QR del tesoro" : "Tu respuesta"}
+        </Text>
         <Text style={shellStyles.cardText}>
-          Session Operations accepts evidence only while Session State stays Running.
+          {treasureHuntStage
+            ? "Encuentra el punto de la pista y escanea su código QR para validar la etapa."
+            : "Escribe la respuesta a la pregunta. La validación es inmediata."}
         </Text>
         {actionBlocked ? (
           <Text style={styles.warning}>Evidence CTA disabled by lifecycle guard.</Text>
@@ -477,9 +502,9 @@ export default function BoardPage() {
         {isFinalized ? (
           <View style={styles.finalizedEvidenceNotice}>
             <StatusChip label="Finalized" tone="error" />
-            <Text style={shellStyles.cardText}>Evidence Submission closed.</Text>
+            <Text style={shellStyles.cardText}>Los envíos están cerrados para esta sesión.</Text>
           </View>
-        ) : (currentStage?.gameType === "TreasureHunt" || currentStage?.gameType === "Treasure Hunt") ? (
+        ) : treasureHuntStage ? (
           <Pressable
             disabled={actionBlocked || submitting}
             onPress={() => {
@@ -577,7 +602,7 @@ export default function BoardPage() {
         </View>
       ) : (
         <View style={shellStyles.section}>
-          <Text style={shellStyles.cardTitle}>Visible hints</Text>
+          <Text style={shellStyles.cardTitle}>Pistas</Text>
           {visibleGameplayHints.length ? (
             visibleGameplayHints.map((hint) => (
               <View key={hint.hintId} style={styles.hintItem}>
@@ -833,6 +858,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     lineHeight: 30
+  },
+  promptCard: {
+    backgroundColor: "#eef7fb",
+    borderColor: "#9cd0e2",
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 8,
+    padding: 16
+  },
+  promptLabel: {
+    color: "#175f78",
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase"
+  },
+  promptText: {
+    color: "#17313b",
+    fontSize: 18,
+    fontWeight: "600",
+    lineHeight: 26
   },
   hintItem: {
     backgroundColor: "#fffaf5",

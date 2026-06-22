@@ -4,10 +4,6 @@ function normalizePath(path: string) {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-function createAuthorizationHeaderPreview(accessToken: string) {
-  return `Bearer ${accessToken.slice(0, 18)}...`;
-}
-
 async function readResponseBody(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
@@ -63,14 +59,6 @@ export class ApiClientError extends Error {
     this.name = "ApiClientError";
   }
 }
-
-export type ApiProbeResult = {
-  ok: boolean;
-  status: number;
-  body: string;
-  url: string;
-  authorizationHeaderPreview: string;
-};
 
 export type ParticipantEnrollmentStatus = {
   liveSessionId: string;
@@ -247,19 +235,6 @@ export function createAuthorizedApiClient(accessToken: string) {
   }
 
   return {
-    request,
-    authorizationHeaderPreview: createAuthorizationHeaderPreview(accessToken),
-    async getHealth(): Promise<ApiProbeResult> {
-      const { url, response } = await request("/health");
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        body: await response.text(),
-        url,
-        authorizationHeaderPreview: createAuthorizationHeaderPreview(accessToken)
-      };
-    },
     validateEnrollmentJoinCode(joinCode: string) {
       return requestJson<ParticipantEnrollmentStatus>(
         `/api/session-management/session-enrollment/${encodeURIComponent(joinCode)}/validate`
