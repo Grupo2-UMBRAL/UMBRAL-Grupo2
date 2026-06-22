@@ -23,16 +23,17 @@ EXPECTED_API_AUDIENCES = {
     "umbral-session-management-api",
     "umbral-scoring-monitoring-api",
 }
+# After the bounded-context refactor the per-service bootstrap endpoints and the
+# mission/scoring smoke routes were removed as dead code. The only role-gated no-op
+# probe that survived lives on session-management, so all auth-through-proxy checks
+# now target its SmokeController (api/session-management/smoke/{role}).
 BOOTSTRAP_PATHS = [
-    "/identity-access/api/identity-access/bootstrap",
-    "/mission-management/api/mission-management/bootstrap",
-    "/session-management/api/session-management/bootstrap",
-    "/scoring-monitoring/api/scoring-monitoring/bootstrap",
+    "/session-management/api/session-management/smoke/participant",
 ]
 ROLE_SMOKE_PATHS = {
-    "admin": "/mission-management/api/mission-management/smoke/administrator",
+    "admin": "/session-management/api/session-management/smoke/administrator",
     "operator": "/session-management/api/session-management/smoke/operator",
-    "participant": "/scoring-monitoring/api/scoring-monitoring/smoke/participant",
+    "participant": "/session-management/api/session-management/smoke/participant",
 }
 SEED_USERS = {
     "admin": "admin123!",
