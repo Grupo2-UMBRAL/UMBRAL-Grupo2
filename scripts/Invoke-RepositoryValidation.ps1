@@ -34,8 +34,8 @@ $mobileDirectory = Join-Path $repositoryRoot "src/apps/mobile"
 
 $backendProjects = @(
     "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
-    "src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.IdentityAccess.Api.csproj",
-    "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
+    "src/services/user-management/UserManagement.Api/UserManagement.Api.csproj",
+    "src/services/user-management/UserManagement.Api.Tests/UserManagement.Api.Tests.csproj",
     "src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj",
     "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj",
@@ -46,7 +46,7 @@ $backendProjects = @(
 
 $backendTestProjects = @(
     "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
-    "src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj",
+    "src/services/user-management/UserManagement.Api.Tests/UserManagement.Api.Tests.csproj",
     "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj",
     "src/services/session-management/SessionManagement.Api.Tests/SessionManagement.Api.Tests.csproj"
@@ -67,6 +67,12 @@ function Invoke-NpmCommand {
         [string[]]$CommandArgs,
         [string]$ComposeService
     )
+
+    # Native tools (npm/vite/rolldown) write benign warnings to stderr. Under the
+    # script-level $ErrorActionPreference = "Stop", Windows PowerShell 5.1 turns those
+    # stderr lines into terminating errors before the exit-code check runs, failing the
+    # gate even when the command succeeded. Judge success by exit code only.
+    $ErrorActionPreference = 'Continue'
 
     $isWindowsHost = $env:OS -eq "Windows_NT"
 
@@ -113,6 +119,9 @@ function Invoke-DotnetCommand {
         Push-Location $repositoryRoot
         try {
             & dotnet @Arguments
+            if ($LASTEXITCODE -ne 0) {
+                throw "dotnet $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
+            }
         }
         finally {
             Pop-Location
@@ -123,6 +132,9 @@ function Invoke-DotnetCommand {
     Push-Location $repositoryRoot
     try {
         & docker compose --env-file "$envFile" -f "docker-compose.dev.yml" -f "docker-compose.utils.yml" run --rm --entrypoint dotnet dotnet-sdk @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose run dotnet-sdk $($Arguments -join ' ') failed with exit code $LASTEXITCODE."
+        }
     }
     finally {
         Pop-Location

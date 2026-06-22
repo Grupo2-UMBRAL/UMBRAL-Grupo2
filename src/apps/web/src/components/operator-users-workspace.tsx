@@ -219,7 +219,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const operatorsUrl = useMemo(
-    () => `${getClientConfig().edgeProxyPublicBaseUrl}/identity-access/api/identity-access/operators`,
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/identity-access/api/operators`,
     []
   );
 
