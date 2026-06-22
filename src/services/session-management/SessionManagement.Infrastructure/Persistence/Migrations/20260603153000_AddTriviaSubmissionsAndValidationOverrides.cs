@@ -14,7 +14,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.AlterColumn<string>(
                 name: "SubmittedHash",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "evidence_submissions",
                 type: "character varying(512)",
                 maxLength: 512,
@@ -25,7 +25,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "SubmittedText",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "evidence_submissions",
                 type: "character varying(1000)",
                 maxLength: 1000,
@@ -33,7 +33,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "validation_override_logs",
-                schema: "session_operations",
+                schema: "session_management",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -53,21 +53,21 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_validation_override_logs_evidence_submissions_EvidenceSubmiss~",
                         column: x => x.EvidenceSubmissionId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "evidence_submissions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_validation_override_logs_live_sessions_LiveSessionId",
                         column: x => x.LiveSessionId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "live_sessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_validation_override_logs_session_teams_SessionTeamId",
                         column: x => x.SessionTeamId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "session_teams",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -75,25 +75,25 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_validation_override_logs_evidence_submission_id",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "validation_override_logs",
                 column: "EvidenceSubmissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_validation_override_logs_LiveSessionId",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "validation_override_logs",
                 column: "LiveSessionId");
 
             migrationBuilder.CreateIndex(
                 name: "ix_validation_override_logs_live_session_team_stage",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "validation_override_logs",
                 columns: new[] { "LiveSessionId", "SessionTeamId", "MissionStageId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_validation_override_logs_SessionTeamId",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "validation_override_logs",
                 column: "SessionTeamId");
         }
@@ -103,16 +103,16 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "validation_override_logs",
-                schema: "session_operations");
+                schema: "session_management");
 
             migrationBuilder.DropColumn(
                 name: "SubmittedText",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "evidence_submissions");
 
             migrationBuilder.AlterColumn<string>(
                 name: "SubmittedHash",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "evidence_submissions",
                 type: "character varying(512)",
                 maxLength: 512,

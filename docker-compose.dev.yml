@@ -113,7 +113,7 @@
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=session_operations
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=session_management
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
       RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}
@@ -142,7 +142,7 @@
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_ops
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_monitoring
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
       RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}

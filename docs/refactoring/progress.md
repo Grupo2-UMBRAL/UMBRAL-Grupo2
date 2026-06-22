@@ -1,5 +1,11 @@
 ﻿# Backend Refactoring Progress
 
+> **Note (2026-06-18):** Bounded contexts were renamed after this tracker was written:
+> `mission-design`→`mission-management`, `scoring-audit`→`scoring-monitoring`,
+> `session-operations`→`session-management`. Where this doc says `MissionDesign.*` etc.,
+> read `MissionManagement.*`. See [remediation-2026-06-18.md](remediation-2026-06-18.md)
+> for the post-refactor architecture review and fixes.
+
 ## Phase 1: Clean Shared Library âœ… COMPLETE
 - [x] Delete YAGNI files (ServiceIdentity, Bootstrap interfaces, ServiceBootstrapDetails)
 - [x] Delete CurrentUser abstraction (CurrentUser, ICurrentUserAccessor, HttpContextCurrentUserAccessor)

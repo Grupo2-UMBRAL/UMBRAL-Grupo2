@@ -17,7 +17,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "join_code_value",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 type: "character varying(6)",
                 maxLength: 6,
@@ -25,21 +25,21 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "enrollment_window_opened_at_utc",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 type: "timestamp with time zone",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "enrollment_window_closed_at_utc",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 type: "timestamp with time zone",
                 nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "session_teams",
-                schema: "session_operations",
+                schema: "session_management",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -54,7 +54,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_session_teams_live_sessions_LiveSessionId",
                         column: x => x.LiveSessionId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "live_sessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -62,7 +62,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "team_participations",
-                schema: "session_operations",
+                schema: "session_management",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -77,14 +77,14 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_team_participations_live_sessions_LiveSessionId",
                         column: x => x.LiveSessionId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "live_sessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_team_participations_session_teams_SessionTeamId",
                         column: x => x.SessionTeamId,
-                        principalSchema: "session_operations",
+                        principalSchema: "session_management",
                         principalTable: "session_teams",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -92,7 +92,7 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_live_sessions_join_code_value",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions",
                 column: "join_code_value",
                 unique: true,
@@ -100,21 +100,21 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_session_teams_live_session_id_normalized_name",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "session_teams",
                 columns: new[] { "LiveSessionId", "NormalizedName" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "ix_team_participations_live_session_id_participant_user_id",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "team_participations",
                 columns: new[] { "LiveSessionId", "ParticipantUserId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_team_participations_SessionTeamId",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "team_participations",
                 column: "SessionTeamId");
         }
@@ -124,30 +124,30 @@ namespace SessionManagement.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "team_participations",
-                schema: "session_operations");
+                schema: "session_management");
 
             migrationBuilder.DropTable(
                 name: "session_teams",
-                schema: "session_operations");
+                schema: "session_management");
 
             migrationBuilder.DropIndex(
                 name: "ix_live_sessions_join_code_value",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions");
 
             migrationBuilder.DropColumn(
                 name: "join_code_value",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions");
 
             migrationBuilder.DropColumn(
                 name: "enrollment_window_opened_at_utc",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions");
 
             migrationBuilder.DropColumn(
                 name: "enrollment_window_closed_at_utc",
-                schema: "session_operations",
+                schema: "session_management",
                 table: "live_sessions");
         }
     }

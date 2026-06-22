@@ -13,7 +13,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "session_event_logs",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -29,7 +29,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "ix_session_event_logs_live_session_id_timestamp",
-                schema: "scoring_ops",
+                schema: "scoring_monitoring",
                 table: "session_event_logs",
                 columns: new[] { "live_session_id", "timestamp" });
         }
@@ -39,7 +39,7 @@ namespace ScoringMonitoring.Infrastructure.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "session_event_logs",
-                schema: "scoring_ops");
+                schema: "scoring_monitoring");
         }
     }
 }

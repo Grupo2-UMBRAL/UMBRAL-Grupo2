@@ -6,7 +6,7 @@ using SessionManagement.Application.Features.LiveSessions;
 
 namespace SessionManagement.Infrastructure;
 
-public sealed class MissionManagementLiveSessionCatalog(HttpClient httpClient) : IMissionManagementLiveSessionCatalog
+public sealed class MissionManagementLiveSessionCatalog(HttpClient httpClient) : IEligibleMissionCatalog
 {
     public async Task<EligibleMissionForLiveSessionSnapshot> GetEligibleMissionForLiveSessionAsync(
         Guid missionId,

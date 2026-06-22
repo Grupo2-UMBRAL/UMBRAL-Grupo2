@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 using ScoringMonitoring.Infrastructure;
-using ScoringMonitoring.Infrastructure.Realtime;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
