@@ -1,4 +1,4 @@
-﻿# Validation Pipeline
+# Validation Pipeline
 
 Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y smoke tests de `docker compose`.
 
@@ -7,7 +7,7 @@ Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y
 - install y build de `web` y `mobile`
 - lint y typecheck de `web`
 - typecheck y build de `mobile`
-- build y tests `.NET` para `shared`, `identity-access`, `mission-management`, `session-management` y `scoring-monitoring`
+- build y tests `.NET` para `shared`, `user-management`, `mission-management`, `session-management` y `scoring-monitoring`
 - cobertura backend con `Coverlet`
 - reportes agregados de cobertura con `ReportGenerator`
 - smoke tests de `docker compose` para `edge-proxy`, servicios backend, `Keycloak`, `PostgreSQL` y `RabbitMQ`
@@ -39,7 +39,7 @@ Si la maquina local tiene puertos ocupados o reservados por Windows, generar un 
 
 ```powershell
 Copy-Item .env.example .env.validation
-# Ajustar EDGE_PROXY_PORT, IDENTITY_ACCESS_PORT, MISSION_MANAGEMENT_PORT,
+# Ajustar EDGE_PROXY_PORT, USER_MANAGEMENT_PORT, MISSION_MANAGEMENT_PORT,
 # SESSION_OPERATIONS_PORT y SCORING_MONITORING_PORT a puertos disponibles.
 ./scripts/Invoke-ComposeSmokeValidation.ps1 -EnvironmentFilePath .env.validation
 ```
@@ -78,7 +78,7 @@ Cobertura backend:
 
 - Meta academica: `90%` backend.
 - Umbral temporal actual: `10%`.
-- Razon: repo todavia combina suites robustas en `identity-access` con bootstrap tests minimos en otros servicios.
+- Razon: repo todavia combina suites robustas en `user-management` con bootstrap tests minimos en otros servicios.
 - Plan de subida:
   1. llevar cada servicio a casos de aplicacion y dominio medibles
   2. subir umbral temporal a `50%`

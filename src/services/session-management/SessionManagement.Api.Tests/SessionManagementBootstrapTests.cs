@@ -310,18 +310,16 @@ public sealed class LiveSessionEndpointTests
         factory.SetEligibleMission(new EligibleMissionForLiveSessionSnapshot(
             Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             "Night Mission",
+            "Night Mission description",
+            120,
             [
                 CreateMissionStageSnapshot(
                     Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                    "Stage 1",
-                    sessionStageOrder: 1,
-                    sourceOrder: 10,
+                    order: 10,
                     difficulty: "Easy"),
                 CreateMissionStageSnapshot(
                     Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                    "Stage 2",
-                    sessionStageOrder: 2,
-                    sourceOrder: 20,
+                    order: 20,
                     difficulty: "Hard")
             ]));
         var client = factory.CreateOperatorClient();
@@ -348,16 +346,16 @@ public sealed class LiveSessionEndpointTests
             liveSession.SessionStageFlow,
             first =>
             {
-                Assert.Equal("Stage 2", first.Name);
-                Assert.Equal("Prompt for Stage 2", first.Prompt);
+                Assert.Equal("Play 20", first.Name);
+                Assert.Equal("Prompt for Play 20", first.Prompt);
                 Assert.Equal(1, first.SessionStageOrder);
                 Assert.Equal(20, first.SourceOrder);
                 Assert.Equal("Hard", first.Difficulty);
             },
             second =>
             {
-                Assert.Equal("Stage 1", second.Name);
-                Assert.Equal("Prompt for Stage 1", second.Prompt);
+                Assert.Equal("Play 10", second.Name);
+                Assert.Equal("Prompt for Play 10", second.Prompt);
                 Assert.Equal(2, second.SessionStageOrder);
                 Assert.Equal(10, second.SourceOrder);
                 Assert.Equal("Easy", second.Difficulty);
@@ -392,7 +390,9 @@ public sealed class LiveSessionEndpointTests
         factory.SetEligibleMission(new EligibleMissionForLiveSessionSnapshot(
             Guid.NewGuid(),
             "Night Mission",
-            [CreateMissionStageSnapshot(Guid.NewGuid(), "Stage 1", 1, 1, "Medium")]));
+            "Night Mission description",
+            120,
+            [CreateMissionStageSnapshot(Guid.NewGuid(), order: 1, difficulty: "Medium")]));
         var client = factory.CreateOperatorClient();
 
         var response = await client.PostAsJsonAsync(
@@ -510,24 +510,24 @@ public sealed class LiveSessionEndpointTests
             fourth => Assert.Equal(LiveSessionStates.Finalized, fourth.State));
     }
 
-    private static EligibleMissionStageSnapshot CreateMissionStageSnapshot(
+    private static EligiblePlaySnapshot CreateMissionStageSnapshot(
         Guid id,
-        string name,
-        int sessionStageOrder,
-        int sourceOrder,
+        int order,
         string difficulty)
     {
-        return new EligibleMissionStageSnapshot(
+        var correctChoiceId = Guid.NewGuid();
+        return new EligiblePlaySnapshot(
             id,
-            name,
-            sessionStageOrder,
-            sourceOrder,
-            30,
-            difficulty,
+            order,
             "Trivia",
-            $"Prompt for {name}",
-            null,
-            "answer",
+            difficulty,
+            30,
+            $"Prompt for Play {order}",
+            [
+                new EligibleChoiceSnapshot(correctChoiceId, "Answer"),
+                new EligibleChoiceSnapshot(Guid.NewGuid(), "Decoy")
+            ],
+            correctChoiceId,
             null,
             []);
     }
@@ -556,21 +556,25 @@ public sealed class LiveSessionEndpointTests
 
     private static EligibleMissionForLiveSessionSnapshot CreateEligibleMission(Guid missionId, Guid missionStageId)
     {
+        var correctChoiceId = Guid.NewGuid();
         return new EligibleMissionForLiveSessionSnapshot(
             missionId,
             "Night Mission",
+            "Night Mission description",
+            120,
             [
-                new EligibleMissionStageSnapshot(
+                new EligiblePlaySnapshot(
                     missionStageId,
-                    "Stage 1",
                     1,
-                    1,
-                    30,
-                    "Medium",
                     "Trivia",
+                    "Medium",
+                    30,
                     "Prompt for Stage 1",
-                    null,
-                    "answer",
+                    [
+                        new EligibleChoiceSnapshot(correctChoiceId, "Answer"),
+                        new EligibleChoiceSnapshot(Guid.NewGuid(), "Decoy")
+                    ],
+                    correctChoiceId,
                     null,
                     [])
             ]);

@@ -32,9 +32,9 @@ public sealed class RecordStageCreditHandler(
             scoreboard.RebuildState();
         }
 
-        var scoreEntry = scoreboard.GrantStageCredit(
+        var scoreEntry = scoreboard.GrantPlayCredit(
             request.SessionTeamId,
-            request.MissionStageId,
+            request.PlayId,
             ParseDifficulty(request.Difficulty),
             request.ResolutionTime,
             request.RecordedAt,
@@ -70,23 +70,23 @@ public sealed class RecordStageCreditHandler(
         return new RecordStageCreditResponse(
             scoreboard.LiveSessionId,
             request.SessionTeamId,
-            request.MissionStageId,
+            request.PlayId,
             scoreEntry?.ScoreEntryId,
             scoreEntry is not null,
             scoreboard.GetTeamScore(request.SessionTeamId).VisibleScore,
             ranking);
     }
 
-    private static MissionStageDifficulty ParseDifficulty(string difficulty)
+    private static PlayDifficulty ParseDifficulty(string difficulty)
     {
-        if (Enum.TryParse<MissionStageDifficulty>(difficulty, ignoreCase: true, out var parsed))
+        if (Enum.TryParse<PlayDifficulty>(difficulty, ignoreCase: true, out var parsed))
         {
             return parsed;
         }
 
         throw new UmbralDomainException(
             "scoreboard.unknown_difficulty",
-            "Mission Stage difficulty is not supported.",
+            "Play difficulty is not supported.",
             UmbralFailureCategory.Validation);
     }
 
@@ -96,7 +96,7 @@ public sealed class RecordStageCreditHandler(
     {
         var source = request.ValidationOverride ? " through Validation Override" : string.Empty;
 
-        return $"Session Team '{request.SessionTeamId}' completed Mission Stage '{request.MissionStageId}'{source} and received {scoreEntry.Delta} point(s). Visible score: {scoreEntry.VisibleScoreAfter}.";
+        return $"Session Team '{request.SessionTeamId}' completed Play '{request.PlayId}'{source} and received {scoreEntry.Delta} point(s). Visible score: {scoreEntry.VisibleScoreAfter}.";
     }
 }
 

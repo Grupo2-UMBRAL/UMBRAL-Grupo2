@@ -147,7 +147,8 @@ public sealed class GetSessionTeamDetailQueryHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType,
-            currentStage.Prompt);
+            currentStage.Prompt,
+            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
     }
 
     private static IReadOnlyList<SessionTeamReleasedHintDetail> MapReleasedHints(
@@ -211,6 +212,7 @@ public sealed class GetSessionTeamDetailQueryHandler(
             gameType,
             submission.SubmittedHash,
             submission.SubmittedText,
+            submission.SubmittedChoiceId,
             outcome,
             submission.FailureReason,
             submission.SubmittedAtUtc,

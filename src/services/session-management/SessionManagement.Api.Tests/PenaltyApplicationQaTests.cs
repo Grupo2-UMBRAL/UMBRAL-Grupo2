@@ -149,7 +149,8 @@ public sealed class PenaltyApplicationQaTests
                     "Medium",
                     "Trivia",
                     "Prompt",
-                    triviaValidAnswer: "seal")
+                    choices: [LiveSessionChoice.Create(Guid.Parse("99999999-9999-9999-9999-999999999991"), "Seal")],
+                    correctChoiceId: Guid.Parse("99999999-9999-9999-9999-999999999991"))
             ]);
 
         liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-10)));

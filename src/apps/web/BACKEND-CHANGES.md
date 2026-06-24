@@ -1,4 +1,4 @@
-﻿# Cambios Pendientes en el Backend
+# Cambios Pendientes en el Backend
 
 Cambios que el backend necesita para completar la integraciÃ³n con el nuevo frontend SPA.
 
@@ -72,7 +72,7 @@ El frontend SPA usa las mismas variables de entorno que antes, inyectadas via `v
 Todos los endpoints de API documentados en el plan de implementaciÃ³n siguen siendo consumidos de la misma forma. El frontend hace fetch directo al edge-proxy con `Authorization: Bearer <token>`.
 
 No hay cambios requeridos en:
-- identity-access-service
+- user-management-service
 - mission-management-service
 - session-management-service
 - scoring-monitoring-service

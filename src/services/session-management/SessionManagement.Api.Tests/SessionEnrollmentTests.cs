@@ -184,21 +184,25 @@ public sealed class SessionEnrollmentEndpointTests
 
     private static EligibleMissionForLiveSessionSnapshot CreateEligibleMission(Guid missionId, Guid missionStageId)
     {
+        var correctChoiceId = Guid.NewGuid();
         return new EligibleMissionForLiveSessionSnapshot(
             missionId,
             "Night Mission",
+            "Night Mission description",
+            120,
             [
-                new EligibleMissionStageSnapshot(
+                new EligiblePlaySnapshot(
                     missionStageId,
-                    "Stage 1",
                     1,
-                    1,
-                    30,
-                    "Medium",
                     "Trivia",
+                    "Medium",
+                    30,
                     "What symbol completes the mural?",
-                    null,
-                    "answer",
+                    [
+                        new EligibleChoiceSnapshot(correctChoiceId, "Answer"),
+                        new EligibleChoiceSnapshot(Guid.NewGuid(), "Decoy")
+                    ],
+                    correctChoiceId,
                     null,
                     [])
             ]);

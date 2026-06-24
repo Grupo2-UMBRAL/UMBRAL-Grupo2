@@ -1,4 +1,4 @@
-﻿{
+{
   "realm": "umbral",
   "enabled": true,
   "displayName": "UMBRAL",
@@ -107,7 +107,7 @@
       ]
     },
     {
-      "clientId": "umbral-identity-access-api",
+      "clientId": "umbral-user-management-api",
       "name": "Identity and Access API",
       "enabled": true,
       "publicClient": false,
@@ -115,7 +115,7 @@
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "secret": "identity-access-secret"
+      "secret": "user-management-secret"
     },
     {
       "clientId": "umbral-mission-management-api",
@@ -195,12 +195,12 @@
       },
       "protocolMappers": [
         {
-          "name": "audience-identity-access-api",
+          "name": "audience-user-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
           "config": {
-            "included.client.audience": "umbral-identity-access-api",
+            "included.client.audience": "umbral-user-management-api",
             "id.token.claim": "false",
             "access.token.claim": "true",
             "lightweight.claim": "false"

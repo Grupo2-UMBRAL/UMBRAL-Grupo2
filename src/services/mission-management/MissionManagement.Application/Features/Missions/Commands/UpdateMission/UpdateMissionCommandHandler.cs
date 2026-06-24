@@ -6,7 +6,10 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
 
-public sealed class UpdateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
+public sealed class UpdateMissionCommandHandler(
+    IUnitOfWork unitOfWork,
+    IRepository<Mission> missionRepository,
+    IMissionManagementDbContext dbContext)
     : IRequestHandler<UpdateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(UpdateMissionCommand request, CancellationToken cancellationToken)
@@ -27,19 +30,7 @@ public sealed class UpdateMissionCommandHandler(IUnitOfWork unitOfWork, IReposit
         mission.UpdateDetails(
             request.Name,
             request.Description,
-            request.Difficulty,
             request.MaximumDurationMinutes);
-        mission.UpdateCatalogGameType(request.GameType);
-
-        if (request.Nodes is not null)
-        {
-            mission.ReplaceNodes(request.Nodes.Select(node => node.ToDomain()).ToArray());
-        }
-
-        if (mission.IsActive)
-        {
-            mission.EnsureEligibleForLiveSession();
-        }
 
         var nameAlreadyExists = await missionRepository
             .AnyAsync(
@@ -53,11 +44,33 @@ public sealed class UpdateMissionCommandHandler(IUnitOfWork unitOfWork, IReposit
                 UmbralFailureCategory.Conflict);
         }
 
+        if (request.Items is null)
+        {
+            // Scalar-only update: leave the path-item tree untouched, persist and reload for the response.
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            var reloaded = await MissionLoader.RequireAsync(dbContext, request.MissionId, cancellationToken);
+            return reloaded.ToResponse();
+        }
+
+        var rootItems = request.Items.ToDomain(request.MissionId);
+        var updatedView = Mission.RehydrateTree(
+            mission.Id,
+            mission.Name,
+            mission.Description,
+            mission.MaximumDurationMinutes,
+            mission.IsActive,
+            rootItems);
+
+        if (mission.IsActive)
+        {
+            updatedView.EnsureEligibleForLiveSession();
+        }
+
+        await MissionLoader.DeleteItemsAsync(dbContext, request.MissionId, cancellationToken);
+        MissionLoader.AddItems(dbContext, updatedView);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return mission.ToResponse();
+        return updatedView.ToResponse();
     }
 }
-
-
-

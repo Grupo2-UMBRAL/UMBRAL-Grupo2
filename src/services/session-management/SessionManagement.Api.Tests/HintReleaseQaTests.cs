@@ -307,7 +307,8 @@ public sealed class HintReleaseQaTests
                     "Easy",
                     "Trivia",
                     "Prompt for Stage One",
-                    triviaValidAnswer: "seal",
+                    choices: [LiveSessionChoice.Create(Guid.Parse("99999999-9999-9999-9999-999999999991"), "Seal")],
+                    correctChoiceId: Guid.Parse("99999999-9999-9999-9999-999999999991"),
                     hints:
                     [
                         LiveSessionStageHint.Create(

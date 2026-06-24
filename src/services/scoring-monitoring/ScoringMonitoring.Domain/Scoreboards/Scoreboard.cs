@@ -6,7 +6,7 @@ namespace ScoringMonitoring.Domain.Scoreboards;
 public sealed class Scoreboard
 {
     private readonly Dictionary<Guid, TeamScore> teamScores = [];
-    private readonly HashSet<StageCreditKey> creditedStages = [];
+    private readonly HashSet<PlayCreditKey> creditedPlays = [];
     private readonly HashSet<Guid> processedPenaltyCommandIds = [];
     private readonly List<ScoreEntry> scoreEntries = [];
 
@@ -33,7 +33,7 @@ public sealed class Scoreboard
     public void RebuildState()
     {
         teamScores.Clear();
-        creditedStages.Clear();
+        creditedPlays.Clear();
         processedPenaltyCommandIds.Clear();
 
         foreach (var scoreEntry in scoreEntries.OrderBy(entry => entry.RecordedAt).ThenBy(entry => entry.ScoreEntryId))
@@ -41,11 +41,11 @@ public sealed class Scoreboard
             var teamScore = GetOrCreateTeamScore(scoreEntry.SessionTeamId);
             teamScore.Apply(scoreEntry.Delta);
 
-            if (scoreEntry.MissionStageId is not null
-                && (scoreEntry.EntryType == ScoreEntryType.StageCredit
+            if (scoreEntry.PlayId is not null
+                && (scoreEntry.EntryType == ScoreEntryType.PlayCredit
                     || scoreEntry.EntryType == ScoreEntryType.ValidationOverrideCredit))
             {
-                creditedStages.Add(new StageCreditKey(scoreEntry.SessionTeamId, scoreEntry.MissionStageId.Value));
+                creditedPlays.Add(new PlayCreditKey(scoreEntry.SessionTeamId, scoreEntry.PlayId.Value));
             }
 
             if (scoreEntry.EntryType == ScoreEntryType.Penalty
@@ -56,17 +56,17 @@ public sealed class Scoreboard
         }
     }
 
-    public ScoreEntry? GrantStageCredit(
+    public ScoreEntry? GrantPlayCredit(
         Guid sessionTeamId,
-        Guid missionStageId,
-        MissionStageDifficulty difficulty,
+        Guid playId,
+        PlayDifficulty difficulty,
         TimeSpan resolutionTime,
         DateTimeOffset recordedAt,
         bool validationOverride = false)
     {
-        if (missionStageId == Guid.Empty)
+        if (playId == Guid.Empty)
         {
-            throw new UmbralDomainException("scoreboard.empty_mission_stage_id", "Mission Stage id is required.");
+            throw new UmbralDomainException("scoreboard.empty_play_id", "Play id is required.");
         }
 
         if (resolutionTime < TimeSpan.Zero)
@@ -76,22 +76,22 @@ public sealed class Scoreboard
 
         EnsureSessionTeamId(sessionTeamId);
 
-        var creditKey = new StageCreditKey(sessionTeamId, missionStageId);
-        if (!creditedStages.Add(creditKey))
+        var creditKey = new PlayCreditKey(sessionTeamId, playId);
+        if (!creditedPlays.Add(creditKey))
         {
             return null;
         }
 
         var entryType = validationOverride
             ? ScoreEntryType.ValidationOverrideCredit
-            : ScoreEntryType.StageCredit;
+            : ScoreEntryType.PlayCredit;
 
         return ApplyDelta(
             sessionTeamId,
             ScoreFor(difficulty),
             entryType,
             recordedAt,
-            missionStageId,
+            playId,
             penaltyCommandId: null,
             penaltyId: null,
             penaltySeverity: null,
@@ -116,7 +116,7 @@ public sealed class Scoreboard
             penalty.Delta,
             ScoreEntryType.Penalty,
             penalty.RecordedAt,
-            missionStageId: null,
+            playId: null,
             penalty.CommandId,
             penalty.PenaltyId,
             penalty.Severity,
@@ -136,7 +136,7 @@ public sealed class Scoreboard
         int delta,
         ScoreEntryType entryType,
         DateTimeOffset recordedAt,
-        Guid? missionStageId,
+        Guid? playId,
         Guid? penaltyCommandId,
         Guid? penaltyId,
         PenaltySeverity? penaltySeverity,
@@ -161,7 +161,7 @@ public sealed class Scoreboard
             visibleScoreBefore,
             teamScore.VisibleScore,
             recordedAt,
-            missionStageId,
+            playId,
             penaltyCommandId,
             penaltyId,
             penaltySeverity,
@@ -193,18 +193,18 @@ public sealed class Scoreboard
         }
     }
 
-    private static int ScoreFor(MissionStageDifficulty difficulty) => difficulty switch
+    private static int ScoreFor(PlayDifficulty difficulty) => difficulty switch
     {
-        MissionStageDifficulty.Easy => 100,
-        MissionStageDifficulty.Medium => 200,
-        MissionStageDifficulty.Hard => 300,
-        _ => throw new UmbralDomainException("scoreboard.unknown_difficulty", "Mission Stage difficulty is not supported.")
+        PlayDifficulty.Easy => 100,
+        PlayDifficulty.Medium => 200,
+        PlayDifficulty.Hard => 300,
+        _ => throw new UmbralDomainException("scoreboard.unknown_difficulty", "Play difficulty is not supported.")
     };
 
-    private readonly record struct StageCreditKey(Guid SessionTeamId, Guid MissionStageId);
+    private readonly record struct PlayCreditKey(Guid SessionTeamId, Guid PlayId);
 }
 
-public enum MissionStageDifficulty
+public enum PlayDifficulty
 {
     Easy,
     Medium,
@@ -213,7 +213,7 @@ public enum MissionStageDifficulty
 
 public enum ScoreEntryType
 {
-    StageCredit,
+    PlayCredit,
     ValidationOverrideCredit,
     Penalty
 }

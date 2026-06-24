@@ -219,7 +219,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const operatorsUrl = useMemo(
-    () => `${getClientConfig().edgeProxyPublicBaseUrl}/identity-access/api/operators`,
+    () => `${getClientConfig().edgeProxyPublicBaseUrl}/user-management/api/operators`,
     []
   );
 
@@ -353,7 +353,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       setIsLoading(true);
       setDraft(createEmptyDraft());
       setShowCreateModal(false);
-      setFeedback("Usuario Operador creado a través de la fachada identity-access.");
+      setFeedback("Usuario Operador creado a través de la fachada user-management.");
       await syncOperators(createdOperatorId);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el Usuario Operador.");
@@ -382,7 +382,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       }
 
       setIsLoading(true);
-      setFeedback(`Usuario Operador ${selectedOperator.username} desactivado a través de la fachada identity-access.`);
+      setFeedback(`Usuario Operador ${selectedOperator.username} desactivado a través de la fachada user-management.`);
       await syncOperators(selectedOperator.id);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo desactivar el Usuario Operador.");
@@ -796,7 +796,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                       value={passwordRotationDraft.password}
                     />
                     <span className="form-hint">
-                      El nuevo secreto va a identity-access. La consola nunca recibe credenciales de administrador de Keycloak.
+                      El nuevo secreto va a user-management. La consola nunca recibe credenciales de administrador de Keycloak.
                     </span>
                   </div>
                 </div>

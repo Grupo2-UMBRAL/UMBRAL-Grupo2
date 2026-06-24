@@ -23,6 +23,7 @@ public sealed record LiveSessionResponse(
     int RegisteredSessionTeamCount,
     IReadOnlyList<LiveSessionStageResponse> SessionStageFlow);
 
+// Operator/administrator-facing projection of a Play in the Session Flow.
 public sealed record LiveSessionStageResponse(
     Guid MissionStageId,
     string Name,
@@ -33,9 +34,12 @@ public sealed record LiveSessionStageResponse(
     string GameType,
     string Prompt,
     string? ExpectedQrHash,
-    string? TriviaValidAnswer,
-    string? TriviaInitialValidationCriterion,
+    IReadOnlyList<LiveSessionChoiceResponse> Choices,
     IReadOnlyList<LiveSessionStageHintResponse> Hints);
+
+public sealed record LiveSessionChoiceResponse(
+    Guid Id,
+    string Text);
 
 public sealed record LiveSessionStageHintResponse(
     Guid Id,
@@ -44,27 +48,32 @@ public sealed record LiveSessionStageHintResponse(
     decimal? Latitude,
     decimal? Longitude);
 
+// Eligible Mission snapshot deserialized from
+// GET api/mission-management/missions/eligible-for-live-session/{missionId}.
 public sealed record EligibleMissionForLiveSessionSnapshot(
     Guid Id,
     string Name,
-    IReadOnlyList<EligibleMissionStageSnapshot> MissionStages);
+    string? Description,
+    int MaximumDurationMinutes,
+    IReadOnlyList<EligiblePlaySnapshot> Plays);
 
-public sealed record EligibleMissionStageSnapshot(
+public sealed record EligiblePlaySnapshot(
     Guid Id,
-    string Name,
-    int SessionStageOrder,
-    int SourceOrder,
-    int ResolvedTimeBudgetMinutes,
-    string Difficulty,
+    int Order,
     string GameType,
+    string Difficulty,
+    int TimeLimitMinutes,
     string Prompt,
+    IReadOnlyList<EligibleChoiceSnapshot>? Choices,
+    Guid? CorrectChoiceId,
     string? ExpectedQrHash,
-    string? TriviaValidAnswer,
-    string? TriviaInitialValidationCriterion,
-    IReadOnlyList<EligibleMissionStageHintSnapshot> Hints);
+    IReadOnlyList<EligiblePlayHintSnapshot>? Hints);
 
-public sealed record EligibleMissionStageHintSnapshot(
+public sealed record EligibleChoiceSnapshot(
     Guid Id,
+    string Text);
+
+public sealed record EligiblePlayHintSnapshot(
     string Content,
     bool IsSolution,
     decimal? Latitude,
@@ -110,23 +119,26 @@ public static class LiveSessionMappings
             liveSession.EnrollmentWindowClosedAtUtc);
     }
 
-    public static LiveSessionStage ToDomain(this EligibleMissionStageSnapshot missionStage, int sessionStageOrder)
+    // Maps an eligible Play onto the flat Session Flow item. The linear model
+    // exposes a single global `order`; it is used as the Play's source order,
+    // while the contiguous flow order is assigned by the Session Flow builder.
+    public static LiveSessionStage ToDomain(this EligiblePlaySnapshot play, int sessionStageOrder)
     {
-        ArgumentNullException.ThrowIfNull(missionStage);
+        ArgumentNullException.ThrowIfNull(play);
 
         return LiveSessionStage.Create(
-            missionStage.Id,
-            missionStage.Name,
+            play.Id,
+            $"Play {play.Order}",
             sessionStageOrder,
-            missionStage.SourceOrder,
-            missionStage.ResolvedTimeBudgetMinutes,
-            missionStage.Difficulty,
-            missionStage.GameType,
-            missionStage.Prompt,
-            missionStage.ExpectedQrHash,
-            missionStage.TriviaValidAnswer,
-            missionStage.TriviaInitialValidationCriterion,
-            missionStage.Hints.Select(hint => hint.ToDomain()).ToArray());
+            play.Order,
+            play.TimeLimitMinutes,
+            play.Difficulty,
+            play.GameType,
+            play.Prompt,
+            play.ExpectedQrHash,
+            play.Choices?.Select(choice => choice.ToDomain()).ToArray(),
+            play.CorrectChoiceId,
+            play.Hints?.Select(hint => hint.ToDomain()).ToArray());
     }
 
     private static LiveSessionStageResponse ToResponse(this LiveSessionStage liveSessionStage)
@@ -141,17 +153,23 @@ public static class LiveSessionMappings
             liveSessionStage.GameType,
             liveSessionStage.Prompt,
             liveSessionStage.ExpectedQrHash,
-            liveSessionStage.TriviaValidAnswer,
-            liveSessionStage.TriviaInitialValidationCriterion,
+            liveSessionStage.Choices.Select(choice => new LiveSessionChoiceResponse(choice.Id, choice.Text)).ToArray(),
             liveSessionStage.Hints.Select(hint => hint.ToResponse()).ToArray());
     }
 
-    private static LiveSessionStageHint ToDomain(this EligibleMissionStageHintSnapshot hint)
+    private static LiveSessionChoice ToDomain(this EligibleChoiceSnapshot choice)
+    {
+        ArgumentNullException.ThrowIfNull(choice);
+
+        return LiveSessionChoice.Create(choice.Id, choice.Text);
+    }
+
+    private static LiveSessionStageHint ToDomain(this EligiblePlayHintSnapshot hint)
     {
         ArgumentNullException.ThrowIfNull(hint);
 
         return LiveSessionStageHint.Create(
-            hint.Id,
+            Guid.NewGuid(),
             hint.Content,
             hint.IsSolution,
             hint.Latitude,
@@ -168,4 +186,3 @@ public static class LiveSessionMappings
             hint.Longitude);
     }
 }
-

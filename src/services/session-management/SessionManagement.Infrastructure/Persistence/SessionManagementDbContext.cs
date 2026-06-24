@@ -191,6 +191,8 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
             evidenceSubmission.Property(entity => entity.SubmittedText)
                 .HasMaxLength(EvidenceSubmission.SubmittedTextMaximumLength)
                 .IsRequired(false);
+            evidenceSubmission.Property(entity => entity.SubmittedChoiceId)
+                .IsRequired(false);
             evidenceSubmission.Property(entity => entity.Outcome)
                 .HasConversion<string>()
                 .HasMaxLength(20)

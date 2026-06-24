@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MissionManagement.Application.Features.MissionStages.Commands.CreateMissionStage;
-using MissionManagement.Application.Features.MissionStages.Queries.ListMissionStages;
 using MissionManagement.Application.Features.Missions.Commands.ActivateMission;
 using MissionManagement.Application.Features.Missions.Commands.CreateMission;
 using MissionManagement.Application.Features.Missions.Commands.DeactivateMission;
@@ -41,10 +39,8 @@ public sealed class MissionsController(ISender sender) : ControllerBase
             new CreateMissionCommand(
                 request.Name,
                 request.Description,
-                request.Difficulty,
                 request.MaximumDurationMinutes,
-                request.GameType,
-                request.Nodes),
+                request.Items),
             cancellationToken);
 
         return Created($"api/mission-management/missions/{mission.Id}", mission);
@@ -61,10 +57,8 @@ public sealed class MissionsController(ISender sender) : ControllerBase
                 missionId,
                 request.Name,
                 request.Description,
-                request.Difficulty,
                 request.MaximumDurationMinutes,
-                request.GameType,
-                request.Nodes),
+                request.Items),
             cancellationToken);
 
         return Ok(mission);
@@ -82,34 +76,5 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     {
         var mission = await sender.Send(new DeactivateMissionCommand(missionId), cancellationToken);
         return Ok(mission);
-    }
-
-    [HttpGet("{missionId:guid}/stages")]
-    public async Task<ActionResult<IReadOnlyList<MissionStageSummaryResponse>>> ListStages(
-        Guid missionId,
-        CancellationToken cancellationToken)
-    {
-        var stages = await sender.Send(new ListMissionStagesQuery(missionId), cancellationToken);
-        return Ok(stages);
-    }
-
-    [HttpPost("{missionId:guid}/stages")]
-    public async Task<ActionResult<MissionStageResponse>> CreateStage(
-        Guid missionId,
-        [FromBody] CreateMissionStageRequest request,
-        CancellationToken cancellationToken)
-    {
-        var stage = await sender.Send(
-            new CreateMissionStageCommand(
-                missionId,
-                request.Name,
-                request.Order,
-                request.Difficulty,
-                request.GameType,
-                request.ExpectedQrHash,
-                request.TriviaValidationCriteria),
-            cancellationToken);
-
-        return Created($"api/mission-management/stages/{stage.Id}", stage);
     }
 }

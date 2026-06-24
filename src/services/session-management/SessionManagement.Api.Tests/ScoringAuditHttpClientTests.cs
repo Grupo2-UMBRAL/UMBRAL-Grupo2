@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using SessionManagement.Application.Scoring;
 using SessionManagement.Infrastructure;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
@@ -8,6 +9,40 @@ namespace SessionManagement.Api.Tests;
 
 public sealed class ScoringMonitoringHttpClientTests
 {
+    [Fact]
+    public async Task RecordStageCreditAsync_SerializesPlayIdField()
+    {
+        var liveSessionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var sessionTeamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var playId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var handler = new CapturingHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.Created));
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://scoring-monitoring.test")
+        };
+        var scoringClient = new ScoringMonitoringHttpClient(httpClient);
+
+        await scoringClient.RecordStageCreditAsync(
+            new RecordStageCreditRequest(
+                liveSessionId,
+                sessionTeamId,
+                playId,
+                "Medium",
+                TimeSpan.FromSeconds(42),
+                DateTimeOffset.UnixEpoch,
+                ValidationOverride: false),
+            CancellationToken.None);
+
+        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
+        Assert.Equal($"/api/scoring-monitoring/sessions/{liveSessionId}/scores", handler.RequestPath);
+        using var document = JsonDocument.Parse(handler.RequestContent);
+        var root = document.RootElement;
+        Assert.True(root.TryGetProperty("playId", out var playIdElement));
+        Assert.Equal(playId, playIdElement.GetGuid());
+        Assert.False(root.TryGetProperty("missionStageId", out _));
+        Assert.False(root.TryGetProperty("MissionStageId", out _));
+    }
+
     [Fact]
     public async Task LogSessionEventAsync_PostsMinimumSafePayloadToSessionEventLogEndpoint()
     {

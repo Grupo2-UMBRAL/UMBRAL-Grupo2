@@ -45,6 +45,7 @@ public sealed record SessionTeamEvidenceSubmissionDetail(
     string GameType,
     string? SubmittedHash,
     string? SubmittedText,
+    Guid? SubmittedChoiceId,
     string ValidationOutcome,
     string? FailureReason,
     DateTimeOffset SubmittedAtUtc,

@@ -33,6 +33,10 @@ public sealed record SessionTeamSnapshot(
     SnapshotSyncMetadata Sync,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<CurrentSessionStageSnapshot>? AllStages);
 
+// Participant-facing projection of the current Play. It intentionally exposes
+// only the selectable Choices (id + text). The correct choice id and any
+// is-correct flag are NEVER included here — Trivia validation stays 100%
+// server-side. Treasure Hunt plays carry an empty Choices list.
 public sealed record CurrentSessionStageSnapshot(
     Guid MissionStageId,
     string Name,
@@ -41,7 +45,12 @@ public sealed record CurrentSessionStageSnapshot(
     int ResolvedTimeBudgetMinutes,
     string Difficulty,
     string GameType,
-    string Prompt);
+    string Prompt,
+    IReadOnlyList<SessionStageChoiceSnapshot> Choices);
+
+public sealed record SessionStageChoiceSnapshot(
+    Guid Id,
+    string Text);
 
 public sealed record VisibleHintSnapshot(
     Guid HintId,

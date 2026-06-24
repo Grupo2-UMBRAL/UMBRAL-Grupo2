@@ -105,7 +105,12 @@ export type SubmitEvidenceInput = {
 
 export type SubmitTriviaAnswerInput = {
   sessionTeamId: string;
-  answerText: string;
+  selectedChoiceId: string;
+};
+
+export type StageChoice = {
+  id: string;
+  text: string;
 };
 
 export type SubmitEvidenceResult = {
@@ -134,6 +139,7 @@ export type CurrentSessionStageSnapshot = {
   difficulty: string;
   gameType: string;
   prompt: string;
+  choices: StageChoice[];
 };
 
 export type VisibleHintSnapshot = {
@@ -285,7 +291,7 @@ export function createAuthorizedApiClient(accessToken: string) {
         {
           method: "POST",
           body: JSON.stringify({
-            answerText: input.answerText
+            selectedChoiceId: input.selectedChoiceId
           })
         }
       );

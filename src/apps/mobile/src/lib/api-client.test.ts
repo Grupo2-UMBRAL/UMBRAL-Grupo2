@@ -106,3 +106,25 @@ test("calls evidence submission endpoint with QR hash payload", async () => {
   expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
   expect((init.headers as Headers).get("content-type")).toBe("application/json");
 });
+
+test("calls trivia submission endpoint with selected choice id payload", async () => {
+  const apiClient = createAuthorizedApiClient("participant-token");
+
+  await apiClient.submitTriviaAnswer({
+    sessionTeamId: "team-1",
+    selectedChoiceId: "choice-2"
+  });
+
+  expect(fetch).toHaveBeenCalledWith(
+    "https://edge.test/session-management/api/session-management/session-teams/team-1/trivia-submissions",
+    expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({
+        selectedChoiceId: "choice-2"
+      })
+    })
+  );
+  const [, init] = (fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+  expect((init.headers as Headers).get("authorization")).toBe("Bearer participant-token");
+  expect((init.headers as Headers).get("content-type")).toBe("application/json");
+});

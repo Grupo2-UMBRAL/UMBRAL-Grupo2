@@ -101,17 +101,17 @@ public sealed class PenaltySeverityTests
 public sealed class ScoreboardStageCreditTests
 {
     [Theory]
-    [InlineData(MissionStageDifficulty.Easy, 100)]
-    [InlineData(MissionStageDifficulty.Medium, 200)]
-    [InlineData(MissionStageDifficulty.Hard, 300)]
-    public void GrantStageCredit_AwardsFullScoreFromMissionStageDifficulty(
-        MissionStageDifficulty difficulty,
+    [InlineData(PlayDifficulty.Easy, 100)]
+    [InlineData(PlayDifficulty.Medium, 200)]
+    [InlineData(PlayDifficulty.Hard, 300)]
+    public void GrantPlayCredit_AwardsFullScoreFromPlayDifficulty(
+        PlayDifficulty difficulty,
         int expectedScore)
     {
         var scoreboard = new Scoreboard(Guid.NewGuid());
         var sessionTeamId = Guid.NewGuid();
 
-        var entry = scoreboard.GrantStageCredit(
+        var entry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             Guid.NewGuid(),
             difficulty,
@@ -126,22 +126,22 @@ public sealed class ScoreboardStageCreditTests
     }
 
     [Fact]
-    public void GrantStageCredit_DoesNotAwardPartialCreditOrDuplicateCredit()
+    public void GrantPlayCredit_DoesNotAwardPartialCreditOrDuplicateCredit()
     {
         var scoreboard = new Scoreboard(Guid.NewGuid());
         var sessionTeamId = Guid.NewGuid();
         var missionStageId = Guid.NewGuid();
 
-        var firstEntry = scoreboard.GrantStageCredit(
+        var firstEntry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Medium,
+            PlayDifficulty.Medium,
             TimeSpan.FromSeconds(12),
             DateTimeOffset.UtcNow);
-        var duplicateEntry = scoreboard.GrantStageCredit(
+        var duplicateEntry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Medium,
+            PlayDifficulty.Medium,
             TimeSpan.FromSeconds(13),
             DateTimeOffset.UtcNow);
 
@@ -153,23 +153,23 @@ public sealed class ScoreboardStageCreditTests
     }
 
     [Fact]
-    public void GrantStageCredit_ValidationOverrideAwardsFullDifficultyScoreOnlyOnce()
+    public void GrantPlayCredit_ValidationOverrideAwardsFullDifficultyScoreOnlyOnce()
     {
         var scoreboard = new Scoreboard(Guid.NewGuid());
         var sessionTeamId = Guid.NewGuid();
         var missionStageId = Guid.NewGuid();
 
-        var firstEntry = scoreboard.GrantStageCredit(
+        var firstEntry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Hard,
+            PlayDifficulty.Hard,
             TimeSpan.FromSeconds(12),
             DateTimeOffset.UtcNow,
             validationOverride: true);
-        var duplicateEntry = scoreboard.GrantStageCredit(
+        var duplicateEntry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Hard,
+            PlayDifficulty.Hard,
             TimeSpan.FromSeconds(13),
             DateTimeOffset.UtcNow,
             validationOverride: true);
@@ -189,18 +189,18 @@ public sealed class ScoreboardStageCreditTests
         var sessionTeamId = Guid.NewGuid();
         var missionStageId = Guid.NewGuid();
 
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromSeconds(8),
             DateTimeOffset.UtcNow);
 
         scoreboard.RebuildState();
-        var duplicateEntry = scoreboard.GrantStageCredit(
+        var duplicateEntry = scoreboard.GrantPlayCredit(
             sessionTeamId,
             missionStageId,
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromSeconds(9),
             DateTimeOffset.UtcNow);
 
@@ -218,26 +218,26 @@ public sealed class ScoreboardStageCreditTests
         var firstStageId = Guid.NewGuid();
         var secondStageId = Guid.NewGuid();
 
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             firstTeamId,
             firstStageId,
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromSeconds(8),
             DateTimeOffset.UtcNow);
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             secondTeamId,
             secondStageId,
-            MissionStageDifficulty.Medium,
+            PlayDifficulty.Medium,
             TimeSpan.FromSeconds(9),
             DateTimeOffset.UtcNow);
 
         ClearMaterializedState(scoreboard);
 
         scoreboard.RebuildState();
-        var duplicateEntry = scoreboard.GrantStageCredit(
+        var duplicateEntry = scoreboard.GrantPlayCredit(
             firstTeamId,
             firstStageId,
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromSeconds(10),
             DateTimeOffset.UtcNow);
 
@@ -250,7 +250,7 @@ public sealed class ScoreboardStageCreditTests
     private static void ClearMaterializedState(Scoreboard scoreboard)
     {
         ClearPrivateCollection(scoreboard, "teamScores");
-        ClearPrivateCollection(scoreboard, "creditedStages");
+        ClearPrivateCollection(scoreboard, "creditedPlays");
         ClearPrivateCollection(scoreboard, "processedPenaltyCommandIds");
     }
 
@@ -298,10 +298,10 @@ public sealed class ScoreboardPenaltyTests
         var scoreboard = new Scoreboard(Guid.NewGuid());
         var sessionTeamId = Guid.NewGuid();
 
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             sessionTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromSeconds(2),
             DateTimeOffset.UtcNow);
 
@@ -364,7 +364,7 @@ public sealed class ScoreboardPenaltyTests
     private static void ClearMaterializedState(Scoreboard scoreboard)
     {
         ClearPrivateCollection(scoreboard, "teamScores");
-        ClearPrivateCollection(scoreboard, "creditedStages");
+        ClearPrivateCollection(scoreboard, "creditedPlays");
         ClearPrivateCollection(scoreboard, "processedPenaltyCommandIds");
     }
 
@@ -420,22 +420,22 @@ public sealed class RankingComparerTests
         var secondTeamId = Guid.NewGuid();
         var thirdTeamId = Guid.NewGuid();
 
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             firstTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromMilliseconds(1000),
             DateTimeOffset.UtcNow);
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             secondTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromMilliseconds(1499),
             DateTimeOffset.UtcNow);
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             thirdTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Easy,
+            PlayDifficulty.Easy,
             TimeSpan.FromMilliseconds(2500),
             DateTimeOffset.UtcNow);
 
@@ -467,16 +467,16 @@ public sealed class RankingComparerTests
         var fasterTeamId = Guid.NewGuid();
         var slowerTeamId = Guid.NewGuid();
 
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             slowerTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Medium,
+            PlayDifficulty.Medium,
             TimeSpan.FromMilliseconds(1501),
             DateTimeOffset.UtcNow);
-        scoreboard.GrantStageCredit(
+        scoreboard.GrantPlayCredit(
             fasterTeamId,
             Guid.NewGuid(),
-            MissionStageDifficulty.Medium,
+            PlayDifficulty.Medium,
             TimeSpan.FromMilliseconds(1000),
             DateTimeOffset.UtcNow);
 

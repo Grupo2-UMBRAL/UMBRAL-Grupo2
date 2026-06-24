@@ -6,21 +6,25 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.CreateMission;
 
-public sealed class CreateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
+public sealed class CreateMissionCommandHandler(
+    IUnitOfWork unitOfWork,
+    IRepository<Mission> missionRepository,
+    IMissionManagementDbContext dbContext)
     : IRequestHandler<CreateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(CreateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        var missionId = Guid.NewGuid();
+        var rootItems = request.Items?.ToDomain(missionId);
+
         var mission = Mission.Create(
-            Guid.NewGuid(),
+            missionId,
             request.Name,
             request.Description,
-            request.Difficulty,
             request.MaximumDurationMinutes,
-            request.GameType,
-            request.Nodes?.Select(node => node.ToDomain()).ToArray());
+            rootItems);
 
         var missionNameAlreadyExists = await missionRepository
             .AnyAsync(
@@ -35,10 +39,9 @@ public sealed class CreateMissionCommandHandler(IUnitOfWork unitOfWork, IReposit
         }
 
         missionRepository.Add(mission);
+        MissionLoader.AddItems(dbContext, mission);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
 }
-
-

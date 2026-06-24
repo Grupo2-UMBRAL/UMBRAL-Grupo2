@@ -1,6 +1,6 @@
 # Keycloak Auth Verification
 
-Validaciones reproducibles para el bootstrap local de `Identity and Access` usando `docker compose` y el `edge proxy`.
+Validaciones reproducibles para el bootstrap local de `User Management` usando `docker compose` y el `edge proxy`.
 
 ## Escenarios cubiertos
 
@@ -32,4 +32,4 @@ docker compose --env-file .env.example -f docker-compose.dev.yml -f docker-compo
 ## Notas
 
 - El caso `expired` no depende del reloj del host. El contenedor espera internamente hasta que el `exp` del JWT quede atras.
-- `login` ahora incluye `identity-access` en el set de audiencias esperadas y en la smoke call por `edge proxy`. Si el servicio aun no existe en el worktree, este escenario no puede pasar end-to-end hasta que se agregue `src/services/identity-access/Umbral.IdentityAccess.Api/`.
+- `login` ahora incluye `user-management` en el set de audiencias esperadas y en la smoke call por `edge proxy`. Si el servicio aun no existe en el worktree, este escenario no puede pasar end-to-end hasta que se agregue `src/services/user-management/UserManagement.Api/`.

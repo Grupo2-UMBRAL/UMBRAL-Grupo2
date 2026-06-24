@@ -2,6 +2,12 @@ using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Domain.LiveSessions;
 
+// Flat per-item snapshot of a Play stored in the Session Flow JSON.
+// (Domain vocabulary: this represents a "Play". The type name is kept as
+// LiveSessionStage to avoid churn across persistence and call sites.)
+// For Trivia plays it carries the selectable Choices plus the server-only
+// CorrectChoiceId used to validate submissions; CorrectChoiceId must never be
+// projected into a participant-facing response.
 public sealed record LiveSessionStage
 {
     public Guid MissionStageId { get; init; }
@@ -22,9 +28,9 @@ public sealed record LiveSessionStage
 
     public string? ExpectedQrHash { get; init; }
 
-    public string? TriviaValidAnswer { get; init; }
+    public IReadOnlyList<LiveSessionChoice> Choices { get; init; } = Array.Empty<LiveSessionChoice>();
 
-    public string? TriviaInitialValidationCriterion { get; init; }
+    public Guid? CorrectChoiceId { get; init; }
 
     public IReadOnlyList<LiveSessionStageHint> Hints { get; init; } = Array.Empty<LiveSessionStageHint>();
 
@@ -38,8 +44,8 @@ public sealed record LiveSessionStage
         string gameType,
         string prompt,
         string? expectedQrHash = null,
-        string? triviaValidAnswer = null,
-        string? triviaInitialValidationCriterion = null,
+        IReadOnlyList<LiveSessionChoice>? choices = null,
+        Guid? correctChoiceId = null,
         IReadOnlyList<LiveSessionStageHint>? hints = null)
     {
         if (missionStageId == Guid.Empty)
@@ -106,6 +112,20 @@ public sealed record LiveSessionStage
                 UmbralFailureCategory.Validation);
         }
 
+        var normalizedChoices = choices is null || choices.Count == 0
+            ? Array.Empty<LiveSessionChoice>()
+            : choices.ToArray();
+
+        if (correctChoiceId.HasValue
+            && normalizedChoices.Length > 0
+            && Array.TrueForAll(normalizedChoices, choice => choice.Id != correctChoiceId.Value))
+        {
+            throw new UmbralDomainException(
+                "live_session_stage_correct_choice_not_in_choices",
+                "LiveSession stage correct choice must be one of its choices.",
+                UmbralFailureCategory.Validation);
+        }
+
         return new LiveSessionStage
         {
             MissionStageId = missionStageId,
@@ -117,10 +137,8 @@ public sealed record LiveSessionStage
             GameType = gameType.Trim(),
             Prompt = prompt.Trim(),
             ExpectedQrHash = string.IsNullOrWhiteSpace(expectedQrHash) ? null : expectedQrHash.Trim(),
-            TriviaValidAnswer = string.IsNullOrWhiteSpace(triviaValidAnswer) ? null : triviaValidAnswer.Trim(),
-            TriviaInitialValidationCriterion = string.IsNullOrWhiteSpace(triviaInitialValidationCriterion)
-                ? null
-                : triviaInitialValidationCriterion.Trim(),
+            Choices = normalizedChoices,
+            CorrectChoiceId = correctChoiceId,
             Hints = hints?.ToArray() ?? Array.Empty<LiveSessionStageHint>()
         };
     }

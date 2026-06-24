@@ -1,4 +1,4 @@
-﻿# Edge Proxy
+# Edge Proxy
 
 `edge-proxy` is the preferred public entry for local web and mobile clients.
 
@@ -18,7 +18,7 @@
 ## Route map
 
 - `/auth/*` -> `Keycloak`
-- `/identity-access/*` -> `Identity and Access`
+- `/user-management/*` -> `User Management`
 - `/mission-management/*` -> `Mission Management`
 - `/session-management/*` -> `Session Operations`
 - `/session-hub/*` -> `Session Operations` realtime hub

@@ -6,10 +6,7 @@ public sealed record UpdateMissionCommand(
     Guid MissionId,
     string Name,
     string Description,
-    string Difficulty,
     int MaximumDurationMinutes,
-    string GameType,
-    IReadOnlyList<MissionNodeRequest>? Nodes = null) : IRequest<MissionResponse>
+    IReadOnlyList<MissionItemRequest>? Items = null) : IRequest<MissionResponse>
 {
 }
-

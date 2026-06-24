@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -549,18 +549,21 @@ function translateProgressState(progressState: string): string {
   }
 }
 
-function translateGameType(gameType: string): string {
+function translateGameType(gameType?: string): string {
+  if (!gameType) return "Desconocido";
   const normalized = gameType.replace(/\s+/g, "").toLowerCase();
-  if (normalized === "treasurehunt") {
-    return "BÃºsqueda del tesoro";
+  switch (normalized) {
+    case "treasurehunt":
+      return "Búsqueda del Tesoro";
+    case "trivia":
+      return "Trivia";
+    default:
+      return gameType;
   }
-  if (normalized === "trivia") {
-    return "Trivia";
-  }
-  return gameType;
 }
 
-function translateDifficulty(difficulty: string): string {
+function translateDifficulty(difficulty?: string): string {
+  if (!difficulty) return "N/A";
   const norm = difficulty.toLowerCase().trim();
   switch (norm) {
     case "easy":
@@ -668,7 +671,8 @@ function getProgressBadgeClass(progressState: string) {
   return "badge badge-green";
 }
 
-function getDifficultyBadgeClass(difficulty: string) {
+function getDifficultyBadgeClass(difficulty?: string) {
+  if (!difficulty) return "badge badge-muted";
   const norm = difficulty.toLowerCase().trim();
   switch (norm) {
     case "easy":
@@ -1545,7 +1549,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
 
     return selectedMissionStageIds
-      .map((missionStageId) => selectedMission.missionStages.find((missionStage) => missionStage.id === missionStageId))
+      .map((missionStageId) => (selectedMission.missionStages || []).find((missionStage) => missionStage.id === missionStageId))
       .filter((missionStage): missionStage is EligibleMissionStage => missionStage !== undefined)
       .map((missionStage, index) => ({
         ...missionStage,
@@ -1558,18 +1562,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const isSelectedLiveSessionOverviewCurrent =
     selectedLiveSession !== null && selectedLiveSessionOverview?.liveSessionId === selectedLiveSession.id;
   const selectedLiveSessionOverviewTeams = useMemo(
-    () => (isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview.sessionTeams : []),
+    () => (isSelectedLiveSessionOverviewCurrent && selectedLiveSessionOverview?.sessionTeams ? selectedLiveSessionOverview.sessionTeams : []),
     [isSelectedLiveSessionOverviewCurrent, selectedLiveSessionOverview]
   );
   const selectedRankingItems =
-    selectedLiveSessionRanking &&
-    selectedLiveSessionRanking.liveSessionId === selectedLiveSession?.id
-      ? selectedLiveSessionRanking.items
+    selectedLiveSessionRanking && selectedLiveSessionRanking.liveSessionId === selectedLiveSession?.id
+      ? selectedLiveSessionRanking.items || []
       : [];
   const selectedEventLogItems = selectedLiveSession
-    ? selectedLiveSessionEventLog.filter((eventLog) => eventLog.liveSessionId === selectedLiveSession.id)
+    ? selectedLiveSessionEventLog.filter((eventLog) => eventLog.liveSessionId === selectedLiveSession.id) || []
     : [];
-  const pendingLiveSessionStageCount = selectedLiveSessionStages.filter(
+  const pendingLiveSessionStageCount = (selectedLiveSessionStages || []).filter(
     (sessionStage) => getSessionStageOperationalStatus(sessionStage, selectedLiveSessionOverviewTeams) === "Pending"
   ).length;
   const operationalHintStageId =
@@ -2704,7 +2707,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
                   <div className="form-group">
                     <label className="form-label">Captura de la misiÃ³n</label>
-                    <input className="form-input" disabled value={`${selectedMission.missionStages.length} etapas activas`} />
+                    <input className="form-input" disabled value={`${(selectedMission.missionStages || []).length} etapas activas`} />
                     <span className="form-hint">
                       La misiÃ³n sigue siendo reutilizable. La LiveSession almacena su propia captura efectiva del Flujo de Etapas de SesiÃ³n.
                     </span>
@@ -2720,7 +2723,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   </div>
 
                   <div className="stage-flow">
-                    {selectedMission.missionStages.map((missionStage) => {
+                    {(selectedMission.missionStages || []).map((missionStage) => {
                       const isSelected = selectedMissionStageIds.includes(missionStage.id);
                       const selectedIndex = selectedMissionStageIds.indexOf(missionStage.id);
 
@@ -2796,7 +2799,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           </div>
                           <span className="stage-meta">
                             Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                            {missionStage.hints.length} pistas copiadas a la captura de la sesiÃ³n.
+                            {(missionStage.hints || []).length} pistas copiadas a la captura de la sesiÃ³n.
                           </span>
                           <p>{missionStage.prompt}</p>
                         </div>
@@ -2992,7 +2995,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                       ) : null}
 
                       <div className="stage-flow">
-                        {selectedLiveSession.sessionStageFlow.map((missionStage) => {
+                        {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
                           const stageStatus = getSessionStageOperationalStatus(
                             missionStage,
                             selectedLiveSessionOverviewTeams
@@ -3026,7 +3029,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                               </div>
                               <span className="stage-meta">
                                 Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                                {missionStage.hints.length} pistas en la captura. {teamsAtOrBeyondStage} equipos en esta etapa o
+                                {(missionStage.hints || []).length} pistas en la captura. {teamsAtOrBeyondStage} equipos en esta etapa o
                                 mÃ¡s adelante.
                               </span>
                               <p>{missionStage.prompt}</p>
@@ -3201,7 +3204,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           <h4>Pistas liberadas</h4>
                         </div>
 
-                        {selectedLiveSessionOverview?.sessionTeams.length ? (
+                        {(selectedLiveSessionOverview?.sessionTeams || []).length ? (
                           <div className="stack-sm">
                             {selectedLiveSessionOverview.sessionTeams.map((team) => {
                               const releasedHints = getReleasedHintsForTeam(team);
@@ -3251,7 +3254,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                         </div>
 
                         <div className="stage-flow">
-                          {selectedLiveSession.sessionStageFlow.map((missionStage) => {
+                          {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
                             const eligibleTeams =
                               selectedLiveSessionOverview?.sessionTeams.filter(
                                 (team) => team.currentStage?.missionStageId === missionStage.missionStageId
@@ -3263,17 +3266,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                   <div className="stack-sm">
                                     <strong className="stage-name">{missionStage.name}</strong>
                                     <span className="stage-meta">
-                                      {eligibleTeams.length} equipos elegibles Â· {missionStage.hints.length} pistas
+                                      {eligibleTeams.length} equipos elegibles Â· {(missionStage.hints || []).length} pistas
                                     </span>
                                   </div>
                                   <span className="badge badge-blue">{translateGameType(missionStage.gameType)}</span>
                                 </div>
 
-                                {missionStage.hints.length === 0 ? (
+                                {(missionStage.hints || []).length === 0 ? (
                                   <p className="text-muted text-xs">Esta etapa aÃºn no tiene pistas disponibles.</p>
                                 ) : (
                                   <div className="stack-sm">
-                                    {missionStage.hints.map((hint) => (
+                                    {(missionStage.hints || []).map((hint) => (
                                       <div className="card card-compact" key={hint.id}>
                                         <div className="stack-sm">
                                           <strong>{hint.content}</strong>
@@ -3340,7 +3343,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                             }
                             value={operationalHintStageId}
                           >
-                            {selectedLiveSession.sessionStageFlow.map((missionStage) => (
+                            {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => (
                               <option key={missionStage.missionStageId} value={missionStage.missionStageId}>
                                 #{missionStage.sessionStageOrder} {missionStage.name}
                               </option>

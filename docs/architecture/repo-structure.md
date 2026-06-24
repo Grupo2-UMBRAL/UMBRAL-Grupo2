@@ -1,4 +1,4 @@
-﻿# Repo Structure
+# Repo Structure
 
 Estructura real actual del repositorio.
 
@@ -22,7 +22,7 @@ Estructura real actual del repositorio.
 |  |  `- web/
 |  |- shared/
 |  `- services/
-|     |- identity-access/
+|     |- user-management/
 |     |- mission-management/
 |     |- scoring-monitoring/
 |     `- session-management/
