@@ -1,4 +1,4 @@
-﻿# Front Endpoints Summary
+# Front Endpoints Summary
 
 Resumen operativo de las rutas que consume hoy el front web y que sirven como base para rehacerlo en Vite + React puro.
 
@@ -15,9 +15,9 @@ Resumen operativo de las rutas que consume hoy el front web y que sirven como ba
 - `POST /api/auth/logout`
 - Login hace exchange contra Keycloak y guarda la sesiÃ³n web.
 
-## Identity and Access
+## User Management
 
-Base: `/identity-access/api/identity-access`
+Base: `/user-management/api/user-management`
 
 - `GET /bootstrap`
 - `GET /operators`

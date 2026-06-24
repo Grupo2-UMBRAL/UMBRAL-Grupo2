@@ -221,7 +221,7 @@ function Assert-HostPortsAvailable {
 
 $environmentValues = Get-ComposeEnvironment -Path $envFile
 $edgeProxyPort = $environmentValues["EDGE_PROXY_PORT"]
-$identityAccessPort = $environmentValues["IDENTITY_ACCESS_PORT"]
+$userManagementPort = $environmentValues["USER_MANAGEMENT_PORT"]
 $missionManagementPort = $environmentValues["MISSION_MANAGEMENT_PORT"]
 $SessionManagementPort = $environmentValues["SESSION_OPERATIONS_PORT"]
 $scoringAuditPort = $environmentValues["SCORING_MONITORING_PORT"]
@@ -238,6 +238,7 @@ $reservedContainerNames = @(
     "umbral-mission-management-service",
     "umbral-session-management-service",
     "umbral-scoring-monitoring-service",
+    "umbral-user-management-service",
     "umbral-edge-proxy"
 )
 $requiredHostPorts = @(
@@ -246,7 +247,7 @@ $requiredHostPorts = @(
     [int]$environmentValues["RABBITMQ_MANAGEMENT_PORT"],
     [int]$environmentValues["KEYCLOAK_PORT"],
     [int]$edgeProxyPort,
-    [int]$identityAccessPort,
+    [int]$userManagementPort,
     [int]$missionManagementPort,
     [int]$SessionManagementPort,
     [int]$scoringAuditPort
@@ -256,18 +257,20 @@ try {
     Assert-ContainerNamesAvailable -ContainerNames $reservedContainerNames
     Assert-HostPortsAvailable -Ports $requiredHostPorts
     Invoke-ComposeCommand -Arguments @("config") | Out-File -FilePath $composeConfigLog -Encoding utf8
-    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "mission-management-service", "session-management-service", "scoring-monitoring-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
+    Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "mission-management-service", "session-management-service", "scoring-monitoring-service", "user-management-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
     Invoke-ComposeCommand -Arguments @("ps") | Out-File -FilePath $composePsLog -Encoding utf8
 
     Wait-ContainerHealthy -ContainerName "umbral-postgres"
     Wait-ContainerHealthy -ContainerName "umbral-rabbitmq"
     Wait-ContainerHealthy -ContainerName "umbral-keycloak"
-    Wait-ContainerHealthy -ContainerName Wait-ContainerHealthy -ContainerName "umbral-mission-management-service"
+    Wait-ContainerHealthy -ContainerName "umbral-mission-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-session-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-scoring-monitoring-service"
+    Wait-ContainerHealthy -ContainerName "umbral-user-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
     Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health"
+    Wait-HttpOk -Uri "http://localhost:$userManagementPort/health" -Name "user-management health"
     Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health"
     Wait-HttpOk -Uri "http://localhost:$SessionManagementPort/health" -Name "session-management health"
     Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-monitoring health"

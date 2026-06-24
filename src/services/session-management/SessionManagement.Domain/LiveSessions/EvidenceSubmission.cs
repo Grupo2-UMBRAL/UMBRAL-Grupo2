@@ -20,6 +20,7 @@ public sealed class EvidenceSubmission
         string gameType,
         string? submittedHash,
         string? submittedText,
+        Guid? submittedChoiceId,
         ValidationOutcome outcome,
         string? failureReason,
         DateTimeOffset submittedAtUtc)
@@ -31,6 +32,7 @@ public sealed class EvidenceSubmission
         GameType = gameType;
         SubmittedHash = submittedHash;
         SubmittedText = submittedText;
+        SubmittedChoiceId = submittedChoiceId;
         Outcome = outcome;
         FailureReason = failureReason;
         SubmittedAtUtc = submittedAtUtc;
@@ -49,6 +51,8 @@ public sealed class EvidenceSubmission
     public string? SubmittedHash { get; private set; }
 
     public string? SubmittedText { get; private set; }
+
+    public Guid? SubmittedChoiceId { get; private set; }
 
     public ValidationOutcome Outcome { get; private set; }
 
@@ -92,6 +96,7 @@ public sealed class EvidenceSubmission
             NormalizeRequiredText(stage.GameType, "evidence_submission_game_type_required", "Evidence Submission game type is required.", 40),
             NormalizeRequiredText(submittedHash, "evidence_submission_hash_required", "Evidence Submission QR hash is required.", SubmittedHashMaximumLength),
             null,
+            null,
             outcome,
             NormalizeOptionalText(failureReason, FailureReasonMaximumLength),
             submittedAtUtc);
@@ -101,7 +106,7 @@ public sealed class EvidenceSubmission
         Guid liveSessionId,
         Guid sessionTeamId,
         LiveSessionStage stage,
-        string submittedText,
+        Guid choiceId,
         ValidationOutcome outcome,
         string? failureReason,
         DateTimeOffset submittedAtUtc)
@@ -115,7 +120,8 @@ public sealed class EvidenceSubmission
             NormalizeGuid(stage.MissionStageId, "evidence_submission_stage_required", "Evidence Submission must reference a Mission Stage."),
             NormalizeRequiredText(stage.GameType, "evidence_submission_game_type_required", "Evidence Submission game type is required.", 40),
             null,
-            NormalizeRequiredText(submittedText, "evidence_submission_text_required", "Evidence Submission answer text is required.", SubmittedTextMaximumLength),
+            null,
+            NormalizeGuid(choiceId, "evidence_submission_choice_required", "Evidence Submission must reference a selected choice."),
             outcome,
             NormalizeOptionalText(failureReason, FailureReasonMaximumLength),
             submittedAtUtc);

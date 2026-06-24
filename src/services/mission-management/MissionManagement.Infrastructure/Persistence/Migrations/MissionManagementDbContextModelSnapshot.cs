@@ -23,40 +23,103 @@ namespace MissionManagement.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Choice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_correct");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("question_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("choices", "mission_management");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Hint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("content");
+
+                    b.Property<bool>("IsSolution")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_solution");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid>("SearchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("search_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SearchId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("hints", "mission_management");
+                });
+
             modelBuilder.Entity("MissionManagement.Domain.Missions.Mission", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.Property<string>("Difficulty")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)");
-
-                    b.Property<string>("GameType")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("description");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<int>("MaximumDurationMinutes")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("maximum_duration_minutes");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<string>("NodeTreeJson")
-                        .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
 
                     b.HasKey("Id");
 
@@ -66,99 +129,222 @@ namespace MissionManagement.Infrastructure.Persistence.Migrations
                     b.ToTable("missions", "mission_management");
                 });
 
-            modelBuilder.Entity("MissionManagement.Domain.Missions.MissionStage", b =>
+            modelBuilder.Entity("MissionManagement.Domain.Missions.PathItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
-                    b.Property<string>("Difficulty")
+                    b.Property<Guid>("MissionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mission_id");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid?>("ParentSectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_section_id");
+
+                    b.Property<string>("item_kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("item_kind");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentSectionId");
+
+                    b.HasIndex("MissionId", "ParentSectionId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("path_items", "mission_management");
+
+                    b.HasDiscriminator<string>("item_kind").HasValue("PathItem");
+
+                    b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Play", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChallengeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("challenge_id");
+
+                    b.Property<string>("DifficultyOverride")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("difficulty_override");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<int?>("TimeLimitMinutesOverride")
+                        .HasColumnType("integer")
+                        .HasColumnName("time_limit_minutes_override");
+
+                    b.Property<string>("play_kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("play_kind");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChallengeId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("plays", "mission_management");
+
+                    b.HasDiscriminator<string>("play_kind").HasValue("Play");
+
+                    b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Challenge", b =>
+                {
+                    b.HasBaseType("MissionManagement.Domain.Missions.PathItem");
+
+                    b.Property<string>("DefaultDifficulty")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("default_difficulty");
 
-                    b.Property<string>("ExpectedQrHash")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
+                    b.Property<int>("DefaultTimeLimitMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("default_time_limit_minutes");
 
                     b.Property<string>("GameType")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("character varying(40)");
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("game_type");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
-                    b.Property<Guid>("MissionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
+                    b.Property<string>("Title")
                         .IsRequired()
+                        .ValueGeneratedOnUpdateSometimes()
                         .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("title");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TriviaValidationCriteria")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MissionId", "Order")
-                        .IsUnique();
-
-                    b.ToTable("mission_stages", "mission_management");
+                    b.HasDiscriminator().HasValue("Challenge");
                 });
 
-            modelBuilder.Entity("MissionManagement.Domain.Missions.MissionStageHint", b =>
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Section", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
+                    b.HasBaseType("MissionManagement.Domain.Missions.PathItem");
 
-                    b.Property<string>("Content")
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .ValueGeneratedOnUpdateSometimes()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("title");
+
+                    b.HasDiscriminator().HasValue("Section");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Question", b =>
+                {
+                    b.HasBaseType("MissionManagement.Domain.Missions.Play");
+
+                    b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("text");
 
-                    b.Property<bool>("IsSolution")
-                        .HasColumnType("boolean");
-
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("double precision");
-
-                    b.Property<Guid>("MissionStageId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MissionStageId");
-
-                    b.ToTable("mission_stage_hints", "mission_management");
+                    b.HasDiscriminator().HasValue("Question");
                 });
 
-            modelBuilder.Entity("MissionManagement.Domain.Missions.MissionStage", b =>
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Search", b =>
+                {
+                    b.HasBaseType("MissionManagement.Domain.Missions.Play");
+
+                    b.Property<string>("Clue")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("clue");
+
+                    b.Property<string>("ExpectedQrHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("expected_qr_hash");
+
+                    b.HasDiscriminator().HasValue("Search");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Choice", b =>
+                {
+                    b.HasOne("MissionManagement.Domain.Missions.Question", null)
+                        .WithMany("Choices")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Hint", b =>
+                {
+                    b.HasOne("MissionManagement.Domain.Missions.Search", null)
+                        .WithMany("Hints")
+                        .HasForeignKey("SearchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.PathItem", b =>
                 {
                     b.HasOne("MissionManagement.Domain.Missions.Mission", null)
                         .WithMany()
                         .HasForeignKey("MissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("MissionManagement.Domain.Missions.Section", null)
+                        .WithMany("Children")
+                        .HasForeignKey("ParentSectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("MissionManagement.Domain.Missions.MissionStageHint", b =>
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Play", b =>
                 {
-                    b.HasOne("MissionManagement.Domain.Missions.MissionStage", null)
-                        .WithMany("Hints")
-                        .HasForeignKey("MissionStageId")
+                    b.HasOne("MissionManagement.Domain.Missions.Challenge", null)
+                        .WithMany("Plays")
+                        .HasForeignKey("ChallengeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MissionManagement.Domain.Missions.MissionStage", b =>
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Challenge", b =>
+                {
+                    b.Navigation("Plays");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Section", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Question", b =>
+                {
+                    b.Navigation("Choices");
+                });
+
+            modelBuilder.Entity("MissionManagement.Domain.Missions.Search", b =>
                 {
                     b.Navigation("Hints");
                 });

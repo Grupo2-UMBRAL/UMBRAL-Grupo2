@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from "react-native";
 import { LoadingScreen } from "../../../src/components/loading-screen";
@@ -130,7 +129,7 @@ export default function BoardPage() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [triviaAnswer, setTriviaAnswer] = useState("");
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SubmissionFeedback>(null);
 
   const refreshSnapshot = useCallback(async () => {
@@ -265,6 +264,10 @@ export default function BoardPage() {
           return currentSnapshot;
         }
 
+        if (payload.currentStage?.missionStageId !== currentSnapshot.currentStage?.missionStageId) {
+          setSelectedChoiceId(null);
+        }
+
         return {
           ...currentSnapshot,
           currentStage: payload.currentStage,
@@ -293,6 +296,7 @@ export default function BoardPage() {
   }, [connectionState.connection, refreshSnapshot]);
 
   const currentStage = snapshot?.currentStage;
+  const triviaChoices = currentStage?.choices ?? [];
   const completedStages = currentStage ? Math.max(0, currentStage.sessionStageOrder - 1) : 0;
   const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
   const treasureHuntStage = isTreasureHunt(currentStage?.gameType);
@@ -364,8 +368,7 @@ export default function BoardPage() {
       return;
     }
 
-    const normalizedAnswer = triviaAnswer.trim();
-    if (!normalizedAnswer) {
+    if (!selectedChoiceId) {
       return;
     }
 
@@ -375,7 +378,7 @@ export default function BoardPage() {
     try {
       const result = await apiClient.submitTriviaAnswer({
         sessionTeamId: storedEnrollment.teamId,
-        answerText: normalizedAnswer
+        selectedChoiceId
       });
 
       setFeedback(
@@ -392,7 +395,7 @@ export default function BoardPage() {
             }
       );
       if (result.validationOutcome === "Accepted") {
-        setTriviaAnswer("");
+        setSelectedChoiceId(null);
       }
       await refreshSnapshot();
     } catch (error) {
@@ -494,7 +497,7 @@ export default function BoardPage() {
         <Text style={shellStyles.cardText}>
           {treasureHuntStage
             ? "Encuentra el punto de la pista y escanea su código QR para validar la etapa."
-            : "Escribe la respuesta a la pregunta. La validación es inmediata."}
+            : "Selecciona la respuesta correcta. La validación es inmediata."}
         </Text>
         {actionBlocked ? (
           <Text style={styles.warning}>Evidence CTA disabled by lifecycle guard.</Text>
@@ -522,23 +525,47 @@ export default function BoardPage() {
           </Pressable>
         ) : (
           <>
-            <TextInput
-              editable={!actionBlocked && !submitting}
-              onChangeText={setTriviaAnswer}
-              placeholder="Escribe tu respuesta..."
-              placeholderTextColor="#70868d"
-              style={styles.triviaInput}
-              value={triviaAnswer}
-            />
+            <Text style={styles.choicePrompt}>Selecciona la respuesta correcta</Text>
+            <View style={styles.choiceGrid}>
+              {triviaChoices.map((choice) => {
+                const isSelected = selectedChoiceId === choice.id;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    disabled={actionBlocked || submitting}
+                    key={choice.id}
+                    onPress={() => {
+                      setSelectedChoiceId(choice.id);
+                    }}
+                    style={({ pressed }) => [
+                      styles.choiceButton,
+                      isSelected && styles.choiceButtonSelected,
+                      (actionBlocked || submitting) && styles.choiceButtonDisabled,
+                      pressed && styles.buttonPressed
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceButtonLabel,
+                        isSelected && styles.choiceButtonLabelSelected
+                      ]}
+                    >
+                      {choice.text}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <Pressable
-              disabled={actionBlocked || submitting || triviaAnswer.trim().length === 0}
+              disabled={actionBlocked || submitting || !selectedChoiceId}
               onPress={() => {
                 void submitTriviaEvidence();
               }}
               style={({ pressed }) => [
                 styles.primaryButton,
-                (actionBlocked || submitting || triviaAnswer.trim().length === 0)
-                  && styles.disabledButton,
+                (actionBlocked || submitting || !selectedChoiceId) && styles.disabledButton,
                 pressed && styles.buttonPressed
               ]}
             >
@@ -724,16 +751,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  triviaInput: {
+  choicePrompt: {
+    color: "#17313b",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20
+  },
+  choiceGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10
+  },
+  choiceButton: {
+    alignItems: "center",
     backgroundColor: "#f7fbfc",
     borderColor: "#b8c8cc",
     borderRadius: 16,
-    borderWidth: 1,
-    color: "#17313b",
-    fontSize: 16,
-    minHeight: 48,
+    borderWidth: 1.5,
+    flexBasis: "47%",
+    flexGrow: 1,
+    justifyContent: "center",
+    minHeight: 56,
     paddingHorizontal: 14,
     paddingVertical: 12
+  },
+  choiceButtonSelected: {
+    backgroundColor: "#d8f3dc",
+    borderColor: "#2d6a4f"
+  },
+  choiceButtonDisabled: {
+    opacity: 0.5
+  },
+  choiceButtonLabel: {
+    color: "#17313b",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center"
+  },
+  choiceButtonLabelSelected: {
+    color: "#1b4332",
+    fontWeight: "800"
   },
   finalizedEvidenceNotice: {
     backgroundColor: "#f2e7de",

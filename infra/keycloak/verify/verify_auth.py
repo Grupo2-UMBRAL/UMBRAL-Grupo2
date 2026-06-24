@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ SHORT_LIVED_CLIENT_ID = os.environ.get("SHORT_LIVED_CLIENT_ID", "umbral-web-shor
 SCENARIO = os.environ.get("AUTH_SMOKE_SCENARIO", "all")
 
 EXPECTED_API_AUDIENCES = {
-    "umbral-identity-access-api",
+    "umbral-user-management-api",
     "umbral-mission-management-api",
     "umbral-session-management-api",
     "umbral-scoring-monitoring-api",

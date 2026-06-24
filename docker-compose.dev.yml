@@ -61,6 +61,26 @@ services:
       timeout: 5s
       retries: 10
 
+  user-management-service:
+    build:
+      context: .
+      dockerfile: infra/keycloak/docker/user-management.Dockerfile
+    container_name: umbral-user-management-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=user_management
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-user-management-api
+      Persistence__ApplyMigrationsOnStartup: "true"
+    ports:
+      - "${USER_MANAGEMENT_PORT:-5001}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
 
   mission-management-service:
     build:
@@ -151,7 +171,7 @@ services:
       AllowedOrigins__1: http://localhost:3000
       AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}
       COVERAGE_REPORT_PATH: /app/coverage
-      ReverseProxy__Clusters__identity-access__Destinations__primary__Address: http://identity-access-service:8080/
+      ReverseProxy__Clusters__user-management__Destinations__primary__Address: http://user-management-service:8080/
       ReverseProxy__Clusters__mission-management__Destinations__primary__Address: http://mission-management-service:8080/
       ReverseProxy__Clusters__session-management__Destinations__primary__Address: http://session-management-service:8080/
       ReverseProxy__Clusters__scoring-monitoring__Destinations__primary__Address: http://scoring-monitoring-service:8080/
@@ -163,6 +183,8 @@ services:
     volumes:
       - ./temp/validation/backend-coverage-report:/app/coverage
     depends_on:
+      user-management-service:
+        condition: service_started
       mission-management-service:
         condition: service_started
       session-management-service:
@@ -223,6 +245,7 @@ services:
       EXPO_PUBLIC_KEYCLOAK_CLIENT_ID: ${MOBILE_KEYCLOAK_CLIENT_ID}
       EXPO_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${MOBILE_SESSION_OPERATIONS_HUB_PATH}
       EXPO_PUBLIC_SCORING_MONITORING_HUB_PATH: ${MOBILE_SCORING_MONITORING_HUB_PATH}
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME}
     ports:
       - "${MOBILE_WEB_PORT}:${MOBILE_WEB_PORT}"
     volumes:

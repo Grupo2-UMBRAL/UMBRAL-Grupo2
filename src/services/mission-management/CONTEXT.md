@@ -2,94 +2,102 @@
 
 Contexto responsable del diseno reusable de las experiencias de juego. Aqui viven las definiciones base que pueden reutilizarse en multiples sesiones en vivo.
 
+El recorrido jugable es **lineal**; la organizacion admite **Sections** recursivas pero **inertes** (patron Composite). El path es el flatten depth-first de los **Challenges** hoja. La decision esta registrada en `docs/adr/0001-linear-path-challenge-model.md`.
+
 ## Language
 
 **Mission**:
-Plantilla reusable que define una experiencia de juego. Una **Mission** contiene un arbol ordenado de **Mission Nodes** y puede combinar varios **Game Types** a traves de sus **Mission Stages** jugables. Las **Hints** viven dentro de los **Mission Stages**.
-_Avoid_: LiveSession, partida, ejecucion
+Plantilla reusable que define una experiencia de juego como una secuencia lineal ordenada de **Path Items**. Puede mezclar varios **Game Types** a traves de sus **Challenges**, y deriva (no autorea) su dificultad y sus tipos a partir de ellos.
+_Avoid_: LiveSession, partida, ejecucion, arbol de nodos
 
-**Mission Stage**:
-**Mission Node** hoja que representa una unidad jugable concreta dentro de una **Mission**. Un **Mission Stage** no tiene hijos, tiene exactamente un **Game Type**, define exactamente una **Difficulty**, define exactamente un **Prompt** visible para participantes, y es la unidad que luego puede participar en flujo operativo.
-_Avoid_: Session Stage, etapa ejecutada, paso puramente visual
+**Path Item**:
+Componente ordenable de una **Mission**: o un **Challenge** jugable (hoja), o una **Section** organizativa (composite) que agrupa mas Path Items. Es el rol Component del patron Composite.
+_Avoid_: Mission Node con datos de juego, hoja jugable que se anida
 
-**Mission Node**:
-Componente estructural ordenable dentro de una **Mission**. Un **Mission Node** puede ser compuesto si tiene hijos o puede materializarse como un **Mission Stage** si es hoja jugable. Cuando un **Mission Node** compuesto agrupa un bloque tematico de negocio, sus descendientes jugables deben compartir el mismo **Game Type** y puede definir un **Default Time Budget** heredable para su subarbol.
-_Avoid_: LiveSession node, UI tree
+**Section**:
+**Path Item** organizativo (composite) que agrupa de forma ordenada a otros Path Items, incluidas otras **Sections** de forma recursiva. Es **inerte**: solo aporta titulo y orden, sin **Game Type**, **Difficulty**, tiempo, validacion ni herencia. No se "juega".
+_Avoid_: Mission Node compuesto con datos de juego, divisor plano sin anidacion, contenedor que hereda tiempo o dificultad
 
-**Substage**:
-Relacion padre-hijo entre un **Mission Node** compuesto y otro **Mission Node** dentro de la misma **Mission**. La composicion puede repetirse recursivamente en varios niveles.
-_Avoid_: session checkpoint, runtime progress marker, paso visual sin significado de dominio
+**Challenge**:
+Bloque jugable y tipado dentro de la ruta, y la **hoja** (Leaf) del Composite. Agrupa varias jugadas homogeneas (**Questions** o **Searches**) que comparten su configuracion general (**Game Type**, **Difficulty** y **Time Limit** por defecto). Es la estacion del recorrido; sus jugadas se resuelven en orden y nunca se anida en otro **Challenge**.
+_Avoid_: Mission Stage, etapa, Mission Node, challenge anidado
 
-**Stage Template Reuse**:
-Capacidad de reutilizar un **Mission Stage** o un subarbol de **Mission Nodes** dentro de otra **Mission** para acelerar el diseno administrativo. El reuse crea una copia independiente en la mision destino, conserva referencia de trazabilidad al origen visible como metadata de solo lectura, solo puede tomar como origen nodos de misiones visibles para el **Administrator** que ejecuta la accion, copia el subarbol completo con sus descendientes, **Hints**, tiempos y metadata, y deja un evento auditable de la operacion.
-_Avoid_: runtime cloning, referencia compartida obligatoria, herencia viva entre misiones, exigir mision activa solo para copiar, copia parcial ambigua en el mismo acto de reuse, trazabilidad solo escondida en logs
+**Trivia Challenge**:
+**Challenge** de tipo Trivia. Contiene una secuencia ordenada de **Questions** estilo Kahoot.
+_Avoid_: quiz suelto, pregunta unica
+
+**Treasure Hunt Challenge**:
+**Challenge** de tipo Treasure Hunt. Contiene una secuencia ordenada de **Searches**.
+_Avoid_: busqueda unica, mapa
+
+**Question**:
+Jugada de un **Trivia Challenge**: un enunciado de texto con entre 2 y 4 **Choices**, de las cuales exactamente una es correcta. Es una unidad puntuable.
+_Avoid_: Prompt, trivia valid answer, criterio de validacion, respuesta de texto libre
+
+**Choice**:
+Una opcion de respuesta de una **Question**. Exactamente una **Choice** por **Question** es la correcta.
+_Avoid_: alternativa de texto abierto, respuesta libre
+
+**Search**:
+Jugada de un **Treasure Hunt Challenge**: una pista que conduce a un codigo QR esperado, con sus propias **Hints**. Es una unidad puntuable.
+_Avoid_: Mission Stage QR, pregunta
 
 **Hint**:
-Pieza de informacion asociada directamente a un **Mission Stage**. Puede ser visible durante la sesion o revelarse como solucion al finalizar.
-_Avoid_: Event, evidence, notification
+Pieza de ayuda asociada a una **Search**. Puede acompanar la busqueda o revelarse como solucion, y puede llevar coordenadas. Las **Questions** de trivia no usan **Hints**.
+_Avoid_: Event, evidence, notification, pista de trivia
 
 **Game Type**:
-Clasificacion fija de un **Mission Stage** que determina su estrategia de validacion de evidencias. En UMBRAL los valores actuales son Treasure Hunt y Trivia.
-_Avoid_: session mode, mission-wide rule cuando la mision mezcla tipos
-
-**Prompt**:
-Texto principal visible de un **Mission Stage** que explica al participante que debe resolver en esa hoja. En `Trivia` suele funcionar como pregunta o enunciado. En `Treasure Hunt` suele funcionar como instruccion, objetivo o contexto de busqueda. No reemplaza las **Hints** ni la regla de validacion del tipo de juego.
-_Avoid_: respuesta valida, criterio interno de validacion, nota solo para operador, hint
+Clasificacion de un **Challenge** que determina su estrategia de validacion y la forma de sus jugadas. Valores actuales: Trivia y Treasure Hunt. Ya no es un valor unico de la **Mission**.
+_Avoid_: session mode, mission-wide rule, tipo a nivel mision
 
 **Difficulty**:
-Clasificacion fija de un **Mission Stage** hoja que determina su puntaje base cuando la hoja queda validada. Los valores del primer release son Easy, Medium y Hard. La **Difficulty** no pertenece al **Mission Node** compuesto ni funciona como valor unico de una **Mission**.
-_Avoid_: mission-wide difficulty, puntaje libre por etapa, dificultad heredada desde nodo compuesto
+Clasificacion (Easy, Medium, Hard) que alimenta el puntaje de una jugada validada. Se define por defecto en el **Challenge** y una jugada puede sobreescribirla. La **Mission** no tiene **Difficulty** propia: la deriva.
+_Avoid_: mission-wide difficulty, dificultad heredada por arbol, puntaje libre
 
-**Default Time Budget**:
-Valor temporal por defecto definido en un **Mission Node** compuesto para sus descendientes. Se hereda hacia abajo mientras un subnodo o un **Mission Stage** no declare su propio tiempo explicito. Cuando aparece un valor mas especifico, reemplaza por completo al heredado.
-_Avoid_: limite total de bloque, timer visual solamente, duracion estimada sin efecto operativo
+**Time Limit**:
+Limite temporal efectivo de una jugada. Se define por defecto en el **Challenge** y una jugada puede sobreescribirlo; no se hereda en cadena por niveles.
+_Avoid_: Default Time Budget heredable, limite total de subarbol, timer decorativo
 
-**Time Budget**:
-Limite temporal efectivo de un **Mission Stage** jugable. Puede declararse directamente en la hoja o resolverse por herencia desde el **Default Time Budget** de sus ancestros.
-_Avoid_: promedio calculado automaticamente por cantidad de hijos, limite total de subarbol
+**Challenge Reuse**:
+Capacidad de copiar un **Challenge** completo (con sus jugadas, **Hints** y configuracion) hacia otra **Mission**. Crea una copia independiente, conserva trazabilidad de origen como metadata de solo lectura y deja un evento auditable.
+_Avoid_: referencia compartida viva, clonado en runtime, copia parcial ambigua
 
 ## Flagged Ambiguities
 
-**Stage**:
-No usar `stage` para cualquier nodo del arbol. Si el nodo tiene hijos, hablar de **Mission Node** compuesto. Si es hoja jugable, hablar de **Mission Stage**.
+**Stage / Etapa**:
+Termino retirado para el diseno. La estacion jugable es un **Challenge**; la unidad puntuable es una **Question** o una **Search**.
+
+**Node / Arbol jugable**:
+No existe arbol de nodos jugables ni el viejo **Mission Node**. La recursion vive solo en el arbol organizativo de **Sections**, que es inerte. Lo jugable es el flatten lineal de los **Challenges** hoja; no hay anidacion de jugadas ni herencia por niveles.
+
+**Stage (cross-context)**:
+En `scoring-monitoring` y `session-management` el credito por "stage" corresponde a una jugada (**Question** o **Search**) de este contexto, no a un **Challenge** completo.
 
 ## Example Dialogue
 
-Dev: "Si una etapa resulta demasiado dificil en una ejecucion, edito la Mission?"
-Experto de dominio: "No. La Mission conserva el diseno base; el ajuste operativo ocurre en la sesion."
+Dev: "Entonces una Mission es un arbol de nodos?"
+Experto: "Solo para organizar. Hay un Composite de Sections recursivas pero inertes; lo jugable es el flatten lineal de los Challenges hoja. Ninguna jugada se anida."
 
-Dev: "Entonces el Game Type pertenece al diseno, no a la operacion."
-Experto de dominio: "Correcto. La sesion deriva ese tipo desde cada Mission Stage jugable."
+Dev: "Una Section puede contener otra Section?"
+Experto: "Si, recursivamente. Pero la Section no tiene juego, tiempo ni dificultad: solo agrupa y ordena."
 
-Dev: "Si una etapa tiene subetapas, todas son jugables?"
-Experto de dominio: "No. Solo los nodos hoja son Mission Stages jugables; los nodos internos componen la estructura."
+Dev: "Si quiero 5 preguntas, creo 5 etapas?"
+Experto: "No. Creas un Trivia Challenge y le agregas 5 Questions. Tipo, dificultad y tiempo se setean una vez en el Challenge."
 
-Dev: "Entonces una Mission completa tiene un solo Game Type?"
-Experto de dominio: "No necesariamente. Cada Mission Stage define su propio Game Type y la Mission puede mezclar varios."
+Dev: "Una Question puede tener respuesta de texto libre?"
+Experto: "No. Tiene entre 2 y 4 Choices y exactamente una correcta, estilo Kahoot."
 
-Dev: "La pregunta de Trivia vive fuera de la etapa?"
-Experto de dominio: "No. Vive en el Prompt del Mission Stage. Trivia lo usa como pregunta; Treasure Hunt lo usa como instruccion."
+Dev: "Un Treasure Hunt Challenge tiene una sola busqueda?"
+Experto: "Puede tener varias Searches en orden, cada una con su pista y su QR esperado."
 
-Dev: "Y la dificultad para scoring vive en la Mission completa o en el nodo hoja?"
-Experto de dominio: "En el Mission Stage. El nodo compuesto estructura el arbol, pero la hoja jugable define la Difficulty que alimenta el puntaje."
+Dev: "La Section agrupa Challenges como un nodo padre?"
+Experto: "Si, es un composite que los contiene y puede anidar otras Sections, pero inerte: sin juego, tiempo ni dificultad, y no altera el orden lineal del flatten."
 
-Dev: "El tiempo del bloque grande es solo decorativo?"
-Experto de dominio: "No. Si el nodo compuesto define un Default Time Budget, sus descendientes lo heredan salvo que alguno lo sobreescriba."
+Dev: "La dificultad vive en la Mission?"
+Experto: "No. Se define en el Challenge, y opcionalmente por jugada. La Mission la deriva solo para mostrar."
 
-Dev: "Y si una hoja define su propio tiempo, se combina con el heredado?"
-Experto de dominio: "No. El valor local reemplaza por completo al heredado."
+Dev: "El tiempo del Challenge se hereda hacia las jugadas en cadena?"
+Experto: "No hay cadena. La jugada usa su tiempo propio si lo tiene; si no, el del Challenge. Dos niveles, sin recursion."
 
-Dev: "Y esa etapa puede usarse otra vez en otra Mission?"
-Experto de dominio: "Si, mediante Stage Template Reuse. Pero lo reutilizado entra como copia independiente, no como referencia global compartida."
-
-Dev: "Solo puedo reutilizar nodos de misiones activas?"
-Experto de dominio: "No. La regla correcta es visibilidad para el Administrator, no estado operativo de la Mission."
-
-Dev: "Cuando reutilizo un bloque, puedo traerme solo algunos hijos?"
-Experto de dominio: "No en el acto de reuse. Primero se copia el subarbol completo y luego editas la copia destino si quieres recortarla."
-
-Dev: "Y como se sabe de donde salio esa copia?"
-Experto de dominio: "La copia muestra su origen como metadata de solo lectura y ademas la operacion queda registrada en auditoria."
-
-Dev: "Entonces, Mission Stage y Mission Node son lo mismo?"
-Experto de dominio: "No. Mission Node es el concepto general; Mission Stage es solo el nodo hoja jugable."
+Dev: "Y el puntaje por velocidad estilo Kahoot?"
+Experto: "Vive en scoring-monitoring. Este contexto solo aporta Difficulty y la respuesta correcta; la sesion aporta el tiempo de resolucion."

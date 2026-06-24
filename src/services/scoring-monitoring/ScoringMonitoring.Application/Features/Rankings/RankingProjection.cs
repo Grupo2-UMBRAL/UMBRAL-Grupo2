@@ -46,7 +46,7 @@ public static class RankingProjection
             .Where(entry =>
                 entry.SessionTeamId == sessionTeamId
                 && entry.ResolutionTime is not null
-                && (entry.EntryType == ScoreEntryType.StageCredit
+                && (entry.EntryType == ScoreEntryType.PlayCredit
                     || entry.EntryType == ScoreEntryType.ValidationOverrideCredit))
             .Sum(entry => entry.ResolutionTime!.Value.Ticks);
 

@@ -3,7 +3,7 @@ namespace ScoringMonitoring.Application.Features.Scoreboards.Commands.RecordStag
 public sealed record RecordStageCreditCommand(
     Guid LiveSessionId,
     Guid SessionTeamId,
-    Guid MissionStageId,
+    Guid PlayId,
     string Difficulty,
     TimeSpan ResolutionTime,
     DateTimeOffset RecordedAt,

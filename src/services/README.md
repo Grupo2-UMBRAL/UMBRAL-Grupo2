@@ -1,10 +1,10 @@
-﻿# Backend Foundation
+# Backend Foundation
 
 Este directorio contiene el baseline backend ejecutable para los bounded contexts que hoy se implementan con servicios `.NET`.
 
 ## Servicios incluidos
 
-- `identity-access/Umbral.IdentityAccess.Api`
+- `user-management/UserManagement.Api`
 - `mission-management/MissionManagement.Api`
 - `session-management/Umbral.SessionManagement.Api`
 - `scoring-monitoring/ScoringMonitoring.Api`
@@ -30,11 +30,11 @@ Los servicios usan `UmbralExceptionHandler` para mapear fallos de forma consiste
 
 ## Build y tests
 
-### Identity and Access
+### User Management
 
 ```powershell
-dotnet build src/services/identity-access/Umbral.IdentityAccess.Api/Umbral.IdentityAccess.Api.csproj
-dotnet test src/services/identity-access/Umbral.IdentityAccess.Api.Tests/Umbral.IdentityAccess.Api.Tests.csproj
+dotnet build src/services/user-management/UserManagement.Api/UserManagement.Api.csproj
+dotnet test src/services/user-management/UserManagement.Api.Tests/UserManagement.Api.Tests.csproj
 ```
 
 ### Mission Management

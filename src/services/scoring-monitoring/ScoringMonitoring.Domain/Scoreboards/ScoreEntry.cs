@@ -20,7 +20,7 @@ public sealed class ScoreEntry
         int visibleScoreBefore,
         int visibleScoreAfter,
         DateTimeOffset recordedAt,
-        Guid? missionStageId = null,
+        Guid? playId = null,
         Guid? penaltyCommandId = null,
         Guid? penaltyId = null,
         PenaltySeverity? penaltySeverity = null,
@@ -58,7 +58,7 @@ public sealed class ScoreEntry
         VisibleScoreBefore = visibleScoreBefore;
         VisibleScoreAfter = visibleScoreAfter;
         RecordedAt = recordedAt;
-        MissionStageId = missionStageId;
+        PlayId = playId;
         PenaltyCommandId = penaltyCommandId;
         PenaltyId = penaltyId;
         PenaltySeverity = penaltySeverity;
@@ -87,7 +87,7 @@ public sealed class ScoreEntry
 
     public DateTimeOffset RecordedAt { get; private set; }
 
-    public Guid? MissionStageId { get; private set; }
+    public Guid? PlayId { get; private set; }
 
     public Guid? PenaltyCommandId { get; private set; }
 

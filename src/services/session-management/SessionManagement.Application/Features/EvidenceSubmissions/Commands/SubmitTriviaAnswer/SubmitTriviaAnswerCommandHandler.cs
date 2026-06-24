@@ -52,7 +52,7 @@ public sealed class SubmitTriviaAnswerHandler(
         var stageStartedAtUtc = GetCurrentStageStartedAtUtc(liveSession, request.SessionTeamId);
         var evidenceSubmission = liveSession.SubmitTriviaAnswer(
             request.SessionTeamId,
-            request.AnswerText,
+            request.SelectedChoiceId,
             submittedAtUtc);
         var currentStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
         var progressState = liveSession.GetProgressStateForTeam(request.SessionTeamId);
@@ -232,7 +232,8 @@ public sealed class SubmitTriviaAnswerHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType,
-            currentStage.Prompt);
+            currentStage.Prompt,
+            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
     }
 
     private static RecordStageCreditRequest CreateStageCreditRequest(

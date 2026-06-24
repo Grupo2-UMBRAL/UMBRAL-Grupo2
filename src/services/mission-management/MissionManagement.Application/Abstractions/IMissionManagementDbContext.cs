@@ -7,9 +7,17 @@ public interface IMissionManagementDbContext
 {
     DbSet<Mission> Missions { get; }
 
-    DbSet<MissionStage> MissionStages { get; }
+    DbSet<PathItem> PathItems { get; }
 
-    DbSet<MissionStageHint> MissionStageHints { get; }
+    DbSet<Section> Sections { get; }
+
+    DbSet<Challenge> Challenges { get; }
+
+    DbSet<Play> Plays { get; }
+
+    DbSet<Choice> Choices { get; }
+
+    DbSet<Hint> Hints { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -7,6 +7,7 @@ using ScoringMonitoring.Application.Features.Scoreboards;
 using ScoringMonitoring.Application.Features.Scoreboards.Commands.ApplyPenalty;
 using ScoringMonitoring.Application.Features.Scoreboards.Commands.RecordStageCredit;
 using ScoringMonitoring.Domain.Audit;
+using ScoringMonitoring.Domain.Scoreboards;
 using ScoringMonitoring.Infrastructure.Persistence;
 using Xunit;
 
@@ -99,13 +100,13 @@ public sealed class SessionEventLogApplicationTests
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();
         var sessionTeamId = Guid.NewGuid();
-        var missionStageId = Guid.NewGuid();
+        var playId = Guid.NewGuid();
 
         await handler.Handle(
             new RecordStageCreditCommand(
                 liveSessionId,
                 sessionTeamId,
-                missionStageId,
+                playId,
                 "Medium",
                 TimeSpan.FromSeconds(15),
                 DateTimeOffset.Parse("2026-06-04T01:45:00Z"),
@@ -116,7 +117,7 @@ public sealed class SessionEventLogApplicationTests
         Assert.Equal(liveSessionId, persistedEvent.LiveSessionId);
         Assert.Equal("StageCredit", persistedEvent.EventType);
         Assert.Contains(sessionTeamId.ToString(), persistedEvent.Description);
-        Assert.Contains(missionStageId.ToString(), persistedEvent.Description);
+        Assert.Contains(playId.ToString(), persistedEvent.Description);
         Assert.Contains("200", persistedEvent.Description);
         Assert.Single(updatesPublisher.EventLogPayloads);
         Assert.Equal(persistedEvent.Id, updatesPublisher.EventLogPayloads[0].Id);

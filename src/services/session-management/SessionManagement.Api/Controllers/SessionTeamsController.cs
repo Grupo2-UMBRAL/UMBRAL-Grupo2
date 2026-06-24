@@ -40,7 +40,7 @@ public sealed class SessionTeamsController(ISender sender) : ControllerBase
         [FromBody] SubmitTriviaAnswerRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(new SubmitTriviaAnswerCommand(sessionTeamId, request.AnswerText), cancellationToken);
+        var result = await sender.Send(new SubmitTriviaAnswerCommand(sessionTeamId, request.SelectedChoiceId), cancellationToken);
         return Ok(result);
     }
 }

@@ -125,7 +125,8 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType,
-            currentStage.Prompt);
+            currentStage.Prompt,
+            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
     }
 
     private static IReadOnlyList<CurrentSessionStageSnapshot>? MapAllStages(LiveSession liveSession)

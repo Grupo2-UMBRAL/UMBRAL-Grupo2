@@ -408,7 +408,7 @@ public sealed class LiveSession
         return evidenceSubmission;
     }
 
-    public EvidenceSubmission SubmitTriviaAnswer(Guid sessionTeamId, string answerText, DateTimeOffset submittedAtUtc)
+    public EvidenceSubmission SubmitTriviaAnswer(Guid sessionTeamId, Guid selectedChoiceId, DateTimeOffset submittedAtUtc)
     {
         EnsureEvidenceSubmissionAllowed();
         EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
@@ -417,25 +417,17 @@ public sealed class LiveSession
         var progress = GetOrCreateProgress(sessionTeamId, submittedAtUtc);
         EnsureTeamProgressAcceptsSubmission(progress);
         var currentStage = SelectCurrentStage(progress, orderedStages);
-        EnsureTriviaStage(currentStage);
+        EnsureTriviaStage(currentStage, selectedChoiceId);
 
-        var normalizedAnswerText = NormalizeRequiredText(
-            answerText,
-            "evidence_submission_text_required",
-            "Evidence Submission answer text is required.",
-            EvidenceSubmission.SubmittedTextMaximumLength);
         EnsureStageNotAcceptedByTeam(sessionTeamId, currentStage.MissionStageId);
 
-        var accepted = string.Equals(
-            NormalizeTriviaAnswerForComparison(currentStage.TriviaValidAnswer!),
-            NormalizeTriviaAnswerForComparison(normalizedAnswerText),
-            StringComparison.Ordinal);
+        var accepted = currentStage.CorrectChoiceId == selectedChoiceId;
         var submissionOutcome = accepted ? ValidationOutcome.Accepted : ValidationOutcome.Rejected;
         var evidenceSubmission = EvidenceSubmission.CreateTrivia(
             Id,
             sessionTeamId,
             currentStage,
-            normalizedAnswerText,
+            selectedChoiceId,
             submissionOutcome,
             accepted ? null : "trivia_answer_mismatch",
             submittedAtUtc);
@@ -922,7 +914,7 @@ public sealed class LiveSession
             UmbralFailureCategory.Validation);
     }
 
-    private static void EnsureTriviaStage(LiveSessionStage currentStage)
+    private static void EnsureTriviaStage(LiveSessionStage currentStage, Guid selectedChoiceId)
     {
         if (!string.Equals(currentStage.GameType, "Trivia", StringComparison.OrdinalIgnoreCase))
         {
@@ -932,19 +924,22 @@ public sealed class LiveSession
                 UmbralFailureCategory.Conflict);
         }
 
-        if (!string.IsNullOrWhiteSpace(currentStage.TriviaValidAnswer))
+        if (!currentStage.CorrectChoiceId.HasValue)
         {
-            return;
+            throw new UmbralDomainException(
+                "evidence_submission_trivia_answer_required",
+                "Current Session Stage does not define a valid Trivia answer.",
+                UmbralFailureCategory.Validation);
         }
 
-        throw new UmbralDomainException(
-            "evidence_submission_trivia_answer_required",
-            "Current Session Stage does not define a valid Trivia answer.",
-            UmbralFailureCategory.Validation);
+        if (currentStage.Choices.All(choice => choice.Id != selectedChoiceId))
+        {
+            throw new UmbralDomainException(
+                "evidence_submission_choice_not_in_play",
+                "Selected choice is not one of the Play choices.",
+                UmbralFailureCategory.Validation);
+        }
     }
-
-    private static string NormalizeTriviaAnswerForComparison(string answerText)
-        => answerText.Trim().ToLowerInvariant();
 
     private void EnsureEnrollmentAllowed(JoinCode presentedJoinCode, DateTimeOffset nowUtc)
     {

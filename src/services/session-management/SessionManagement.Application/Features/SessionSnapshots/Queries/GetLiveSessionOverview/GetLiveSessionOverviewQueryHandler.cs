@@ -131,7 +131,8 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType,
-            currentStage.Prompt);
+            currentStage.Prompt,
+            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
     }
 
     private static IReadOnlyList<VisibleHintSnapshot> MapVisibleHints(

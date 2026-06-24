@@ -1,4 +1,4 @@
-﻿# Frontend Agent
+# Frontend Agent
 
 ## Rol
 
@@ -12,7 +12,7 @@ Implementa interfaces de usuario alineadas al ERS, al lenguaje del dominio y a l
 - [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
 - [../../src/session-management/CONTEXT.md](../../src/session-management/CONTEXT.md)
 - [../../src/scoring-monitoring/CONTEXT.md](../../src/scoring-monitoring/CONTEXT.md)
-- [../../src/identity-access/CONTEXT.md](../../src/identity-access/CONTEXT.md)
+- [../../src/services/user-management/CONTEXT.md](../../src/services/user-management/CONTEXT.md)
 - [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)
 
 ## Hace

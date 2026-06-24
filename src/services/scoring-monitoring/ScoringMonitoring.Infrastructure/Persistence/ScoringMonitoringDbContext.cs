@@ -75,8 +75,8 @@ public sealed class ScoringMonitoringDbContext(DbContextOptions<ScoringMonitorin
             scoreEntry.Property(entity => entity.RecordedAt)
                 .HasColumnName("recorded_at")
                 .IsRequired();
-            scoreEntry.Property(entity => entity.MissionStageId)
-                .HasColumnName("mission_stage_id");
+            scoreEntry.Property(entity => entity.PlayId)
+                .HasColumnName("play_id");
             scoreEntry.Property(entity => entity.PenaltyCommandId)
                 .HasColumnName("penalty_command_id");
             scoreEntry.Property(entity => entity.PenaltyId)
@@ -99,10 +99,10 @@ public sealed class ScoringMonitoringDbContext(DbContextOptions<ScoringMonitorin
                 .HasDatabaseName("ix_score_entries_live_session_id");
             scoreEntry.HasIndex(entity => new { entity.LiveSessionId, entity.SessionTeamId })
                 .HasDatabaseName("ix_score_entries_live_session_id_session_team_id");
-            scoreEntry.HasIndex(entity => new { entity.LiveSessionId, entity.SessionTeamId, entity.MissionStageId })
+            scoreEntry.HasIndex(entity => new { entity.LiveSessionId, entity.SessionTeamId, entity.PlayId })
                 .IsUnique()
-                .HasDatabaseName("ux_score_entries_single_stage_credit")
-                .HasFilter("mission_stage_id IS NOT NULL AND entry_type IN ('StageCredit', 'ValidationOverrideCredit')");
+                .HasDatabaseName("ux_score_entries_single_play_credit")
+                .HasFilter("play_id IS NOT NULL AND entry_type IN ('PlayCredit', 'ValidationOverrideCredit')");
             scoreEntry.HasIndex(entity => new { entity.LiveSessionId, entity.PenaltyCommandId })
                 .IsUnique()
                 .HasDatabaseName("ux_score_entries_penalty_command")

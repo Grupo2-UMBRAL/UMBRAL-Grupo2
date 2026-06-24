@@ -1382,6 +1382,57 @@ tr.clickable {
   gap: var(--space-xs);
 }
 
+/* Drag handle for sortable mission items */
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-base);
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: var(--text-md);
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong, var(--border));
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Trivia choice rows */
+.choice-row {
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.choice-row .form-input {
+  flex: 1;
+}
+
+.choice-correct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.choice-correct input[type="radio"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}
+
 /* ----------------------------------------------------------------
    21. TIMELINE (team detail)
    ---------------------------------------------------------------- */

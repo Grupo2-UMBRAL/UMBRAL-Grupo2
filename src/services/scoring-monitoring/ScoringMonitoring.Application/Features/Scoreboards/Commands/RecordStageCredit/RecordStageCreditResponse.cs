@@ -5,7 +5,7 @@ namespace ScoringMonitoring.Application.Features.Scoreboards.Commands.RecordStag
 public sealed record RecordStageCreditResponse(
     Guid LiveSessionId,
     Guid SessionTeamId,
-    Guid MissionStageId,
+    Guid PlayId,
     Guid? ScoreEntryId,
     bool ScoreEntryCreated,
     int VisibleScore,

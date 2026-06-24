@@ -16,7 +16,7 @@ public sealed class ScoringMonitoringHttpClient(HttpClient httpClient) : IScorin
             new
             {
                 request.SessionTeamId,
-                request.MissionStageId,
+                PlayId = request.PlayId,
                 request.Difficulty,
                 request.ResolutionTime,
                 request.RecordedAt,

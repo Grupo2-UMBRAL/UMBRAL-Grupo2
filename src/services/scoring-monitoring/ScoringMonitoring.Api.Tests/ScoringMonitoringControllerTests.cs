@@ -35,7 +35,7 @@ public sealed class ScoringMonitoringControllerTests
             $"/api/scoring-monitoring/sessions/{liveSessionId}/scores",
             new RecordStageCreditRequest(
                 sessionTeamId,
-                MissionStageId: Guid.NewGuid(),
+                PlayId: Guid.NewGuid(),
                 Difficulty: "Medium",
                 ResolutionTime: TimeSpan.FromSeconds(15),
                 RecordedAt: DateTimeOffset.Parse("2026-06-04T01:45:00Z"),
@@ -96,7 +96,7 @@ public sealed class ScoringMonitoringControllerTests
             $"/api/scoring-monitoring/sessions/{liveSessionId}/scores",
             new RecordStageCreditRequest(
                 sessionTeamId,
-                MissionStageId: Guid.NewGuid(),
+                PlayId: Guid.NewGuid(),
                 Difficulty: "Medium",
                 ResolutionTime: TimeSpan.FromSeconds(15),
                 RecordedAt: DateTimeOffset.Parse("2026-06-04T01:45:00Z"),

@@ -51,7 +51,7 @@ type MockBoardApiClient = {
   submitEvidence: jest.Mock<Promise<{ validationOutcome: string }>, [{ sessionTeamId: string; qrHash: string }]>;
   submitTriviaAnswer: jest.Mock<
     Promise<{ validationOutcome: string }>,
-    [{ sessionTeamId: string; answerText: string }]
+    [{ sessionTeamId: string; selectedChoiceId: string }]
   >;
 };
 
@@ -106,7 +106,12 @@ function createSnapshot(overrides: Partial<SessionTeamSnapshot> = {}): SessionTe
       resolvedTimeBudgetMinutes: 15,
       difficulty: "Medium",
       gameType: "Trivia",
-      prompt: "Decode the message hidden in the seal."
+      prompt: "Decode the message hidden in the seal.",
+      choices: [
+        { id: "choice-1", text: "Aurora" },
+        { id: "choice-2", text: "Eclipse" },
+        { id: "choice-3", text: "Nebula" }
+      ]
     },
     visibleHints: [
       {
@@ -135,7 +140,8 @@ function createTreasureHuntSnapshot(overrides: Partial<SessionTeamSnapshot> = {}
     currentStage: snapshot.currentStage
       ? {
           ...snapshot.currentStage,
-          gameType: "TreasureHunt"
+          gameType: "TreasureHunt",
+          choices: []
         }
       : snapshot.currentStage
   };
@@ -287,7 +293,11 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
           resolvedTimeBudgetMinutes: 15,
           difficulty: "Medium",
           gameType: "Trivia",
-          prompt: "Decode the message hidden in the seal."
+          prompt: "Decode the message hidden in the seal.",
+          choices: [
+            { id: "choice-1", text: "Aurora" },
+            { id: "choice-2", text: "Eclipse" }
+          ]
         },
         {
           missionStageId: "stage-2",
@@ -297,7 +307,8 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
           resolvedTimeBudgetMinutes: 10,
           difficulty: "Hard",
           gameType: "TreasureHunt",
-          prompt: "Find the archive gate marker."
+          prompt: "Find the archive gate marker.",
+          choices: []
         }
       ],
       visibleHints: [
@@ -335,7 +346,7 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
   expect(screen.getByText("Solution")).toBeTruthy();
   expect(screen.getByText(/Lat 10.50001 \| Lon -66.90001/)).toBeTruthy();
   expect(screen.getByText("Evidence CTA disabled by lifecycle guard.")).toBeTruthy();
-  expect(screen.queryByPlaceholderText("Escribe tu respuesta...")).toBeNull();
+  expect(screen.queryByText("Eclipse")).toBeNull();
 });
 
 test("keeps final solutions out of live Visible hints before finalization", async () => {
@@ -478,7 +489,8 @@ test("resync callback fetches a fresh snapshot after SignalR reconnect", async (
           resolvedTimeBudgetMinutes: 10,
           difficulty: "Hard",
           gameType: "TreasureHunt",
-          prompt: "Find the archive gate marker."
+          prompt: "Find the archive gate marker.",
+          choices: []
         },
         sync: {
           sequenceNumber: 3,
@@ -564,7 +576,7 @@ test("submits scanned QR evidence and renders rejected feedback", async () => {
   expect(screen.getByText(/Código incorrecto, inténtalo de nuevo/)).toBeTruthy();
 });
 
-test("submits Trivia answer and renders accepted feedback", async () => {
+test("submits the selected Trivia choice and renders accepted feedback", async () => {
   const apiClient = createMockApiClient();
   apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
   apiClient.submitTriviaAnswer.mockResolvedValue({ validationOutcome: "Accepted" });
@@ -572,22 +584,37 @@ test("submits Trivia answer and renders accepted feedback", async () => {
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByPlaceholderText("Escribe tu respuesta...")).toBeTruthy();
+    expect(screen.getByText("Eclipse")).toBeTruthy();
   });
 
-  fireEvent.changeText(screen.getByPlaceholderText("Escribe tu respuesta..."), " caracas ");
+  fireEvent.press(screen.getByText("Eclipse"));
   fireEvent.press(screen.getByText("Enviar"));
 
   await waitFor(() => {
     expect(apiClient.submitTriviaAnswer).toHaveBeenCalledWith({
       sessionTeamId: "team-1",
-      answerText: "caracas"
+      selectedChoiceId: "choice-2"
     });
   });
   expect(screen.getByText(/Respuesta correcta/)).toBeTruthy();
 });
 
-test("submits Trivia answer and renders rejected feedback", async () => {
+test("disables submit until a Trivia choice is selected", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Aurora")).toBeTruthy();
+  });
+
+  fireEvent.press(screen.getByText("Enviar"));
+
+  expect(apiClient.submitTriviaAnswer).not.toHaveBeenCalled();
+});
+
+test("submits the selected Trivia choice and renders rejected feedback", async () => {
   const apiClient = createMockApiClient();
   apiClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
   apiClient.submitTriviaAnswer.mockResolvedValue({ validationOutcome: "Rejected" });
@@ -595,16 +622,16 @@ test("submits Trivia answer and renders rejected feedback", async () => {
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByPlaceholderText("Escribe tu respuesta...")).toBeTruthy();
+    expect(screen.getByText("Nebula")).toBeTruthy();
   });
 
-  fireEvent.changeText(screen.getByPlaceholderText("Escribe tu respuesta..."), "valencia");
+  fireEvent.press(screen.getByText("Nebula"));
   fireEvent.press(screen.getByText("Enviar"));
 
   await waitFor(() => {
     expect(apiClient.submitTriviaAnswer).toHaveBeenCalledWith({
       sessionTeamId: "team-1",
-      answerText: "valencia"
+      selectedChoiceId: "choice-3"
     });
   });
   expect(screen.getByText(/Respuesta incorrecta, intenta de nuevo/)).toBeTruthy();

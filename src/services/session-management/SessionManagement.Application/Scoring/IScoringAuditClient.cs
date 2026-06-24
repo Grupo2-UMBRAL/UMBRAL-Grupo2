@@ -20,7 +20,7 @@ public interface IScoringMonitoringClient
 public sealed record RecordStageCreditRequest(
     Guid LiveSessionId,
     Guid SessionTeamId,
-    Guid MissionStageId,
+    Guid PlayId,
     string Difficulty,
     TimeSpan ResolutionTime,
     DateTimeOffset RecordedAt,

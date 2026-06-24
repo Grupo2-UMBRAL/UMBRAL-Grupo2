@@ -1,6 +1,6 @@
 # Session Management
 
-Contexto responsable de la ejecucion en vivo de una mision para equipos concretos. Aqui viven el estado operativo de la sesion, el flujo efectivo de etapas y la interaccion en tiempo real con operadores y participantes.
+Contexto responsable de la ejecucion en vivo de una mision para equipos concretos. Aqui viven el estado operativo de la sesion, el **Session Flow** efectivo (lista lineal de **Plays**) y la interaccion en tiempo real con operadores y participantes.
 
 ## Language
 
@@ -24,12 +24,16 @@ _Avoid_: per-team progression, scoring update
 Grupo creado o elegido por participantes dentro de una **LiveSession**. Un **Session Team** existe solo dentro de esa sesion y se modela como parte de la consistencia del agregado **LiveSession**.
 _Avoid_: team global, user
 
-**Session Stage Flow**:
-Secuencia efectiva de etapas que una **LiveSession** ejecuta. Se deriva aplanando los **Mission Stages** hoja del arbol de **Mission Nodes** en recorrido depth-first de izquierda a derecha y puede cambiar por desactivaciones propias de la sesion. Conserva los datos operativos necesarios de cada hoja, incluido su **Prompt** y su **Difficulty**, para que la experiencia del participante y el scoring de esa ejecucion no dependan de ediciones posteriores de la **Mission** reusable.
-_Avoid_: Mission Stage, flujo base
+**Session Flow**:
+Secuencia efectiva de **Plays** que una **LiveSession** ejecuta. La **Mission** ya entrega sus **Plays** en orden lineal global (1-based, depth-first ya resuelto), y el **Session Flow** los conserva como una lista plana que puede cambiar por desactivaciones propias de la sesion. Conserva los datos operativos necesarios de cada **Play**, incluido su **Prompt**, su **Difficulty**, su `gameType`, su `timeLimitMinutes` ya resuelto y, en Trivia, sus alternativas seleccionables, para que la experiencia del participante y el scoring de esa ejecucion no dependan de ediciones posteriores de la **Mission** reusable.
+_Avoid_: Play base, flujo base, arbol de nodos
+
+**Play**:
+Unidad jugable individual dentro del **Session Flow** de una **LiveSession**. Cada **Play** trae ya resuelto su `gameType` (`Trivia` o `Treasure Hunt`), su **Difficulty** y su `timeLimitMinutes`, ademas de su **Prompt** y los datos propios del juego: en `Trivia`, las alternativas seleccionables y, solo del lado del servidor, cual es la correcta; en `Treasure Hunt`, el hash de QR esperado y sus **Hints**.
+_Avoid_: Mission Stage, Mission Node, etapa del arbol
 
 **Session Progression**:
-Capacidad interna de **Session Operations** que gobierna la etapa actual de cada **Session Team**, la aceptacion operativa de evidencias y el avance por el **Session Stage Flow**.
+Capacidad interna de **Session Operations** que gobierna el **Play** actual de cada **Session Team**, la aceptacion operativa de evidencias y el avance por el **Session Flow**.
 _Avoid_: global session state, ranking projection
 
 **Per-Team Progression**:
@@ -45,20 +49,20 @@ Periodo previo al inicio efectivo del juego en el que un participante puede crea
 _Avoid_: open-ended switching, runtime free reassignment
 
 **Evidence Submission**:
-Intento de un **Session Team** por resolver su etapa actual dentro de una **LiveSession**. Session Operations decide si el envio es aceptable dentro del flujo activo antes de que otras capacidades lo usen.
-_Avoid_: ScoreEntry, audit event
+Intento de un **Session Team** por resolver su **Play** actual dentro de una **LiveSession**. En `Trivia` el intento lleva el `choiceId` seleccionado; en `Treasure Hunt` el hash del QR escaneado. Session Operations decide si el envio es aceptable dentro del **Session Flow** activo antes de que otras capacidades lo usen.
+_Avoid_: ScoreEntry, audit event, texto libre de respuesta Trivia
 
 **Validation Override**:
-Intervencion manual del **Operator** para corregir el resultado de una **Evidence Submission** ambigua dentro de una **LiveSession**. La correccion cambia el resultado operativo final, debe quedar auditada y, si confirma una respuesta valida, habilita el puntaje completo de la hoja sin duplicar credito positivo para la misma etapa.
-_Avoid_: nuevo intento disfrazado, doble premio por la misma etapa, cambio silencioso sin trazabilidad
+Intervencion manual del **Operator** para corregir el resultado de una **Evidence Submission** ambigua dentro de una **LiveSession**. La correccion cambia el resultado operativo final, debe quedar auditada y, si confirma una respuesta valida, habilita el puntaje completo del **Play** sin duplicar credito positivo para el mismo **Play**.
+_Avoid_: nuevo intento disfrazado, doble premio por el mismo Play, cambio silencioso sin trazabilidad
 
 **Validation Outcome**:
 Resultado de evaluar una **Evidence Submission** dentro de una **LiveSession**. Puede resolverse automaticamente por regla o requerir intervencion manual del operador en casos ambiguos.
 _Avoid_: score entry, audit-only status
 
 **Validation Override**:
-Correccion manual del **Operator** sobre un **Validation Outcome** de Trivia cuando una respuesta ambigua o inicialmente rechazada corresponde a una alternativa valida. Puede habilitar el credito completo de la hoja una sola vez, pero no crea credito positivo duplicado.
-_Avoid_: revision humana obligatoria para toda respuesta Trivia, puntaje parcial, segundo credito por la misma hoja
+Correccion manual del **Operator** sobre un **Validation Outcome** de Trivia. La validacion automatica de Trivia compara el `choiceId` seleccionado contra la alternativa correcta del **Play**, siempre del lado del servidor; el override existe solo para casos excepcionales. Puede habilitar el credito completo del **Play** una sola vez, pero no crea credito positivo duplicado.
+_Avoid_: revision humana obligatoria para toda respuesta Trivia, comparar texto libre, puntaje parcial, segundo credito por el mismo Play
 
 **Resolution Time**:
 Tiempo oficial de resolucion usado para desempatar **Ranking** y para auditoria. Se mide desde la recepcion del envio en backend con precision oficial de 500 ms. No modifica puntaje ni aplica compensacion por latencia.
@@ -85,15 +89,15 @@ Resultado operativo de una **Evidence Submission** rechazada dentro de una **Liv
 _Avoid_: penalizacion automatica implicita, confundir rechazo de evidencia con sancion, descuento silencioso
 
 **Session Flow Deactivation**:
-Capacidad operativa de desactivar etapas pendientes dentro del **Session Stage Flow** para una **LiveSession** concreta. Puede apuntar a un **Mission Stage** hoja individual o a un **Mission Node** compuesto, caso en el que la desactivacion aplica a todas sus hojas descendientes que sigan pendientes. Las hojas ya completadas conservan su historial y no se reescriben.
-_Avoid_: editar la Mission base, borrar historial ya ejecutado, desactivar solo el nodo visual sin efecto en hojas
+Capacidad operativa de desactivar **Plays** pendientes dentro del **Session Flow** para una **LiveSession** concreta. Apunta a un **Play** individual que siga pendiente. Los **Plays** ya completados conservan su historial y no se reescriben.
+_Avoid_: editar la Mission base, borrar historial ya ejecutado, desactivar un Play ya resuelto
 
 **Participant Stage View**:
-Vista operativa que recibe un **Session Team** participante durante la **LiveSession**. Muestra la hoja jugable actual, su **Prompt** visible y puede incluir el nombre del bloque padre como contexto, pero no expone el arbol completo de **Mission Nodes**.
-_Avoid_: mostrar toda la jerarquia administrativa al jugador, convertir estructura de diseno en carga cognitiva de runtime
+Vista operativa que recibe un **Session Team** participante durante la **LiveSession**. Muestra el **Play** actual y su **Prompt** visible; en `Trivia` incluye las alternativas seleccionables (id + texto) pero **nunca** cual es la correcta. No expone la respuesta correcta ni ninguna marca de correccion.
+_Avoid_: revelar la alternativa correcta, exponer `correctChoiceId` o flag isCorrect al jugador, convertir estructura de diseno en carga cognitiva de runtime
 
 **Prompt**:
-Texto principal visible de la hoja actual dentro de una **LiveSession**. Se copia desde el **Mission Stage** al crear el snapshot del **Session Stage Flow**. En `Trivia` se presenta como pregunta o enunciado; en `Treasure Hunt` como instruccion, objetivo o contexto previo al escaneo.
+Texto principal visible del **Play** actual dentro de una **LiveSession**. Se copia desde el **Play** de la **Mission** al crear el snapshot del **Session Flow**. En `Trivia` se presenta como pregunta o enunciado acompanado de sus alternativas; en `Treasure Hunt` como instruccion, objetivo o contexto previo al escaneo.
 _Avoid_: respuesta correcta, hint liberada, nota privada de operador
 
 ## Flagged Ambiguities
@@ -128,7 +132,10 @@ Dev: "Si un equipo resuelve la etapa 1, los demas ya no pueden hacerlo?"
 Experto de dominio: "No. Cada Session Team progresa de forma independiente por su propio flujo."
 
 Dev: "En Trivia, toda respuesta queda esperando al operador?"
-Experto de dominio: "No. Primero intentamos resolver el Validation Outcome automaticamente; el operador entra solo si el caso es ambiguo."
+Experto de dominio: "No. La validacion compara el choiceId seleccionado contra la alternativa correcta del Play, en el servidor; el operador entra solo si el caso es ambiguo."
+
+Dev: "Y el jugador ve cual alternativa es la correcta?"
+Experto de dominio: "Nunca. El Play expone las alternativas con id y texto, pero cual es la correcta vive solo en el dominio y en la comparacion server-side."
 
 Dev: "Las pistas son solo un atributo mas de la sesion?"
 Experto de dominio: "No. Hint Release tiene reglas propias dentro de Session Operations, aunque siga perteneciendo al mismo bounded context."
@@ -136,20 +143,17 @@ Experto de dominio: "No. Hint Release tiene reglas propias dentro de Session Ope
 Dev: "Cuando penalizo a un equipo, escribo cualquier numero?"
 Experto de dominio: "No. En la operacion eliges una severidad predefinida y dejas el motivo; el descuento lo resuelve Scoring and Monitoring."
 
-Dev: "Desactivar una etapa cambia la Mission Stage?"
-Experto de dominio: "No. Cambia el Session Stage Flow de esta LiveSession."
+Dev: "Desactivar un Play cambia la Mission?"
+Experto de dominio: "No. Cambia el Session Flow de esta LiveSession."
 
-Dev: "Puedo desactivar un bloque completo del arbol durante la sesion?"
-Experto de dominio: "Si. La sesion puede desactivar una hoja o un nodo compuesto, y en este ultimo caso se desactivan sus hojas pendientes descendientes."
+Dev: "Y si ese Play ya se jugo?"
+Experto de dominio: "Solo se desactiva lo pendiente. Lo ya completado queda intacto en el historial."
 
-Dev: "Y si parte de ese bloque ya se jugo?"
-Experto de dominio: "Se puede desactivar lo pendiente. Lo ya completado queda intacto en el historial."
-
-Dev: "El participante ve todo el arbol de la mision?"
-Experto de dominio: "No. Ve su hoja actual y, si ayuda, el nombre del bloque padre como contexto."
+Dev: "El participante ve todos los Plays de la mision?"
+Experto de dominio: "No. Ve su Play actual; el Session Flow es una lista lineal y avanza Play a Play."
 
 Dev: "Entonces una respuesta Trivia puede validarse sin pregunta?"
-Experto de dominio: "No deberia. El participante necesita ver el Prompt de la hoja actual antes de enviar evidencia."
+Experto de dominio: "No deberia. El participante necesita ver el Prompt y las alternativas del Play actual antes de enviar evidencia."
 
 Dev: "Y Evidence Submission existe aunque luego no otorgue puntos?"
 Experto de dominio: "Si. Primero es un hecho operativo de la sesion; el puntaje se decide aparte."

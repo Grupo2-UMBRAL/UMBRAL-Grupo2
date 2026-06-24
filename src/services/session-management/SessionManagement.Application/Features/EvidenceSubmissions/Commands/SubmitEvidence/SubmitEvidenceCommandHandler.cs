@@ -204,7 +204,8 @@ public sealed class SubmitEvidenceCommandHandler(
             currentStage.ResolvedTimeBudgetMinutes,
             currentStage.Difficulty,
             currentStage.GameType,
-            currentStage.Prompt);
+            currentStage.Prompt,
+            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
     }
 
     private static RecordStageCreditRequest CreateStageCreditRequest(

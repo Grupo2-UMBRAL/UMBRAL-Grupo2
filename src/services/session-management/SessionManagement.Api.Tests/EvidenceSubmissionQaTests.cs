@@ -8,6 +8,8 @@ namespace SessionManagement.Api.Tests;
 public sealed class EvidenceSubmissionQaTests
 {
     private static readonly Guid TeamId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    private static readonly Guid CorrectChoiceId = Guid.Parse("c0c0c0c0-0000-0000-0000-000000000001");
+    private static readonly Guid WrongChoiceId = Guid.Parse("c0c0c0c0-0000-0000-0000-000000000002");
     private static readonly DateTimeOffset NowUtc = new(2026, 6, 3, 14, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -72,27 +74,29 @@ public sealed class EvidenceSubmissionQaTests
     }
 
     [Fact]
-    public void SubmitTriviaAnswer_AcceptsMatchingAnswerIgnoringCaseAndOuterSpaces_AndAdvancesTeamToNextStage()
+    public void SubmitTriviaAnswer_AcceptsCorrectChoice_AndAdvancesTeamToNextStage()
     {
         var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
 
-        var submission = liveSession.SubmitTriviaAnswer(TeamId, "  CARACAS  ", NowUtc);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, CorrectChoiceId, NowUtc);
 
         Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
-        Assert.Equal("CARACAS", submission.SubmittedText);
+        Assert.Equal(CorrectChoiceId, submission.SubmittedChoiceId);
+        Assert.Null(submission.SubmittedText);
         Assert.Equal(SessionTeamProgressStates.InProgress, liveSession.GetProgressStateForTeam(TeamId));
         Assert.Equal("Trivia Stage 2", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
         Assert.Equal(1, liveSession.SequenceNumber);
     }
 
     [Fact]
-    public void SubmitTriviaAnswer_RejectsMismatchingAnswer_AndKeepsTeamOnCurrentStage()
+    public void SubmitTriviaAnswer_RejectsWrongChoice_AndKeepsTeamOnCurrentStage()
     {
         var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
 
-        var submission = liveSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, WrongChoiceId, NowUtc);
 
         Assert.Equal(ValidationOutcome.Rejected, submission.Outcome);
+        Assert.Equal(WrongChoiceId, submission.SubmittedChoiceId);
         Assert.Equal("trivia_answer_mismatch", submission.FailureReason);
         Assert.Equal(SessionTeamProgressStates.InProgress, liveSession.GetProgressStateForTeam(TeamId));
         Assert.Equal("Trivia Stage 1", liveSession.GetCurrentStageForTeam(TeamId)?.Name);
@@ -100,10 +104,23 @@ public sealed class EvidenceSubmissionQaTests
     }
 
     [Fact]
+    public void SubmitTriviaAnswer_ThrowsValidation_WhenChoiceNotInPlay()
+    {
+        var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
+
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            liveSession.SubmitTriviaAnswer(TeamId, Guid.NewGuid(), NowUtc));
+
+        Assert.Equal("evidence_submission_choice_not_in_play", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Validation, exception.Category);
+        Assert.Empty(liveSession.EvidenceSubmissions);
+    }
+
+    [Fact]
     public void OverrideValidationOutcome_AcceptsRejectedTriviaSubmission_AndAdvancesTeam()
     {
         var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
-        var submission = liveSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, WrongChoiceId, NowUtc);
 
         var overrideLog = liveSession.OverrideValidationOutcome(
             submission.Id,
@@ -130,7 +147,7 @@ public sealed class EvidenceSubmissionQaTests
     public void OverrideValidationOutcome_DoesNotAdvanceAgain_WhenSubmissionWasAlreadyAccepted()
     {
         var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 3);
-        var submission = liveSession.SubmitTriviaAnswer(TeamId, "caracas", NowUtc);
+        var submission = liveSession.SubmitTriviaAnswer(TeamId, CorrectChoiceId, NowUtc);
 
         var overrideLog = liveSession.OverrideValidationOutcome(
             submission.Id,
@@ -151,9 +168,9 @@ public sealed class EvidenceSubmissionQaTests
     {
         var liveSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
 
-        var acceptedSubmission = liveSession.SubmitTriviaAnswer(TeamId, "caracas", NowUtc);
+        var acceptedSubmission = liveSession.SubmitTriviaAnswer(TeamId, CorrectChoiceId, NowUtc);
         var rejectedSession = CreateTriviaLiveSessionWithTeam(stageCount: 2);
-        var rejectedSubmission = rejectedSession.SubmitTriviaAnswer(TeamId, "valencia", NowUtc);
+        var rejectedSubmission = rejectedSession.SubmitTriviaAnswer(TeamId, WrongChoiceId, NowUtc);
 
         Assert.Equal(ValidationOutcome.Accepted, acceptedSubmission.Outcome);
         Assert.Equal(ValidationOutcome.Rejected, rejectedSubmission.Outcome);
@@ -208,7 +225,12 @@ public sealed class EvidenceSubmissionQaTests
                     "Medium",
                     "Trivia",
                     $"Prompt for Trivia Stage {stageOrder}",
-                    triviaValidAnswer: "Caracas"))
+                    choices:
+                    [
+                        LiveSessionChoice.Create(CorrectChoiceId, "Caracas"),
+                        LiveSessionChoice.Create(WrongChoiceId, "Valencia")
+                    ],
+                    correctChoiceId: CorrectChoiceId))
                 .ToArray());
 
         liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-20)));

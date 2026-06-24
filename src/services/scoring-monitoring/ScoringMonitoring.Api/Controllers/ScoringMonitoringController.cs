@@ -29,7 +29,7 @@ public sealed class ScoringMonitoringController(ISender sender) : ControllerBase
             new RecordStageCreditCommand(
                 liveSessionId,
                 request.SessionTeamId,
-                request.MissionStageId,
+                request.PlayId,
                 request.Difficulty,
                 request.ResolutionTime,
                 request.RecordedAt,

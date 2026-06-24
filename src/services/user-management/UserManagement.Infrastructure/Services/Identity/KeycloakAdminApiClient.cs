@@ -274,7 +274,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         }
 
         throw new UmbralTechnicalException(
-            "identity_access_keycloak_admin_failed",
+            "user_management_keycloak_admin_failed",
             $"Keycloak admin API failed: {(detail.Length == 0 ? $"{(int)response.StatusCode} {response.ReasonPhrase}" : detail)}.");
     }
 
@@ -317,7 +317,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
                 response.Dispose();
 
                 throw new UmbralTechnicalException(
-                    "identity_access_admin_session_failed",
+                    "user_management_admin_session_failed",
                     $"Could not open Keycloak admin session: {(detail.Length == 0 ? $"{(int)response.StatusCode} {response.ReasonPhrase}" : detail)}.");
             }
 
@@ -328,7 +328,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
                 if (string.IsNullOrWhiteSpace(payload.AccessToken))
                 {
                     throw new UmbralTechnicalException(
-                        "identity_access_admin_token_missing",
+                        "user_management_admin_token_missing",
                         "Keycloak admin token response omitted access token.");
                 }
 
@@ -370,7 +370,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         if (string.IsNullOrWhiteSpace(options.AdminUsername) || string.IsNullOrWhiteSpace(options.AdminPassword))
         {
             throw new UmbralTechnicalException(
-                "identity_access_admin_credentials_missing",
+                "user_management_admin_credentials_missing",
                 "Missing Keycloak admin credentials for Operator management.");
         }
     }
@@ -384,7 +384,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         if (payload is null)
         {
             throw new UmbralTechnicalException(
-                "identity_access_provider_payload_missing",
+                "user_management_provider_payload_missing",
                 "Keycloak returned an empty payload.");
         }
 

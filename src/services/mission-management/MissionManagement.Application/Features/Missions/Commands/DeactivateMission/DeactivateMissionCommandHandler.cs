@@ -6,7 +6,10 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.DeactivateMission;
 
-public sealed class DeactivateMissionCommandHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
+public sealed class DeactivateMissionCommandHandler(
+    IUnitOfWork unitOfWork,
+    IRepository<Mission> missionRepository,
+    IMissionManagementDbContext dbContext)
     : IRequestHandler<DeactivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(DeactivateMissionCommand request, CancellationToken cancellationToken)
@@ -24,12 +27,12 @@ public sealed class DeactivateMissionCommandHandler(IUnitOfWork unitOfWork, IRep
                 UmbralFailureCategory.NotFound);
         }
 
+        var aggregate = await MissionLoader.RequireAsync(dbContext, request.MissionId, cancellationToken);
+        mission.ReplaceItems(aggregate.RootItems);
+
         mission.Deactivate();
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
 }
-
-
-

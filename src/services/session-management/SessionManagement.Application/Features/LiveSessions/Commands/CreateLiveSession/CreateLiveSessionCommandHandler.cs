@@ -62,21 +62,21 @@ public sealed class CreateLiveSessionCommandHandler(
                 UmbralFailureCategory.Validation);
         }
 
-        var eligibleMissionStages = eligibleMission.MissionStages.ToDictionary(missionStage => missionStage.Id);
+        var eligiblePlays = eligibleMission.Plays.ToDictionary(play => play.Id);
         var sessionStageFlow = new List<LiveSessionStage>(selectedMissionStageIds.Count);
 
         for (var index = 0; index < selectedMissionStageIds.Count; index++)
         {
             var selectedMissionStageId = selectedMissionStageIds[index];
-            if (!eligibleMissionStages.TryGetValue(selectedMissionStageId, out var missionStage))
+            if (!eligiblePlays.TryGetValue(selectedMissionStageId, out var play))
             {
                 throw new UmbralDomainException(
                     "live_session_stage_not_eligible",
-                    $"Mission Stage '{selectedMissionStageId}' is not eligible for this LiveSession.",
+                    $"Play '{selectedMissionStageId}' is not eligible for this LiveSession.",
                     UmbralFailureCategory.Validation);
             }
 
-            sessionStageFlow.Add(missionStage.ToDomain(index + 1));
+            sessionStageFlow.Add(play.ToDomain(index + 1));
         }
 
         return sessionStageFlow;

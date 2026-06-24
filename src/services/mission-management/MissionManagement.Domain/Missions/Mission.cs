@@ -1,16 +1,15 @@
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Domain.Missions;
 
+/// <summary>
+/// Aggregate root. A Mission owns an ordered list of root <see cref="PathItem"/>s (the Composite).
+/// Its playable path is the depth-first, in-order flatten of the <see cref="Play"/>s of active
+/// <see cref="Challenge"/>s. The Mission no longer authors Game Type or Difficulty; both are derived.
+/// </summary>
 public sealed class Mission
 {
-    private static readonly JsonSerializerOptions TreeSerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
+    private readonly List<PathItem> _rootItems = new();
 
     private Mission()
     {
@@ -20,20 +19,14 @@ public sealed class Mission
         Guid id,
         string name,
         string description,
-        string difficulty,
         int maximumDurationMinutes,
-        string gameType,
-        bool isActive,
-        string nodeTreeJson)
+        bool isActive)
     {
         Id = id;
         Name = name;
         Description = description;
-        Difficulty = difficulty;
         MaximumDurationMinutes = maximumDurationMinutes;
-        GameType = gameType;
         IsActive = isActive;
-        NodeTreeJson = nodeTreeJson;
     }
 
     public Guid Id { get; private set; }
@@ -42,67 +35,150 @@ public sealed class Mission
 
     public string Description { get; private set; } = string.Empty;
 
-    public string Difficulty { get; private set; } = string.Empty;
-
     public int MaximumDurationMinutes { get; private set; }
-
-    public string GameType { get; private set; } = string.Empty;
 
     public bool IsActive { get; private set; }
 
-    public string NodeTreeJson { get; private set; } = "[]";
-
-    [JsonIgnore]
-    [NotMapped]
-    public IReadOnlyList<MissionNode> Nodes => DeserializeNodes(NodeTreeJson);
+    /// <summary>The ordered root Path Items (those whose <see cref="PathItem.ParentSectionId"/> is null).</summary>
+    public IReadOnlyList<PathItem> RootItems => _rootItems;
 
     public static Mission Create(
         Guid id,
         string name,
         string description,
-        string difficulty,
         int maximumDurationMinutes,
-        string gameType,
-        IReadOnlyList<MissionNode>? nodes = null)
+        IReadOnlyList<PathItem>? rootItems = null)
     {
         var mission = new Mission(
             id,
-            NormalizeRequiredText(name, "mission_name_required", "Mission name is required.", 120),
-            NormalizeRequiredText(description, "mission_description_required", "Mission description is required.", 1_024),
-            NormalizeRequiredText(difficulty, "mission_difficulty_required", "Mission difficulty is required.", 60),
+            DomainText.NormalizeRequired(name, "mission_name_required", "Mission name is required.", 120),
+            DomainText.NormalizeRequired(description, "mission_description_required", "Mission description is required.", 1_024),
             NormalizeMaximumDuration(maximumDurationMinutes),
-            MissionGameType.Normalize(gameType),
-            false,
-            "[]");
+            false);
 
-        mission.ReplaceNodes(nodes ?? Array.Empty<MissionNode>());
+        mission.SetRootItems(rootItems ?? Array.Empty<PathItem>());
 
         return mission;
     }
 
-    public void UpdateDetails(
-        string name,
-        string description,
-        string difficulty,
-        int maximumDurationMinutes)
+    public void UpdateDetails(string name, string description, int maximumDurationMinutes)
     {
-        Name = NormalizeRequiredText(name, "mission_name_required", "Mission name is required.", 120);
-        Description = NormalizeRequiredText(description, "mission_description_required", "Mission description is required.", 1_024);
-        Difficulty = NormalizeRequiredText(difficulty, "mission_difficulty_required", "Mission difficulty is required.", 60);
+        Name = DomainText.NormalizeRequired(name, "mission_name_required", "Mission name is required.", 120);
+        Description = DomainText.NormalizeRequired(description, "mission_description_required", "Mission description is required.", 1_024);
         MaximumDurationMinutes = NormalizeMaximumDuration(maximumDurationMinutes);
     }
 
-    public void UpdateCatalogGameType(string gameType)
+    public void ReplaceItems(IReadOnlyList<PathItem> rootItems)
     {
-        GameType = MissionGameType.Normalize(gameType);
+        ArgumentNullException.ThrowIfNull(rootItems);
+        SetRootItems(rootItems);
     }
 
-    public void ReplaceNodes(IReadOnlyList<MissionNode> nodes)
+    /// <summary>
+    /// Rebuilds a Mission aggregate from flat persistence rows. Plays are attached to their Challenge,
+    /// choices/hints to their play, and path items are linked by <see cref="PathItem.ParentSectionId"/>
+    /// into the Section tree, everything ordered by <see cref="PathItem.Order"/> / play order.
+    /// </summary>
+    public static Mission Rehydrate(
+        Guid id,
+        string name,
+        string description,
+        int maximumDurationMinutes,
+        bool isActive,
+        IReadOnlyList<Section> sections,
+        IReadOnlyList<Challenge> challenges,
+        IReadOnlyList<Play> plays,
+        IReadOnlyList<Choice> choices,
+        IReadOnlyList<Hint> hints)
     {
-        ArgumentNullException.ThrowIfNull(nodes);
+        ArgumentNullException.ThrowIfNull(sections);
+        ArgumentNullException.ThrowIfNull(challenges);
+        ArgumentNullException.ThrowIfNull(plays);
+        ArgumentNullException.ThrowIfNull(choices);
+        ArgumentNullException.ThrowIfNull(hints);
 
-        var normalizedNodes = MissionNode.NormalizeRoots(nodes, MaximumDurationMinutes);
-        NodeTreeJson = JsonSerializer.Serialize(normalizedNodes, TreeSerializerOptions);
+        var mission = new Mission(id, name, description, maximumDurationMinutes, isActive);
+
+        // choices -> questions, hints -> searches
+        var choicesByQuestion = choices.ToLookup(choice => choice.QuestionId);
+        foreach (var question in plays.OfType<Question>())
+        {
+            foreach (var choice in choicesByQuestion[question.Id].OrderBy(choice => choice.Order))
+            {
+                question.AttachChoice(choice);
+            }
+
+            question.SortChoices();
+        }
+
+        var hintsBySearch = hints.ToLookup(hint => hint.SearchId);
+        foreach (var search in plays.OfType<Search>())
+        {
+            foreach (var hint in hintsBySearch[search.Id].OrderBy(hint => hint.Order))
+            {
+                search.AttachHint(hint);
+            }
+
+            search.SortHints();
+        }
+
+        // plays -> challenges
+        var playsByChallenge = plays.ToLookup(play => play.ChallengeId);
+        foreach (var challenge in challenges)
+        {
+            foreach (var play in playsByChallenge[challenge.Id].OrderBy(play => play.Order))
+            {
+                challenge.AttachPlay(play);
+            }
+
+            challenge.SortPlays();
+        }
+
+        // path items -> section tree
+        var pathItems = sections.Cast<PathItem>().Concat(challenges).ToList();
+        var sectionsById = sections.ToDictionary(section => section.Id);
+
+        foreach (var item in pathItems)
+        {
+            if (item.ParentSectionId is { } parentId && sectionsById.TryGetValue(parentId, out var parent))
+            {
+                parent.AttachChild(item);
+            }
+            else
+            {
+                mission._rootItems.Add(item);
+            }
+        }
+
+        foreach (var section in sections)
+        {
+            section.SortChildren();
+        }
+
+        mission._rootItems.Sort(static (left, right) => left.Order.CompareTo(right.Order));
+
+        return mission;
+    }
+
+    /// <summary>
+    /// Builds a Mission from an already-constructed root <see cref="PathItem"/> tree (children already
+    /// attached), preserving <paramref name="isActive"/>. Used to view/validate a post-update aggregate
+    /// without round-tripping through persistence.
+    /// </summary>
+    public static Mission RehydrateTree(
+        Guid id,
+        string name,
+        string description,
+        int maximumDurationMinutes,
+        bool isActive,
+        IReadOnlyList<PathItem> rootItems)
+    {
+        ArgumentNullException.ThrowIfNull(rootItems);
+
+        var mission = new Mission(id, name, description, maximumDurationMinutes, isActive);
+        mission.SetRootItems(rootItems);
+
+        return mission;
     }
 
     public void Deactivate()
@@ -134,74 +210,112 @@ public sealed class Mission
 
     public void EnsureEligibleForLiveSession()
     {
-        var activeMissionStages = EnumerateActiveMissionStages(Nodes, MaximumDurationMinutes).ToArray();
-        if (activeMissionStages.Length == 0)
+        if (Flatten().Count == 0)
         {
             throw new UmbralDomainException(
-                "mission_eligible_stage_required",
-                "Mission must expose at least one active Mission Stage to be eligible for LiveSession.",
+                "mission_eligible_play_required",
+                "Mission must expose at least one play from an active, well-formed Challenge to be eligible for LiveSession.",
                 UmbralFailureCategory.Validation);
-        }
-
-        foreach (var missionStage in activeMissionStages)
-        {
-            _ = missionStage.GetRequiredDifficulty();
-            EnsureMissionStagePrompt(missionStage);
-            EnsureMissionStageValidationData(missionStage);
-            EnsureMissionStageHintsAreConsistent(missionStage);
         }
     }
 
     public bool IsEligibleForLiveSession()
     {
-        try
+        return Flatten().Count > 0;
+    }
+
+    /// <summary>
+    /// Depth-first, in-order flatten over root Path Items ordered by Order, descending into Sections,
+    /// collecting the Plays (in play Order) of active, well-formed Challenges only. A global 1-based
+    /// Order index is assigned across the whole flattened sequence.
+    /// </summary>
+    public IReadOnlyList<FlattenedPlay> Flatten()
+    {
+        var result = new List<FlattenedPlay>();
+        FlattenInto(_rootItems, result);
+        return result;
+    }
+
+    private static void FlattenInto(IReadOnlyList<PathItem> items, List<FlattenedPlay> result)
+    {
+        foreach (var item in items.OrderBy(item => item.Order))
         {
-            EnsureEligibleForLiveSession();
-            return true;
-        }
-        catch (UmbralDomainException)
-        {
-            return false;
+            switch (item)
+            {
+                case Section section:
+                    FlattenInto(section.Children, result);
+                    break;
+
+                case Challenge { IsActive: true } challenge when challenge.IsWellFormed:
+                    foreach (var play in challenge.Plays.OrderBy(play => play.Order))
+                    {
+                        result.Add(Project(challenge, play, result.Count + 1));
+                    }
+
+                    break;
+            }
         }
     }
 
-    private static IReadOnlyList<MissionNode> DeserializeNodes(string? nodeTreeJson)
+    private static FlattenedPlay Project(Challenge challenge, Play play, int globalOrder)
     {
-        if (string.IsNullOrWhiteSpace(nodeTreeJson))
+        var difficulty = play.ResolveDifficulty(challenge.DefaultDifficulty);
+        var timeLimit = play.ResolveTimeLimitMinutes(challenge.DefaultTimeLimitMinutes);
+
+        return play switch
         {
-            return Array.Empty<MissionNode>();
-        }
-
-        IReadOnlyList<MissionNode>? nodes =
-            JsonSerializer.Deserialize<List<MissionNode>>(nodeTreeJson, TreeSerializerOptions);
-
-        return nodes ?? Array.Empty<MissionNode>();
+            Question question => new FlattenedPlay
+            {
+                Id = question.Id,
+                Order = globalOrder,
+                GameType = challenge.GameType,
+                Difficulty = difficulty,
+                TimeLimitMinutes = timeLimit,
+                Prompt = question.Prompt,
+                Choices = question.Choices
+                    .OrderBy(choice => choice.Order)
+                    .Select(choice => new FlattenedChoice(choice.Id, choice.Text))
+                    .ToArray(),
+                CorrectChoiceId = question.Choices.FirstOrDefault(choice => choice.IsCorrect)?.Id
+            },
+            Search search => new FlattenedPlay
+            {
+                Id = search.Id,
+                Order = globalOrder,
+                GameType = challenge.GameType,
+                Difficulty = difficulty,
+                TimeLimitMinutes = timeLimit,
+                Prompt = search.Prompt,
+                ExpectedQrHash = search.ExpectedQrHash,
+                Hints = search.Hints
+                    .OrderBy(hint => hint.Order)
+                    .Select(hint => new FlattenedHint(hint.Content, hint.IsSolution, hint.Latitude, hint.Longitude))
+                    .ToArray()
+            },
+            _ => throw new UmbralDomainException(
+                "play_kind_unsupported",
+                $"Play '{play.Id}' has an unsupported kind.",
+                UmbralFailureCategory.Validation)
+        };
     }
 
-    private static string NormalizeRequiredText(
-        string value,
-        string errorCode,
-        string errorMessage,
-        int maximumLength)
+    private void SetRootItems(IReadOnlyList<PathItem> rootItems)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        var ordered = rootItems.OrderBy(item => item.Order).ToList();
+
+        var duplicateOrder = ordered
+            .GroupBy(item => item.Order)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateOrder is not null)
         {
             throw new UmbralDomainException(
-                errorCode,
-                errorMessage,
+                "path_item_order_duplicate",
+                $"Path item order '{duplicateOrder.Key}' is duplicated among siblings.",
                 UmbralFailureCategory.Validation);
         }
 
-        var normalized = value.Trim();
-        if (normalized.Length > maximumLength)
-        {
-            throw new UmbralDomainException(
-                $"{errorCode}_too_long",
-                $"Value cannot exceed {maximumLength} characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return normalized;
+        _rootItems.Clear();
+        _rootItems.AddRange(ordered);
     }
 
     private static int NormalizeMaximumDuration(int maximumDurationMinutes)
@@ -223,100 +337,5 @@ public sealed class Mission
         }
 
         return maximumDurationMinutes;
-    }
-
-    private static IEnumerable<MissionNode> EnumerateActiveMissionStages(
-        IEnumerable<MissionNode> nodes,
-        int inheritedTimeBudgetMinutes)
-    {
-        foreach (var node in nodes)
-        {
-            if (!node.IsActive)
-            {
-                continue;
-            }
-
-            var resolvedTimeBudgetMinutes = node.ResolveTimeBudgetMinutes(inheritedTimeBudgetMinutes);
-            if (node.IsLeaf)
-            {
-                yield return node;
-                continue;
-            }
-
-            foreach (var child in EnumerateActiveMissionStages(node.Children, resolvedTimeBudgetMinutes))
-            {
-                yield return child;
-            }
-        }
-    }
-
-    private static void EnsureMissionStageValidationData(MissionNode missionStage)
-    {
-        if (string.Equals(missionStage.GameType, MissionGameType.TreasureHunt, StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(missionStage.ExpectedQrHash))
-            {
-                throw new UmbralDomainException(
-                    "mission_eligible_stage_expected_qr_hash_required",
-                    $"Mission Stage '{missionStage.Name}' must define an expected QR hash.",
-                    UmbralFailureCategory.Validation);
-            }
-
-            return;
-        }
-
-        if (string.Equals(missionStage.GameType, MissionGameType.Trivia, StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(missionStage.TriviaValidAnswer) &&
-                string.IsNullOrWhiteSpace(missionStage.TriviaInitialValidationCriterion))
-            {
-                throw new UmbralDomainException(
-                    "mission_eligible_stage_trivia_validation_required",
-                    $"Mission Stage '{missionStage.Name}' must define a valid answer or validation criterion.",
-                    UmbralFailureCategory.Validation);
-            }
-
-            return;
-        }
-
-        throw new UmbralDomainException(
-            "mission_eligible_stage_game_type_unsupported",
-            $"Mission Stage '{missionStage.Name}' has unsupported Game Type '{missionStage.GameType}'.",
-            UmbralFailureCategory.Validation);
-    }
-
-    private static void EnsureMissionStagePrompt(MissionNode missionStage)
-    {
-        if (!string.IsNullOrWhiteSpace(missionStage.Prompt))
-        {
-            return;
-        }
-
-        throw new UmbralDomainException(
-            "mission_eligible_stage_prompt_required",
-            $"Mission Stage '{missionStage.Name}' must define a prompt.",
-            UmbralFailureCategory.Validation);
-    }
-
-    private static void EnsureMissionStageHintsAreConsistent(MissionNode missionStage)
-    {
-        foreach (var hint in missionStage.Hints)
-        {
-            if (string.IsNullOrWhiteSpace(hint.Content))
-            {
-                throw new UmbralDomainException(
-                    "mission_eligible_hint_content_required",
-                    $"Mission Stage '{missionStage.Name}' has a hint without content.",
-                    UmbralFailureCategory.Validation);
-            }
-
-            if (hint.Latitude.HasValue != hint.Longitude.HasValue)
-            {
-                throw new UmbralDomainException(
-                    "mission_eligible_hint_coordinates_incomplete",
-                    $"Mission Stage '{missionStage.Name}' has a hint with incomplete coordinates.",
-                    UmbralFailureCategory.Validation);
-            }
-        }
     }
 }
