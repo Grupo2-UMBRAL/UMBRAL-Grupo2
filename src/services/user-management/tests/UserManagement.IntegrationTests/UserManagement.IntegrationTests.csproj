@@ -16,9 +16,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\SessionManagement.Api\SessionManagement.Api.csproj" />
+    <ProjectReference Include="..\..\UserManagement.Api\UserManagement.Api.csproj" />
   </ItemGroup>
 </Project>
