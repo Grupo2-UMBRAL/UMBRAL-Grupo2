@@ -378,6 +378,249 @@ public sealed class ScoreboardPenaltyTests
     }
 }
 
+public sealed class ScoreboardGuardTests
+{
+    [Fact]
+    public void Constructor_RejectsEmptyLiveSessionId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => new Scoreboard(Guid.Empty));
+
+        Assert.Equal("scoreboard.empty_live_session_id", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Domain, exception.Category);
+    }
+
+    [Fact]
+    public void GrantPlayCredit_RejectsEmptyPlayId()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.GrantPlayCredit(
+            Guid.NewGuid(),
+            Guid.Empty,
+            PlayDifficulty.Easy,
+            TimeSpan.FromSeconds(1),
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("scoreboard.empty_play_id", exception.Code);
+    }
+
+    [Fact]
+    public void GrantPlayCredit_RejectsNegativeResolutionTime()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.GrantPlayCredit(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            PlayDifficulty.Easy,
+            TimeSpan.FromSeconds(-1),
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("scoreboard.negative_resolution_time", exception.Code);
+    }
+
+    [Fact]
+    public void GrantPlayCredit_RejectsEmptySessionTeamId()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.GrantPlayCredit(
+            Guid.Empty,
+            Guid.NewGuid(),
+            PlayDifficulty.Easy,
+            TimeSpan.FromSeconds(1),
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("scoreboard.empty_session_team_id", exception.Code);
+    }
+
+    [Fact]
+    public void GrantPlayCredit_RejectsUnknownDifficulty()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.GrantPlayCredit(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            (PlayDifficulty)(-1),
+            TimeSpan.FromSeconds(1),
+            DateTimeOffset.UtcNow));
+
+        Assert.Equal("scoreboard.unknown_difficulty", exception.Code);
+    }
+
+    [Fact]
+    public void GetTeamScore_RejectsEmptySessionTeamId()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.GetTeamScore(Guid.Empty));
+
+        Assert.Equal("scoreboard.empty_session_team_id", exception.Code);
+    }
+
+    [Fact]
+    public void ApplyPenalty_RejectsNullPenalty()
+    {
+        var scoreboard = new Scoreboard(Guid.NewGuid());
+
+        Assert.Throws<ArgumentNullException>(() => scoreboard.ApplyPenalty(null!));
+    }
+}
+
+public sealed class PenaltyGuardTests
+{
+    [Fact]
+    public void Constructor_RejectsEmptyPenaltyId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(penaltyId: Guid.Empty));
+
+        Assert.Equal("penalty.empty_id", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Domain, exception.Category);
+    }
+
+    [Fact]
+    public void Constructor_RejectsEmptyCommandId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(commandId: Guid.Empty));
+
+        Assert.Equal("penalty.empty_command_id", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsEmptySessionTeamId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(sessionTeamId: Guid.Empty));
+
+        Assert.Equal("penalty.empty_session_team_id", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RequiresOperatorUserId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(appliedByOperatorUserId: " "));
+
+        Assert.Equal("penalty.operator_user_id_required", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsOperatorUserIdExceedingMaximumLength()
+    {
+        var tooLong = new string('o', Penalty.AppliedByOperatorUserIdMaximumLength + 1);
+
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(appliedByOperatorUserId: tooLong));
+
+        Assert.Equal("penalty.operator_user_id_too_long", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsReasonExceedingMaximumLength()
+    {
+        var tooLong = new string('r', Penalty.ReasonMaximumLength + 1);
+
+        var exception = Assert.Throws<UmbralDomainException>(() => CreatePenalty(reason: tooLong));
+
+        Assert.Equal("penalty.reason_too_long", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_TrimsOperatorUserIdAndReason()
+    {
+        var penalty = CreatePenalty(appliedByOperatorUserId: " operator-1 ", reason: " Motivo operativo ");
+
+        Assert.Equal("operator-1", penalty.AppliedByOperatorUserId);
+        Assert.Equal("Motivo operativo", penalty.Reason);
+    }
+
+    private static Penalty CreatePenalty(
+        Guid? penaltyId = null,
+        Guid? commandId = null,
+        Guid? sessionTeamId = null,
+        PenaltySeverity severity = PenaltySeverity.Minor,
+        string appliedByOperatorUserId = "operator-1",
+        string reason = "Motivo operativo") =>
+        new(
+            penaltyId ?? Guid.NewGuid(),
+            commandId ?? Guid.NewGuid(),
+            sessionTeamId ?? Guid.NewGuid(),
+            severity,
+            appliedByOperatorUserId,
+            reason,
+            DateTimeOffset.UtcNow);
+}
+
+public sealed class ScoreEntryGuardTests
+{
+    [Fact]
+    public void Constructor_RejectsEmptyScoreEntryId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreateScoreEntry(scoreEntryId: Guid.Empty));
+
+        Assert.Equal("score_entry.empty_id", exception.Code);
+        Assert.Equal(UmbralFailureCategory.Domain, exception.Category);
+    }
+
+    [Fact]
+    public void Constructor_RejectsEmptyLiveSessionId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreateScoreEntry(liveSessionId: Guid.Empty));
+
+        Assert.Equal("score_entry.empty_live_session_id", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsEmptySessionTeamId()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreateScoreEntry(sessionTeamId: Guid.Empty));
+
+        Assert.Equal("score_entry.empty_session_team_id", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsNegativeVisibleScoreBefore()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreateScoreEntry(visibleScoreBefore: -1));
+
+        Assert.Equal("score_entry.negative_visible_score", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_RejectsNegativeVisibleScoreAfter()
+    {
+        var exception = Assert.Throws<UmbralDomainException>(() => CreateScoreEntry(visibleScoreAfter: -1));
+
+        Assert.Equal("score_entry.negative_visible_score", exception.Code);
+    }
+
+    [Fact]
+    public void Constructor_AcceptsValidScoreEntry()
+    {
+        var entry = CreateScoreEntry();
+
+        Assert.Equal(ScoreEntryType.PlayCredit, entry.EntryType);
+        Assert.Equal(100, entry.Delta);
+        Assert.Equal(100, entry.VisibleScoreAfter);
+    }
+
+    private static ScoreEntry CreateScoreEntry(
+        Guid? scoreEntryId = null,
+        Guid? liveSessionId = null,
+        Guid? sessionTeamId = null,
+        int visibleScoreBefore = 0,
+        int visibleScoreAfter = 100) =>
+        new(
+            scoreEntryId ?? Guid.NewGuid(),
+            liveSessionId ?? Guid.NewGuid(),
+            sessionTeamId ?? Guid.NewGuid(),
+            ScoreEntryType.PlayCredit,
+            delta: 100,
+            accumulatedScoreBefore: 0,
+            accumulatedScoreAfter: 100,
+            visibleScoreBefore,
+            visibleScoreAfter,
+            DateTimeOffset.UtcNow);
+}
+
 public sealed class RankingComparerTests
 {
     [Fact]
