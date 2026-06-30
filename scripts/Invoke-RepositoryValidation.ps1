@@ -2,7 +2,7 @@ param(
     [string]$ArtifactDirectory = "temp/validation",
     [string]$EnvironmentFilePath,
     [switch]$SkipComposeSmoke,
-    [ValidateSet("Full", "Frontend", "Web", "Mobile", "Backend")]
+    [ValidateSet("Full", "Frontend", "Web", "Mobile", "Backend", "BackendUnit", "BackendIntegration")]
     [string]$Scope = "Full",
     [int]$TemporaryCoverageThreshold = 10,
     [int]$TargetCoverage = 90
@@ -47,16 +47,23 @@ $backendProjects = @(
     "src/services/session-management/tests/SessionManagement.IntegrationTests/SessionManagement.IntegrationTests.csproj"
 )
 
-$backendTestProjects = @(
+$backendUnitTestProjects = @(
     "src/shared/Umbral.ServiceDefaults.UnitTests/Umbral.ServiceDefaults.UnitTests.csproj",
     "src/services/user-management/tests/UserManagement.UnitTests/UserManagement.UnitTests.csproj",
     "src/services/mission-management/tests/MissionManagement.UnitTests/MissionManagement.UnitTests.csproj",
-    "src/services/mission-management/tests/MissionManagement.IntegrationTests/MissionManagement.IntegrationTests.csproj",
     "src/services/scoring-monitoring/tests/ScoringMonitoring.UnitTests/ScoringMonitoring.UnitTests.csproj",
+    "src/services/session-management/tests/SessionManagement.UnitTests/SessionManagement.UnitTests.csproj"
+)
+
+# Integration lane: WebApplicationFactory + (for Postgres-backed cases) a Docker engine.
+$backendIntegrationTestProjects = @(
+    "src/services/mission-management/tests/MissionManagement.IntegrationTests/MissionManagement.IntegrationTests.csproj",
     "src/services/scoring-monitoring/tests/ScoringMonitoring.IntegrationTests/ScoringMonitoring.IntegrationTests.csproj",
-    "src/services/session-management/tests/SessionManagement.UnitTests/SessionManagement.UnitTests.csproj",
     "src/services/session-management/tests/SessionManagement.IntegrationTests/SessionManagement.IntegrationTests.csproj"
 )
+
+# Unit lane first (fast, no Docker) so it fails before the slower integration lane runs.
+$backendTestProjects = $backendUnitTestProjects + $backendIntegrationTestProjects
 
 function Test-Scope {
     param(
@@ -162,7 +169,7 @@ if (Test-Scope -AllowedScopes @("Full", "Frontend", "Mobile")) {
     Invoke-NpmCommand -WorkingDirectory $mobileDirectory -ComposeService "mobile-package-manager" -CommandArgs @("run", "build")
 }
 
-if (Test-Scope -AllowedScopes @("Full", "Backend")) {
+if (Test-Scope -AllowedScopes @("Full", "Backend", "BackendUnit", "BackendIntegration")) {
     foreach ($coverageArtifactDirectory in @($testResultsDirectory, $backendCoverageReportDirectory)) {
         if (Test-Path -LiteralPath $coverageArtifactDirectory) {
             Remove-Item -LiteralPath $coverageArtifactDirectory -Recurse -Force
@@ -171,11 +178,18 @@ if (Test-Scope -AllowedScopes @("Full", "Backend")) {
         $null = New-Item -ItemType Directory -Force -Path $coverageArtifactDirectory
     }
 
-    foreach ($project in $backendProjects) {
+    $selectedBuildProjects = if ($Scope -eq "BackendUnit") { $backendUnitTestProjects } else { $backendProjects }
+    $selectedTestProjects = switch ($Scope) {
+        "BackendUnit" { $backendUnitTestProjects }
+        "BackendIntegration" { $backendIntegrationTestProjects }
+        default { $backendTestProjects }
+    }
+
+    foreach ($project in $selectedBuildProjects) {
         Invoke-DotnetCommand -Arguments @("build", $project, "--configuration", "Release")
     }
 
-    foreach ($testProject in $backendTestProjects) {
+    foreach ($testProject in $selectedTestProjects) {
         $projectName = [System.IO.Path]::GetFileNameWithoutExtension($testProject)
         $projectResultsDirectory = Join-Path $testResultsDirectory $projectName
         $null = New-Item -ItemType Directory -Force -Path $projectResultsDirectory
