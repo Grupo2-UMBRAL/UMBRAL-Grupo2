@@ -14,6 +14,6 @@
     <ProjectReference Include="..\..\..\shared\Umbral.ServiceDefaults\Umbral.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="ScoringMonitoring.Api.Tests" />
+    <InternalsVisibleTo Include="ScoringMonitoring.IntegrationTests" />
   </ItemGroup>
 </Project>

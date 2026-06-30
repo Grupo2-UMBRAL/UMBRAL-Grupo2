@@ -33,23 +33,29 @@ $webDirectory = Join-Path $repositoryRoot "src/apps/web"
 $mobileDirectory = Join-Path $repositoryRoot "src/apps/mobile"
 
 $backendProjects = @(
-    "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
+    "src/shared/Umbral.ServiceDefaults.UnitTests/Umbral.ServiceDefaults.UnitTests.csproj",
     "src/services/user-management/UserManagement.Api/UserManagement.Api.csproj",
-    "src/services/user-management/UserManagement.Api.Tests/UserManagement.Api.Tests.csproj",
+    "src/services/user-management/tests/UserManagement.UnitTests/UserManagement.UnitTests.csproj",
     "src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj",
-    "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
+    "src/services/mission-management/tests/MissionManagement.UnitTests/MissionManagement.UnitTests.csproj",
+    "src/services/mission-management/tests/MissionManagement.IntegrationTests/MissionManagement.IntegrationTests.csproj",
     "src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj",
-    "src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj",
+    "src/services/scoring-monitoring/tests/ScoringMonitoring.UnitTests/ScoringMonitoring.UnitTests.csproj",
+    "src/services/scoring-monitoring/tests/ScoringMonitoring.IntegrationTests/ScoringMonitoring.IntegrationTests.csproj",
     "src/services/session-management/SessionManagement.Api/SessionManagement.Api.csproj",
-    "src/services/session-management/SessionManagement.Api.Tests/SessionManagement.Api.Tests.csproj"
+    "src/services/session-management/tests/SessionManagement.UnitTests/SessionManagement.UnitTests.csproj",
+    "src/services/session-management/tests/SessionManagement.IntegrationTests/SessionManagement.IntegrationTests.csproj"
 )
 
 $backendTestProjects = @(
-    "src/shared/Umbral.ServiceDefaults.Tests/Umbral.ServiceDefaults.Tests.csproj",
-    "src/services/user-management/UserManagement.Api.Tests/UserManagement.Api.Tests.csproj",
-    "src/services/mission-management/MissionManagement.Api.Tests/MissionManagement.Api.Tests.csproj",
-    "src/services/scoring-monitoring/ScoringMonitoring.Api.Tests/ScoringMonitoring.Api.Tests.csproj",
-    "src/services/session-management/SessionManagement.Api.Tests/SessionManagement.Api.Tests.csproj"
+    "src/shared/Umbral.ServiceDefaults.UnitTests/Umbral.ServiceDefaults.UnitTests.csproj",
+    "src/services/user-management/tests/UserManagement.UnitTests/UserManagement.UnitTests.csproj",
+    "src/services/mission-management/tests/MissionManagement.UnitTests/MissionManagement.UnitTests.csproj",
+    "src/services/mission-management/tests/MissionManagement.IntegrationTests/MissionManagement.IntegrationTests.csproj",
+    "src/services/scoring-monitoring/tests/ScoringMonitoring.UnitTests/ScoringMonitoring.UnitTests.csproj",
+    "src/services/scoring-monitoring/tests/ScoringMonitoring.IntegrationTests/ScoringMonitoring.IntegrationTests.csproj",
+    "src/services/session-management/tests/SessionManagement.UnitTests/SessionManagement.UnitTests.csproj",
+    "src/services/session-management/tests/SessionManagement.IntegrationTests/SessionManagement.IntegrationTests.csproj"
 )
 
 function Test-Scope {
