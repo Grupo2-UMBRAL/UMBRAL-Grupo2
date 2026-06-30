@@ -16,6 +16,6 @@
     <ProjectReference Include="..\..\..\shared\Umbral.ServiceDefaults\Umbral.ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="SessionManagement.Api.Tests" />
+    <InternalsVisibleTo Include="SessionManagement.IntegrationTests" />
   </ItemGroup>
 </Project>
