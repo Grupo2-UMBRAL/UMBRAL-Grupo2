@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddUmbralTelemetry();
 
 builder.Services.AddUmbralApiDefaults(builder.Configuration);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<IMissionManagementDbContext>());

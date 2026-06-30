@@ -1,4 +1,15 @@
 services:
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:8.0
+    container_name: umbral-aspire-dashboard
+    ports:
+      - "18888:18888" # Dashboard UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4317"   # OTLP HTTP
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+      DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://0.0.0.0:4317"
+
   postgres:
     image: postgres:16-alpine
     container_name: umbral-postgres
@@ -69,6 +80,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=user_management
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
@@ -90,6 +103,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=mission_management
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
@@ -111,6 +126,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=session_management
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
@@ -140,6 +157,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=umbral;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_monitoring
       RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
@@ -167,6 +186,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://aspire-dashboard:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       AllowedOrigins__0: http://localhost:5173
       AllowedOrigins__1: http://localhost:3000
       AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}

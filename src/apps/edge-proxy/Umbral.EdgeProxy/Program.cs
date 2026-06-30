@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
 using Yarp.ReverseProxy.Model;
+using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddUmbralTelemetry();
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
