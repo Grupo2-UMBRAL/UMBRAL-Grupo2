@@ -3,6 +3,7 @@ using UserManagement.Infrastructure;
 using UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddUmbralTelemetry();
 
 
 builder.Services.AddControllers();

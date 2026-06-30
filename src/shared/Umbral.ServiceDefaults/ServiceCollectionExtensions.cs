@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 namespace Umbral.ServiceDefaults;
 
@@ -73,6 +77,38 @@ public static class ServiceCollectionExtensions
                     npgsqlOptions.MigrationsAssembly(typeof(TContext).Assembly.FullName);
                     npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", schemaName);
                 }));
+
+        return services;
+    }
+
+    public static IServiceCollection AddUmbralTelemetry(this IServiceCollection services)
+    {
+        services.AddLogging(logging =>
+        {
+            logging.AddOpenTelemetry(options =>
+            {
+                options.IncludeFormattedMessage = true;
+                options.IncludeScopes = true;
+                options.AddOtlpExporter();
+            });
+        });
+
+        services.AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics.AddAspNetCoreInstrumentation()
+                       .AddHttpClientInstrumentation()
+                       .AddRuntimeInstrumentation();
+                
+                metrics.AddOtlpExporter();
+            })
+            .WithTracing(tracing =>
+            {
+                tracing.AddAspNetCoreInstrumentation()
+                       .AddHttpClientInstrumentation();
+
+                tracing.AddOtlpExporter();
+            });
 
         return services;
     }
