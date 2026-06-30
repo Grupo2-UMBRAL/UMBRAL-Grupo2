@@ -4,7 +4,12 @@ param(
 
     [string]$OutputDirectory = "temp/validation/backend-coverage-report",
 
-    [string]$ReportTypes = "Html;Cobertura;TextSummary"
+    [string]$ReportTypes = "Html;Cobertura;TextSummary",
+
+    # Drop test assemblies and generated EF migrations so the report reflects production code.
+    [string]$AssemblyFilters = "-*.UnitTests;-*.IntegrationTests",
+
+    [string]$ClassFilters = "-*.Migrations.*"
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,7 +55,9 @@ if ($hasHostDotnet) {
         & dotnet tool run reportgenerator -- `
             "-reports:$resolvedResultsDirectory/**/coverage.cobertura.xml" `
             "-targetdir:$resolvedOutputDirectory" `
-            "-reporttypes:$ReportTypes"
+            "-reporttypes:$ReportTypes" `
+            "-assemblyfilters:$AssemblyFilters" `
+            "-classfilters:$ClassFilters"
     }
     finally {
         Pop-Location
@@ -61,7 +68,7 @@ else {
     $containerOutputDirectory = Convert-ToContainerPath -AbsolutePath $resolvedOutputDirectory
     $reportGeneratorCommand = @(
         'dotnet tool restore',
-        ("dotnet tool run reportgenerator -- '-reports:{0}/**/coverage.cobertura.xml' '-targetdir:{1}' '-reporttypes:{2}'" -f $containerResultsDirectory, $containerOutputDirectory, $ReportTypes)
+        ("dotnet tool run reportgenerator -- '-reports:{0}/**/coverage.cobertura.xml' '-targetdir:{1}' '-reporttypes:{2}' '-assemblyfilters:{3}' '-classfilters:{4}'" -f $containerResultsDirectory, $containerOutputDirectory, $ReportTypes, $AssemblyFilters, $ClassFilters)
     ) -join ' && '
 
     Push-Location $repositoryRoot
