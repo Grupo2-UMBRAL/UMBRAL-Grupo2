@@ -659,6 +659,29 @@ code {
   min-height: 100dvh;
 }
 
+/* Collapsible sidebar */
+.sidebar,
+.main-area {
+  transition: transform var(--duration-fast) ease, margin-left var(--duration-fast) ease;
+}
+.dashboard.sidebar-collapsed .sidebar {
+  transform: translateX(-100%);
+}
+.dashboard.sidebar-collapsed .main-area {
+  margin-left: 0;
+}
+.content-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+.sidebar-toggle {
+  flex-shrink: 0;
+  padding: 0.4rem;
+  line-height: 0;
+}
+
 .content-header {
   position: sticky;
   top: 0;
@@ -1500,7 +1523,9 @@ tr.clickable {
 }
 
 .split-layout-wide {
-  grid-template-columns: 1fr 1.5fr;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-lg);
 }
 
 /* ----------------------------------------------------------------
@@ -1568,6 +1593,50 @@ tr.clickable {
   color: var(--text-muted);
   font-size: var(--text-xs);
   line-height: 1.5;
+}
+
+/* Per-team stage progress, one block per Session Stage */
+.stage-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.stage-progress-track {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stage-progress-block {
+  flex: 1;
+  height: 7px;
+  min-width: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  transition: background var(--duration-fast) ease;
+}
+
+.stage-progress-block.is-done {
+  background: var(--green);
+}
+
+.stage-progress-block.is-current {
+  background: var(--accent-text);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.stage-progress-block.is-pending {
+  background: var(--border);
+}
+
+.stage-progress-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ----------------------------------------------------------------
