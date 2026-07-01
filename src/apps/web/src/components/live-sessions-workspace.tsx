@@ -8,17 +8,20 @@ import {
 } from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
 
+// Vocabulario del front: "etapa" = la unidad jugable (el "play" del backend),
+// "misión" = la plantilla, "sesión" = la LiveSession en curso. El endpoint de
+// mission-management habla "play"; lo adaptamos al modelo "etapa" en el borde del
+// fetch (toEligibleMissionSummary / toEligibleMissionDetail) para que el resto de la
+// UI permanezca en "etapa".
+
 type EligibleMissionSummary = {
   id: string;
   name: string;
-  difficulty: string;
   maximumDurationMinutes: number;
-  gameType: string;
   activeMissionStageCount: number;
 };
 
 type EligibleMissionStageHint = {
-  id: string;
   content: string;
   isSolution: boolean;
   latitude: number | null;
@@ -28,14 +31,11 @@ type EligibleMissionStageHint = {
 type EligibleMissionStage = {
   id: string;
   name: string;
-  sessionStageOrder: number;
   sourceOrder: number;
   resolvedTimeBudgetMinutes: number;
   gameType: string;
   prompt: string;
   expectedQrHash: string | null;
-  triviaValidAnswer: string | null;
-  triviaInitialValidationCriterion: string | null;
   hints: EligibleMissionStageHint[];
 };
 
@@ -43,11 +43,72 @@ type EligibleMissionDetail = {
   id: string;
   name: string;
   description: string;
-  difficulty: string;
   maximumDurationMinutes: number;
-  gameType: string;
   missionStages: EligibleMissionStage[];
 };
+
+// --- forma de cable "play" de mission-management (adaptada a "etapa" arriba) ---
+type EligiblePlayPayload = {
+  id: string;
+  order: number;
+  gameType: string;
+  timeLimitMinutes: number;
+  prompt: string;
+  expectedQrHash: string | null;
+  hints: { content: string; isSolution: boolean; latitude: number | null; longitude: number | null }[] | null;
+};
+
+type EligibleMissionSummaryPayload = {
+  id: string;
+  name: string;
+  maximumDurationMinutes: number;
+  activePlayCount: number;
+};
+
+type EligibleMissionDetailPayload = {
+  id: string;
+  name: string;
+  description: string;
+  maximumDurationMinutes: number;
+  plays: EligiblePlayPayload[] | null;
+};
+
+function toEligibleMissionSummary(payload: EligibleMissionSummaryPayload): EligibleMissionSummary {
+  return {
+    id: payload.id,
+    name: payload.name,
+    maximumDurationMinutes: payload.maximumDurationMinutes,
+    activeMissionStageCount: payload.activePlayCount
+  };
+}
+
+function toEligibleMissionStage(play: EligiblePlayPayload): EligibleMissionStage {
+  return {
+    id: play.id,
+    name: `Etapa ${play.order}`,
+    sourceOrder: play.order,
+    resolvedTimeBudgetMinutes: play.timeLimitMinutes,
+    gameType: play.gameType,
+    prompt: play.prompt,
+    expectedQrHash: play.expectedQrHash ?? null,
+    hints: (play.hints ?? []).map((hint) => ({
+      content: hint.content,
+      isSolution: hint.isSolution,
+      latitude: hint.latitude,
+      longitude: hint.longitude
+    }))
+  };
+}
+
+function toEligibleMissionDetail(payload: EligibleMissionDetailPayload): EligibleMissionDetail {
+  return {
+    id: payload.id,
+    name: payload.name,
+    description: payload.description,
+    maximumDurationMinutes: payload.maximumDurationMinutes,
+    missionStages: (payload.plays ?? []).map(toEligibleMissionStage)
+  };
+}
 
 type LiveSessionStageHint = {
   id: string;
@@ -87,6 +148,8 @@ type LiveSession = {
 };
 
 type LiveSessionLifecycleAction = "start" | "pause" | "resume" | "finalize" | "cancel";
+
+type EnrollmentAction = "generate-join-code" | "open-window" | "close-window";
 type CurrentSessionStageSnapshot = {
   missionStageId: string;
   name: string;
@@ -424,7 +487,7 @@ function formatTimestamp(value: string | null) {
 
 function formatShortTimestamp(value: string | null | undefined) {
   if (!value) {
-    return "Sin sincronizaciÃ³n";
+    return "Sin sincronización";
   }
 
   const timestamp = new Date(value);
@@ -513,7 +576,7 @@ function formatResolutionTime(value: string) {
 function findRankingTeamName(sessionTeamId: string, teams: LiveSessionOverviewTeam[]) {
   return (
     teams.find((team) => team.sessionTeamId === sessionTeamId)?.teamName ??
-    `Equipo de sesiÃ³n ${sessionTeamId.slice(0, 8)}`
+    `Equipo de sesión ${sessionTeamId.slice(0, 8)}`
   );
 }
 
@@ -567,11 +630,11 @@ function translateDifficulty(difficulty?: string): string {
   const norm = difficulty.toLowerCase().trim();
   switch (norm) {
     case "easy":
-      return "FÃ¡cil";
+      return "Fácil";
     case "medium":
       return "Medio";
     case "hard":
-      return "DifÃ­cil";
+      return "Difícil";
     default:
       return difficulty;
   }
@@ -597,7 +660,7 @@ function parseOptionalCoordinate(value: string) {
 
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
-    throw new Error("Las coordenadas deben ser valores numÃ©ricos.");
+    throw new Error("Las coordenadas deben ser valores numéricos.");
   }
 
   return parsed;
@@ -669,21 +732,6 @@ function getProgressBadgeClass(progressState: string) {
   }
 
   return "badge badge-green";
-}
-
-function getDifficultyBadgeClass(difficulty?: string) {
-  if (!difficulty) return "badge badge-muted";
-  const norm = difficulty.toLowerCase().trim();
-  switch (norm) {
-    case "easy":
-      return "badge badge-green";
-    case "medium":
-      return "badge badge-amber";
-    case "hard":
-      return "badge badge-red";
-    default:
-      return "badge badge-muted";
-  }
 }
 
 function getStageLabel(stage: CurrentSessionStageSnapshot | null) {
@@ -819,13 +867,13 @@ function ScoringRankingWidget({
     <section className="card">
       <div className="card-header">
         <div className="stack-sm">
-          <span className="eyebrow">PuntuaciÃ³n y AuditorÃ­a</span>
-          <h4>ClasificaciÃ³n</h4>
+          <span className="eyebrow">Puntuación y Auditoría</span>
+          <h4>Clasificación</h4>
         </div>
         <div className="card-header-actions">
           <span className={getConnectionIndicatorClass(connectionState)}>
             <span className={getConnectionDotClass(connectionState)} />
-            PuntuaciÃ³n: {connectionState.label}
+            Puntuación: {connectionState.label}
           </span>
           <button className="btn btn-ghost btn-sm" disabled={isLoading} onClick={onRefresh} type="button">
             {isLoading ? "Sincronizando..." : "Actualizar"}
@@ -835,7 +883,7 @@ function ScoringRankingWidget({
 
       {error ? (
         <div className="error-banner">
-          <strong>ClasificaciÃ³n no disponible.</strong>
+          <strong>Clasificación no disponible.</strong>
           <p>{error}</p>
         </div>
       ) : null}
@@ -877,8 +925,8 @@ function ScoringRankingWidget({
 
       {!error && !isLoading && rankingItems.length === 0 ? (
         <div className="empty-state">
-          <strong>AÃºn no hay entradas de puntuaciÃ³n.</strong>
-          <p>La clasificaciÃ³n aparecerÃ¡ cuando PuntuaciÃ³n y AuditorÃ­a registre crÃ©dito de etapa.</p>
+          <strong>Aún no hay entradas de puntuación.</strong>
+          <p>La clasificación aparecerá cuando Puntuación y Auditoría registre crédito de etapa.</p>
         </div>
       ) : null}
     </section>
@@ -904,8 +952,8 @@ function SessionEventTimeline({
     <section className="card">
       <div className="card-header">
         <div className="stack-sm">
-          <span className="eyebrow">BitÃ¡cora de auditorÃ­a</span>
-          <h4>LÃ­nea de tiempo</h4>
+          <span className="eyebrow">Bitácora de auditoría</span>
+          <h4>Línea de tiempo</h4>
         </div>
         <div className="card-header-actions">
           <span className={getConnectionIndicatorClass(connectionState)}>
@@ -920,7 +968,7 @@ function SessionEventTimeline({
 
       {error ? (
         <div className="error-banner">
-          <strong>LÃ­nea de tiempo no disponible.</strong>
+          <strong>Línea de tiempo no disponible.</strong>
           <p>{error}</p>
         </div>
       ) : null}
@@ -947,8 +995,8 @@ function SessionEventTimeline({
 
       {!error && !isLoading && eventLogItems.length === 0 ? (
         <div className="empty-state">
-          <strong>Sin eventos auditables aÃºn.</strong>
-          <p>La lÃ­nea de tiempo se mantendrÃ¡ lista mientras el registro de eventos de sesiÃ³n espera eventos de puntuaciÃ³n u operador.</p>
+          <strong>Sin eventos auditables aún.</strong>
+          <p>La línea de tiempo se mantendrá lista mientras el registro de eventos de sesión espera eventos de puntuación u operador.</p>
         </div>
       ) : null}
     </section>
@@ -995,8 +1043,8 @@ function SessionTeamDetailPanel({
     return (
       <aside className="drawer">
         <div className="empty-state">
-          <strong>Seleccione un equipo de la sesiÃ³n.</strong>
-          <p>Los detalles del operador se muestran aquÃ­ con la actividad, pistas, envÃ­os y estado de inactividad.</p>
+          <strong>Seleccione un equipo de la sesión.</strong>
+          <p>Los detalles del operador se muestran aquí con la actividad, pistas, envíos y estado de inactividad.</p>
         </div>
         {error ? (
           <div className="error-banner">
@@ -1012,7 +1060,7 @@ function SessionTeamDetailPanel({
     <aside className="drawer">
       <div className="drawer-header">
         <div className="stack-sm">
-          <span className="eyebrow">Detalles del equipo de sesiÃ³n</span>
+          <span className="eyebrow">Detalles del equipo de sesión</span>
           <h4>{detail.teamName}</h4>
           <span className="text-muted text-sm">{detail.participantCount} participante(s)</span>
         </div>
@@ -1024,14 +1072,14 @@ function SessionTeamDetailPanel({
       <div className="drawer-body">
         {detail.isInactive ? (
           <div className="error-banner">
-            <strong>Sin envÃ­os de evidencia recientes.</strong>
-            <p>La Ãºltima actividad es mÃ¡s antigua que el lÃ­mite configurado.</p>
+            <strong>Sin envíos de evidencia recientes.</strong>
+            <p>La última actividad es más antigua que el límite configurado.</p>
           </div>
         ) : null}
 
         <div className="row-sm">
           <div className="form-group">
-            <label className="form-label">LÃ­mite de inactividad</label>
+            <label className="form-label">Límite de inactividad</label>
             <input
               className="form-input"
               min={1}
@@ -1071,7 +1119,7 @@ function SessionTeamDetailPanel({
           <div className="card-header">
             <div className="stack-sm">
               <span className="eyebrow">Actividad</span>
-              <h5>Pistas y EnvÃ­os de Evidencia</h5>
+              <h5>Pistas y Envíos de Evidencia</h5>
             </div>
             <label className="checkbox-label">
               <input
@@ -1140,7 +1188,7 @@ function SessionTeamDetailPanel({
                                   setOverrideReason("");
                                 }}
                                 role="dialog"
-                                aria-label="Motivo de anulaciÃ³n de validaciÃ³n"
+                                aria-label="Motivo de anulación de validación"
                               >
                                 <div className="form-group">
                                   <label className="form-label">Motivo del operador</label>
@@ -1158,7 +1206,7 @@ function SessionTeamDetailPanel({
                                     disabled={overridePendingSubmissionId === item.submission.id}
                                     type="submit"
                                   >
-                                    {overridePendingSubmissionId === item.submission.id ? "Enviando" : "Forzar aceptaciÃ³n"}
+                                    {overridePendingSubmissionId === item.submission.id ? "Enviando" : "Forzar aceptación"}
                                   </button>
                                   <button
                                     className="btn btn-ghost btn-sm"
@@ -1182,7 +1230,7 @@ function SessionTeamDetailPanel({
                                 }}
                                 type="button"
                               >
-                                Forzar AceptaciÃ³n (Override)
+                                Forzar Aceptación (Override)
                               </button>
                             )}
                           </div>
@@ -1196,7 +1244,7 @@ function SessionTeamDetailPanel({
           ) : (
             <div className="empty-state">
               <strong>Sin actividad del equipo coincidente.</strong>
-              <p>Limpie el filtro o espere a que lleguen pistas y envÃ­os de evidencia.</p>
+              <p>Limpie el filtro o espere a que lleguen pistas y envíos de evidencia.</p>
             </div>
           )}
         </section>
@@ -1246,14 +1294,14 @@ function LiveSessionOverviewDashboard({
       <section className="card">
         <div className="card-header">
           <div className="stack-sm">
-            <span className="eyebrow">OperaciÃ³n en vivo</span>
+            <span className="eyebrow">Operación en vivo</span>
             <h3>{overview?.name ?? liveSession.name}</h3>
             <span className="text-muted">{overview?.missionName ?? liveSession.missionName}</span>
           </div>
           <div className="card-header-actions">
             <span className={getConnectionIndicatorClass(connectionState)}>
               <span className={getConnectionDotClass(connectionState)} />
-              SincronizaciÃ³n en tiempo real: {connectionState.label}
+              Sincronización en tiempo real: {connectionState.label}
             </span>
             <button className="btn btn-ghost" disabled={isLoadingOverview} onClick={onRefreshOverview} type="button">
               {isLoadingOverview ? "Actualizando..." : "Actualizar vista"}
@@ -1264,7 +1312,7 @@ function LiveSessionOverviewDashboard({
 
       <div className="split-layout-wide">
         <div className="card card-compact">
-          <strong className="text-sm">Estado de la SesiÃ³n</strong>
+          <strong className="text-sm">Estado de la Sesión</strong>
           <p className="text-lg">{translateSessionState(sessionState)}</p>
         </div>
         <div className="card card-compact">
@@ -1276,7 +1324,7 @@ function LiveSessionOverviewDashboard({
           <p className="text-lg">{overview ? activeTeamCount : liveSession.registeredSessionTeamCount}</p>
         </div>
         <div className="card card-compact">
-          <strong className="text-sm">Ãšltima sincronizaciÃ³n</strong>
+          <strong className="text-sm">Última sincronización</strong>
           <p className="text-lg mono">{lastSyncLabel}</p>
         </div>
       </div>
@@ -1285,7 +1333,7 @@ function LiveSessionOverviewDashboard({
         <div className="card-header">
           <div className="stack-sm">
             <span className="eyebrow">Ciclo de vida</span>
-            <h4>Control de sesiÃ³n</h4>
+            <h4>Control de sesión</h4>
           </div>
           <span className={getSessionStateBadgeClass(sessionState)}>{translateSessionState(sessionState)}</span>
         </div>
@@ -1315,7 +1363,7 @@ function LiveSessionOverviewDashboard({
 
         {overviewIsStale ? (
           <p className="text-muted text-sm">
-            La conexiÃ³n en tiempo real no estÃ¡ completamente activa. La captura permanece visible y la actualizaciÃ³n manual estÃ¡ disponible.
+            La conexión en tiempo real no está completamente activa. La captura permanece visible y la actualización manual está disponible.
           </p>
         ) : (
           <p className="text-muted text-sm">{connectionState.detail}</p>
@@ -1325,7 +1373,7 @@ function LiveSessionOverviewDashboard({
       <section className="card">
         <div className="card-header">
           <div className="stack-sm">
-            <span className="eyebrow">Equipos de la SesiÃ³n</span>
+            <span className="eyebrow">Equipos de la Sesión</span>
             <h4>Progreso operativo</h4>
           </div>
           {isLoadingOverview ? <span className="badge badge-amber">Sincronizando</span> : null}
@@ -1389,8 +1437,8 @@ function LiveSessionOverviewDashboard({
           </div>
         ) : (
           <div className="empty-state">
-            <strong>No se cargaron equipos de sesiÃ³n.</strong>
-            <p>Use la actualizaciÃ³n manual si el registro de participantes cambiÃ³ mientras se reconectaba en tiempo real.</p>
+            <strong>No se cargaron equipos de sesión.</strong>
+            <p>Use la actualización manual si el registro de participantes cambió mientras se reconectaba en tiempo real.</p>
           </div>
         )}
       </section>
@@ -1447,15 +1495,16 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [overridePendingSubmissionId, setOverridePendingSubmissionId] = useState<string | null>(null);
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
+  const [enrollmentActionPending, setEnrollmentActionPending] = useState<EnrollmentAction | null>(null);
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
-    detail: "SignalR esperando la selecciÃ³n de una LiveSession."
+    detail: "SignalR esperando la selección de una LiveSession."
   });
   const [scoringRealtimeConnection, setScoringRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
-    detail: "SignalR esperando la selecciÃ³n de una LiveSession."
+    detail: "SignalR esperando la selección de una LiveSession."
   });
   const [rankingError, setRankingError] = useState<string | null>(null);
   const [eventLogError, setEventLogError] = useState<string | null>(null);
@@ -1500,31 +1549,31 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     const actions: LifecycleActionViewModel[] = [
       {
         action: "start",
-        label: "Iniciar sesiÃ³n",
+        label: "Iniciar sesión",
         requiresConfirmation: true,
         disabled: selectedLiveSession.state !== "Scheduled" || selectedLiveSession.registeredSessionTeamCount === 0
       },
       {
         action: "pause",
-        label: "Pausar sesiÃ³n",
+        label: "Pausar sesión",
         requiresConfirmation: true,
         disabled: selectedLiveSession.state !== "Active"
       },
       {
         action: "resume",
-        label: "Reanudar sesiÃ³n",
+        label: "Reanudar sesión",
         requiresConfirmation: false,
         disabled: selectedLiveSession.state !== "Paused"
       },
       {
         action: "finalize",
-        label: "Finalizar sesiÃ³n",
+        label: "Finalizar sesión",
         requiresConfirmation: true,
         disabled: !["Active", "Paused"].includes(selectedLiveSession.state)
       },
       {
         action: "cancel",
-        label: "Cancelar sesiÃ³n",
+        label: "Cancelar sesión",
         requiresConfirmation: true,
         disabled: !["Scheduled", "Active", "Paused"].includes(selectedLiveSession.state)
       }
@@ -1601,13 +1650,14 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           throw new Error(await readFailureDetail(response));
         }
 
-        const payload = (await response.json()) as EligibleMissionSummary[];
-        setMissions(payload);
+        const payload = (await response.json()) as EligibleMissionSummaryPayload[];
+        const mapped = payload.map(toEligibleMissionSummary);
+        setMissions(mapped);
 
         const nextMissionId =
-          preferredMissionId && payload.some((mission) => mission.id === preferredMissionId)
+          preferredMissionId && mapped.some((mission) => mission.id === preferredMissionId)
             ? preferredMissionId
-            : payload[0]?.id ?? null;
+            : mapped[0]?.id ?? null;
 
         setSelectedMissionId(nextMissionId);
       } catch (error) {
@@ -1698,7 +1748,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         const payload = (await response.json()) as SessionTeamDetailResponse;
         setSelectedSessionTeamDetail(payload);
       } catch (error) {
-        setSessionTeamDetailError(error instanceof Error ? error.message : "No se pudieron cargar los detalles del equipo de sesiÃ³n.");
+        setSessionTeamDetailError(error instanceof Error ? error.message : "No se pudieron cargar los detalles del equipo de sesión.");
         setSelectedSessionTeamDetail(null);
       } finally {
         setIsLoadingSessionTeamDetail(false);
@@ -1765,7 +1815,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSelectedLiveSessionEventLog(sortSessionEventLogItems(payload));
       } catch (error) {
         setSelectedLiveSessionEventLog([]);
-        setEventLogError(error instanceof Error ? error.message : "No se pudo cargar el registro de eventos de la sesiÃ³n.");
+        setEventLogError(error instanceof Error ? error.message : "No se pudo cargar el registro de eventos de la sesión.");
       } finally {
         setIsLoadingEventLog(false);
       }
@@ -1787,15 +1837,16 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           throw new Error(await readFailureDetail(response));
         }
 
-        const mission = (await response.json()) as EligibleMissionDetail;
+        const payload = (await response.json()) as EligibleMissionDetailPayload;
+        const mission = toEligibleMissionDetail(payload);
         setSelectedMission(mission);
         setSelectedMissionStageIds(mission.missionStages.map((missionStage) => missionStage.id));
         setDraft((current) => ({
-          name: current.name.trim() ? current.name : `${mission.name} / EjecuciÃ³n programada`,
+          name: current.name.trim() ? current.name : `${mission.name} / Ejecución programada`,
           scheduledStartAtLocal: current.scheduledStartAtLocal
         }));
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los detalles de la misiÃ³n elegible.");
+        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los detalles de la misión elegible.");
       } finally {
         setIsLoadingMissionDetail(false);
       }
@@ -1912,7 +1963,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           setSessionRealtimeConnection({
             kind: "disconnected",
             label: "Desconectado",
-            detail: "SignalR esperando la selecciÃ³n de una LiveSession."
+            detail: "SignalR esperando la selección de una LiveSession."
           });
         }
       });
@@ -1971,7 +2022,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: "reconnecting",
         label: "Reconectando",
-        detail: "TransmisiÃ³n en tiempo real perdida. La captura permanece visible."
+        detail: "Transmisión en tiempo real perdida. La captura permanece visible."
       });
     });
 
@@ -1983,7 +2034,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: "connected",
         label: "Conectado",
-        detail: "TransmisiÃ³n de sesiÃ³n en tiempo real restaurada."
+        detail: "Transmisión de sesión en tiempo real restaurada."
       });
       refreshSelectedOverview();
     });
@@ -1996,7 +2047,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSessionRealtimeConnection({
         kind: error ? "error" : "disconnected",
         label: "Desconectado",
-        detail: error ? `SignalR cerrado: ${error.message}` : "TransmisiÃ³n de sesiÃ³n en tiempo real cerrada."
+        detail: error ? `SignalR cerrado: ${error.message}` : "Transmisión de sesión en tiempo real cerrada."
       });
     });
 
@@ -2005,7 +2056,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSessionRealtimeConnection({
           kind: "connecting",
           label: "Reconectando",
-          detail: "Abriendo la transmisiÃ³n de sesiÃ³n en tiempo real."
+          detail: "Abriendo la transmisión de sesión en tiempo real."
         });
       }
     });
@@ -2020,7 +2071,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSessionRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "TransmisiÃ³n de sesiÃ³n en tiempo real conectada."
+          detail: "Transmisión de sesión en tiempo real conectada."
         });
       },
       (error: unknown) => {
@@ -2031,7 +2082,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setSessionRealtimeConnection({
           kind: "error",
           label: "Desconectado",
-          detail: error instanceof Error ? error.message : "No se pudo conectar a la transmisiÃ³n de sesiÃ³n en tiempo real."
+          detail: error instanceof Error ? error.message : "No se pudo conectar a la transmisión de sesión en tiempo real."
         });
       }
     );
@@ -2118,7 +2169,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           setScoringRealtimeConnection({
             kind: "disconnected",
             label: "Desconectado",
-            detail: "SignalR esperando la selecciÃ³n de una LiveSession."
+            detail: "SignalR esperando la selección de una LiveSession."
           });
         }
       });
@@ -2164,7 +2215,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setScoringRealtimeConnection({
         kind: "reconnecting",
         label: "Reconectando",
-        detail: "TransmisiÃ³n de Scoring y AuditorÃ­a perdida. Los componentes mantienen la Ãºltima captura."
+        detail: "Transmisión de Scoring y Auditoría perdida. Los componentes mantienen la última captura."
       });
     });
 
@@ -2173,7 +2224,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "TransmisiÃ³n de Scoring y AuditorÃ­a restaurada."
+          detail: "Transmisión de Scoring y Auditoría restaurada."
         });
         void loadLiveSessionRanking(selectedLiveSessionId);
         void loadLiveSessionEventLog(selectedLiveSessionId);
@@ -2188,7 +2239,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setScoringRealtimeConnection({
         kind: error ? "error" : "disconnected",
         label: "Desconectado",
-        detail: error ? `Scoring y AuditorÃ­a cerrado: ${error.message}` : "TransmisiÃ³n de Scoring y AuditorÃ­a cerrada."
+        detail: error ? `Scoring y Auditoría cerrado: ${error.message}` : "Transmisión de Scoring y Auditoría cerrada."
       });
     });
 
@@ -2197,7 +2248,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connecting",
           label: "Reconectando",
-          detail: "Abriendo la transmisiÃ³n de Scoring y AuditorÃ­a."
+          detail: "Abriendo la transmisión de Scoring y Auditoría."
         });
       }
     });
@@ -2212,7 +2263,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "connected",
           label: "Conectado",
-          detail: "TransmisiÃ³n de Scoring y AuditorÃ­a conectada."
+          detail: "Transmisión de Scoring y Auditoría conectada."
         });
       },
       (error: unknown) => {
@@ -2223,7 +2274,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         setScoringRealtimeConnection({
           kind: "error",
           label: "Desconectado",
-          detail: error instanceof Error ? error.message : "No se pudo conectar al servicio de tiempo real de Scoring y AuditorÃ­a."
+          detail: error instanceof Error ? error.message : "No se pudo conectar al servicio de tiempo real de Scoring y Auditoría."
         });
       }
     );
@@ -2275,7 +2326,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     event.preventDefault();
 
     if (!selectedMission) {
-      setErrorMessage("Seleccione una MisiÃ³n activa primero.");
+      setErrorMessage("Seleccione una Misión activa primero.");
       return;
     }
 
@@ -2285,7 +2336,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
 
     if (selectedMissionStageIds.length === 0) {
-      setErrorMessage("El Flujo de Etapas de SesiÃ³n debe conservar al menos una Etapa de MisiÃ³n activa.");
+      setErrorMessage("El Flujo de Etapas de Sesión debe conservar al menos una Etapa de Misión activa.");
       return;
     }
 
@@ -2319,10 +2370,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       const liveSession = (await response.json()) as LiveSession;
       setSelectedLiveSessionId(liveSession.id);
       setDraft({
-        name: `${selectedMission.name} / EjecuciÃ³n de seguimiento`,
+        name: `${selectedMission.name} / Ejecución de seguimiento`,
         scheduledStartAtLocal: ""
       });
-      setFeedback("LiveSession programada a partir de la captura de MisiÃ³n activa.");
+      setFeedback("LiveSession programada a partir de la captura de Misión activa.");
       await loadLiveSessions(liveSession.id);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear la LiveSession.");
@@ -2364,9 +2415,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
       await loadLiveSessions(selectedLiveSession.id);
       await loadLiveSessionOverview(selectedLiveSession.id);
-      setFeedback(`LiveSession movida a travÃ©s de la acciÃ³n de ciclo de vida: ${action}.`);
+      setFeedback(`LiveSession movida a través de la acción de ciclo de vida: ${action}.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo actualizar el ciclo de vida de la sesiÃ³n.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo actualizar el ciclo de vida de la sesión.");
     } finally {
       setLifecycleActionPending(null);
     }
@@ -2393,11 +2444,50 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
       await loadLiveSessions(selectedLiveSession.id);
       await loadLiveSessionOverview(selectedLiveSession.id);
-      setFeedback("Etapa de sesiÃ³n desactivada para esta LiveSession.");
+      setFeedback("Etapa de sesión desactivada para esta LiveSession.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo desactivar la etapa de sesiÃ³n.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo desactivar la etapa de sesión.");
     } finally {
       setDeactivatingStageId(null);
+    }
+  }
+
+  async function handleEnrollmentAction(action: EnrollmentAction) {
+    if (!selectedLiveSession || enrollmentActionPending !== null) {
+      return;
+    }
+
+    const endpointByAction: Record<EnrollmentAction, string> = {
+      "generate-join-code": "session-enrollment/join-code",
+      "open-window": "session-enrollment/window/open",
+      "close-window": "session-enrollment/window/close"
+    };
+    const successByAction: Record<EnrollmentAction, string> = {
+      "generate-join-code": "Código de unión generado.",
+      "open-window": "Ventana de inscripción abierta. Los participantes ya pueden registrar equipos.",
+      "close-window": "Ventana de inscripción cerrada."
+    };
+
+    setEnrollmentActionPending(action);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/${endpointByAction[action]}`, {
+        method: "POST",
+        headers: createAuthorizedHeaders(accessToken)
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      await loadLiveSessions(selectedLiveSession.id);
+      setFeedback(successByAction[action]);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo actualizar la inscripción de la sesión.");
+    } finally {
+      setEnrollmentActionPending(null);
     }
   }
 
@@ -2409,12 +2499,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
 
     if (!effectivePenaltySessionTeamId) {
-      setErrorMessage("Seleccione un equipo de la sesiÃ³n para la penalizaciÃ³n.");
+      setErrorMessage("Seleccione un equipo de la sesión para la penalización.");
       return;
     }
 
     if (!penaltyDraft.reason.trim()) {
-      setErrorMessage("El motivo de la penalizaciÃ³n es obligatorio.");
+      setErrorMessage("El motivo de la penalización es obligatorio.");
       return;
     }
 
@@ -2446,11 +2536,11 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setPenaltyDraft(createEmptyPenaltyDraft(payload.sessionTeamId));
       setFeedback(
         payload.penaltyApplied
-          ? `PenalizaciÃ³n aplicada con severidad ${penaltyDraft.severity}.`
-          : "Comando de penalizaciÃ³n duplicado ignorado. El Ranking no ha cambiado."
+          ? `Penalización aplicada con severidad ${penaltyDraft.severity}.`
+          : "Comando de penalización duplicado ignorado. El Ranking no ha cambiado."
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo aplicar la penalizaciÃ³n.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo aplicar la penalización.");
     } finally {
       setIsSubmittingPenalty(false);
     }
@@ -2480,7 +2570,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       }
 
       await loadLiveSessionOverview(selectedLiveSession.id);
-      setFeedback("Pista liberada para los equipos de sesiÃ³n elegibles.");
+      setFeedback("Pista liberada para los equipos de sesión elegibles.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo liberar la pista.");
     } finally {
@@ -2525,7 +2615,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setOperationalHintDraft(createEmptyOperationalHintDraft());
       await loadLiveSessions(selectedLiveSession.id);
       await loadLiveSessionOverview(selectedLiveSession.id);
-      setFeedback("Pista operativa aÃ±adida a la captura de la LiveSession.");
+      setFeedback("Pista operativa añadida a la captura de la LiveSession.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear la pista operativa.");
     } finally {
@@ -2561,9 +2651,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
       await loadSessionTeamDetail(selectedLiveSession.id, selectedSessionTeamId, inactivityThresholdMinutes);
       await loadLiveSessionOverview(selectedLiveSession.id);
-      setFeedback("La anulaciÃ³n de validaciÃ³n aceptÃ³ el envÃ­o de evidencia de trivia.");
+      setFeedback("La anulación de validación aceptó el envío de evidencia de trivia.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo aplicar la anulaciÃ³n de validaciÃ³n.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo aplicar la anulación de validación.");
     } finally {
       setOverridePendingSubmissionId(null);
     }
@@ -2573,12 +2663,12 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     <div className="workspace-section">
       <div className="workspace-section-header">
         <div className="stack-sm">
-          <span className="eyebrow">Operaciones de sesiÃ³n</span>
-          <h2>Espacio de trabajo de programaciÃ³n de LiveSession</h2>
+          <span className="eyebrow">Operaciones de sesión</span>
+          <h2>Espacio de trabajo de programación de LiveSession</h2>
         </div>
         <p className="text-muted">
-          El operador selecciona una MisiÃ³n activa, recorta el Flujo de Etapas de SesiÃ³n a etapas activas, reordena la ejecuciÃ³n efectiva
-          y persiste una captura de LiveSession Programada sin modificar el DiseÃ±o de la MisiÃ³n.
+          El operador selecciona una Misión activa, recorta el Flujo de Etapas de Sesión a etapas activas, reordena la ejecución efectiva
+          y persiste una captura de LiveSession Programada sin modificar el Diseño de la Misión.
         </p>
       </div>
 
@@ -2589,7 +2679,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
             <p className="text-lg">{missionSummary.totalMissions}</p>
           </div>
           <div className="card card-compact">
-            <strong className="text-sm">Etapas de misiÃ³n activas</strong>
+            <strong className="text-sm">Etapas de misión activas</strong>
             <p className="text-lg">{missionSummary.totalActiveStages}</p>
           </div>
           <div className="card card-compact">
@@ -2605,7 +2695,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           <section className="card">
             <div className="card-header">
               <div className="stack-sm">
-                <span className="eyebrow">Origen de la misiÃ³n</span>
+                <span className="eyebrow">Origen de la misión</span>
                 <h3>Misiones elegibles</h3>
               </div>
               <button
@@ -2624,8 +2714,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
             {!isLoadingMissions && missions.length === 0 ? (
               <div className="empty-state">
-                <strong>Ninguna misiÃ³n activa puede iniciar una LiveSession todavÃ­a.</strong>
-                <p>El DiseÃ±o de la MisiÃ³n debe exponer al menos una Etapa de MisiÃ³n activa antes de que sea posible programar.</p>
+                <strong>Ninguna misión activa puede iniciar una LiveSession todavía.</strong>
+                <p>El Diseño de la Misión debe exponer al menos una Etapa de Misión activa antes de que sea posible programar.</p>
               </div>
             ) : null}
 
@@ -2644,14 +2734,9 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <strong>{mission.name}</strong>
                     <span className="badge badge-green">{mission.activeMissionStageCount} etapas</span>
                   </div>
-                  <p className={getDifficultyBadgeClass(mission.difficulty)}>{translateDifficulty(mission.difficulty)}</p>
                   <div className="detail-panel">
                     <div className="detail-row">
-                      <span className="detail-label">Tipo de catÃ¡logo</span>
-                      <span className="detail-value">{translateGameType(mission.gameType)}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">DuraciÃ³n</span>
+                      <span className="detail-label">Duración</span>
                       <span className="detail-value">{mission.maximumDurationMinutes} min</span>
                     </div>
                   </div>
@@ -2669,7 +2754,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
               {selectedMission ? <span className="badge badge-green">{draftPreview.length} seleccionados</span> : null}
             </div>
 
-            {isLoadingMissionDetail ? <p className="loading-center">Cargando flujo de etapas de la misiÃ³n.</p> : null}
+            {isLoadingMissionDetail ? <p className="loading-center">Cargando flujo de etapas de la misión.</p> : null}
 
             {selectedMission ? (
               <form className="stack" onSubmit={handleCreateLiveSession}>
@@ -2706,10 +2791,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Captura de la misiÃ³n</label>
+                    <label className="form-label">Captura de la misión</label>
                     <input className="form-input" disabled value={`${(selectedMission.missionStages || []).length} etapas activas`} />
                     <span className="form-hint">
-                      La misiÃ³n sigue siendo reutilizable. La LiveSession almacena su propia captura efectiva del Flujo de Etapas de SesiÃ³n.
+                      La misión sigue siendo reutilizable. La LiveSession almacena su propia captura efectiva del Flujo de Etapas de Sesión.
                     </span>
                   </div>
                 </div>
@@ -2717,8 +2802,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                 <section className="card-section">
                   <div className="card-header">
                     <div className="stack-sm">
-                      <span className="eyebrow">Flujo de etapas de sesiÃ³n</span>
-                      <h4>Etapas de misiÃ³n elegibles</h4>
+                      <span className="eyebrow">Flujo de etapas de sesión</span>
+                      <h4>Etapas de misión elegibles</h4>
                     </div>
                   </div>
 
@@ -2778,13 +2863,13 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                   <div className="card-header">
                     <div className="stack-sm">
                       <span className="eyebrow">Vista previa</span>
-                      <h3>Flujo efectivo de etapas de sesiÃ³n</h3>
+                      <h3>Flujo efectivo de etapas de sesión</h3>
                     </div>
                   </div>
 
                   {draftPreview.length === 0 ? (
                     <div className="empty-state">
-                      <strong>Ninguna etapa de misiÃ³n activa seleccionada.</strong>
+                      <strong>Ninguna etapa de misión activa seleccionada.</strong>
                       <p>Mantenga al menos una etapa en el flujo antes de programar la LiveSession.</p>
                     </div>
                   ) : (
@@ -2799,7 +2884,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           </div>
                           <span className="stage-meta">
                             Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                            {(missionStage.hints || []).length} pistas copiadas a la captura de la sesiÃ³n.
+                            {(missionStage.hints || []).length} pistas copiadas a la captura de la sesión.
                           </span>
                           <p>{missionStage.prompt}</p>
                         </div>
@@ -2816,8 +2901,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
               </form>
             ) : (
               <div className="empty-state">
-                <strong>Seleccione una misiÃ³n elegible.</strong>
-                <p>La programaciÃ³n del operador comienza a partir de una captura de MisiÃ³n activa expuesta por el DiseÃ±o de MisiÃ³n.</p>
+                <strong>Seleccione una misión elegible.</strong>
+                <p>La programación del operador comienza a partir de una captura de Misión activa expuesta por el Diseño de Misión.</p>
               </div>
             )}
           </section>
@@ -2845,8 +2930,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
           {!isLoadingLiveSessions && liveSessions.length === 0 ? (
             <div className="empty-state">
-              <strong>Ninguna LiveSession programada todavÃ­a.</strong>
-              <p>La primera creaciÃ³n exitosa aparecerÃ¡ aquÃ­ con la captura persistida del Flujo de Etapas de SesiÃ³n.</p>
+              <strong>Ninguna LiveSession programada todavía.</strong>
+              <p>La primera creación exitosa aparecerá aquí con la captura persistida del Flujo de Etapas de Sesión.</p>
             </div>
           ) : null}
 
@@ -2933,7 +3018,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <>
                       <div className="detail-panel">
                         <div className="detail-row">
-                          <span className="detail-label">MisiÃ³n</span>
+                          <span className="detail-label">Misión</span>
                           <span className="detail-value">{selectedLiveSession.missionName}</span>
                         </div>
                         <div className="detail-row">
@@ -2945,11 +3030,11 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           <span className="detail-value">{formatTimestamp(selectedLiveSession.createdAtUtc)}</span>
                         </div>
                         <div className="detail-row">
-                          <span className="detail-label">CÃ³digo de uniÃ³n</span>
-                          <span className="detail-value mono">{selectedLiveSession.joinCode ?? "No generado aÃºn"}</span>
+                          <span className="detail-label">Código de unión</span>
+                          <span className="detail-value mono">{selectedLiveSession.joinCode ?? "No generado aún"}</span>
                         </div>
                         <div className="detail-row">
-                          <span className="detail-label">Ventana de inscripciÃ³n</span>
+                          <span className="detail-label">Ventana de inscripción</span>
                           <span className="detail-value">
                             {selectedLiveSession.enrollmentWindowOpenedAtUtc
                               ? selectedLiveSession.enrollmentWindowClosedAtUtc
@@ -2963,6 +3048,55 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           <span className="detail-value">{selectedLiveSession.registeredSessionTeamCount}</span>
                         </div>
                       </div>
+
+                      <section className="card-section">
+                        <div className="stack-sm">
+                          <span className="eyebrow">Preparación de inscripción</span>
+                          <p className="text-muted text-xs">
+                            1) Generá el código de unión. 2) Abrí la inscripción para que los participantes registren
+                            equipos con ese código. 3) Con al menos un equipo registrado, iniciá la sesión.
+                          </p>
+                        </div>
+                        <div className="row-sm row-wrap">
+                          <button
+                            className="btn btn-primary"
+                            disabled={Boolean(selectedLiveSession.joinCode) || enrollmentActionPending !== null}
+                            onClick={() => void handleEnrollmentAction("generate-join-code")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "generate-join-code"
+                              ? "Generando..."
+                              : selectedLiveSession.joinCode
+                                ? "Código generado"
+                                : "Generar código de unión"}
+                          </button>
+                          <button
+                            className="btn btn-success"
+                            disabled={
+                              !selectedLiveSession.joinCode ||
+                              Boolean(selectedLiveSession.enrollmentWindowOpenedAtUtc) ||
+                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                              enrollmentActionPending !== null
+                            }
+                            onClick={() => void handleEnrollmentAction("open-window")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "open-window" ? "Abriendo..." : "Abrir inscripción"}
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            disabled={
+                              !selectedLiveSession.enrollmentWindowOpenedAtUtc ||
+                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                              enrollmentActionPending !== null
+                            }
+                            onClick={() => void handleEnrollmentAction("close-window")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
+                          </button>
+                        </div>
+                      </section>
 
                       <div className="row-sm row-wrap">
                         {lifecycleActions.map((action) => {
@@ -2990,7 +3124,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
                       {selectedLiveSession.state === "Scheduled" && selectedLiveSession.registeredSessionTeamCount === 0 ? (
                         <p className="info-banner">
-                          El inicio permanece bloqueado hasta que el registro de sesiÃ³n registre al menos un equipo de sesiÃ³n.
+                          El inicio permanece bloqueado hasta que el registro de sesión registre al menos un equipo de sesión.
                         </p>
                       ) : null}
 
@@ -3030,7 +3164,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                               <span className="stage-meta">
                                 Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
                                 {(missionStage.hints || []).length} pistas en la captura. {teamsAtOrBeyondStage} equipos en esta etapa o
-                                mÃ¡s adelante.
+                                más adelante.
                               </span>
                               <p>{missionStage.prompt}</p>
                               <div className="row-sm">
@@ -3054,7 +3188,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <section className="card-section">
                       <div className="card-header">
                         <div className="stack-sm">
-                          <span className="eyebrow">Scoring y AuditorÃ­a</span>
+                          <span className="eyebrow">Scoring y Auditoría</span>
                           <h3>Ranking de Equipos</h3>
                         </div>
                         {isLoadingRanking ? <span className="badge badge-amber">Sincronizando</span> : null}
@@ -3068,7 +3202,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                 <th>Puesto</th>
                                 <th>Equipo</th>
                                 <th>Puntaje</th>
-                                <th>Tiempo de resoluciÃ³n</th>
+                                <th>Tiempo de resolución</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -3095,8 +3229,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                         </div>
                       ) : (
                         <div className="empty-state">
-                          <strong>Sin entradas de puntuaciÃ³n todavÃ­a.</strong>
-                          <p>El Ranking aparecerÃ¡ cuando Scoring y AuditorÃ­a registre crÃ©dito de etapa.</p>
+                          <strong>Sin entradas de puntuación todavía.</strong>
+                          <p>El Ranking aparecerá cuando Scoring y Auditoría registre crédito de etapa.</p>
                         </div>
                       )}
                     </section>
@@ -3106,15 +3240,15 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <section className="card-section">
                       <div className="card-header">
                         <div className="stack-sm">
-                          <span className="eyebrow">AplicaciÃ³n de Penalizaciones</span>
-                          <h3>Penalizar Equipo de la SesiÃ³n</h3>
+                          <span className="eyebrow">Aplicación de Penalizaciones</span>
+                          <h3>Penalizar Equipo de la Sesión</h3>
                         </div>
-                        <span className="badge badge-amber">SincronizaciÃ³n de Ranking</span>
+                        <span className="badge badge-amber">Sincronización de Ranking</span>
                       </div>
 
                       <form className="stack" onSubmit={handleApplyPenalty}>
                         <div className="form-group">
-                          <label className="form-label">Equipo de la sesiÃ³n</label>
+                          <label className="form-label">Equipo de la sesión</label>
                           <select
                             className="form-select"
                             onChange={(event) =>
@@ -3127,7 +3261,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                             value={effectivePenaltySessionTeamId}
                           >
                             <option value="" disabled>
-                              Seleccionar equipo de la sesiÃ³n
+                              Seleccionar equipo de la sesión
                             </option>
                             {selectedLiveSessionOverviewTeams.map((team) => (
                               <option key={team.sessionTeamId} value={team.sessionTeamId}>
@@ -3151,7 +3285,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                           >
                             <option value="Minor">Menor (-50)</option>
                             <option value="Major">Mayor (-100)</option>
-                            <option value="Critical">CrÃ­tica (-200)</option>
+                            <option value="Critical">Crítica (-200)</option>
                           </select>
                         </div>
 
@@ -3172,7 +3306,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                         </div>
 
                         <p className="form-hint">
-                          ID del comando de penalizaciÃ³n: <code>{penaltyDraft.commandId}</code>
+                          ID del comando de penalización: <code>{penaltyDraft.commandId}</code>
                         </p>
 
                         <div className="form-actions">
@@ -3181,7 +3315,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                             disabled={isSubmittingPenalty || !isSelectedLiveSessionOverviewCurrent}
                             type="submit"
                           >
-                            {isSubmittingPenalty ? "Aplicando..." : "Aplicar penalizaciÃ³n"}
+                            {isSubmittingPenalty ? "Aplicando..." : "Aplicar penalización"}
                           </button>
                         </div>
                       </form>
@@ -3192,8 +3326,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                     <section className="card-section">
                       <div className="card-header">
                         <div className="stack-sm">
-                          <span className="eyebrow">OperaciÃ³n en vivo</span>
-                          <h3>GestiÃ³n de Pistas (Hints)</h3>
+                          <span className="eyebrow">Operación en vivo</span>
+                          <h3>Gestión de Pistas (Hints)</h3>
                         </div>
                         {isLoadingLiveSessionOverview ? <span className="badge badge-green">Sincronizando</span> : null}
                       </div>
@@ -3206,7 +3340,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
                         {(selectedLiveSessionOverview?.sessionTeams || []).length ? (
                           <div className="stack-sm">
-                            {selectedLiveSessionOverview.sessionTeams.map((team) => {
+                            {(selectedLiveSessionOverview?.sessionTeams || []).map((team) => {
                               const releasedHints = getReleasedHintsForTeam(team);
 
                               return (
@@ -3249,7 +3383,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
                       <section className="card-section">
                         <div className="stack-sm">
-                          <span className="eyebrow">LiberaciÃ³n</span>
+                          <span className="eyebrow">Liberación</span>
                           <h4>Pistas disponibles por etapa actual</h4>
                         </div>
 
@@ -3273,7 +3407,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                 </div>
 
                                 {(missionStage.hints || []).length === 0 ? (
-                                  <p className="text-muted text-xs">Esta etapa aÃºn no tiene pistas disponibles.</p>
+                                  <p className="text-muted text-xs">Esta etapa aún no tiene pistas disponibles.</p>
                                 ) : (
                                   <div className="stack-sm">
                                     {(missionStage.hints || []).map((hint) => (
@@ -3328,11 +3462,11 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                       <form className="stack" onSubmit={handleCreateOperationalHint}>
                         <div className="stack-sm">
                           <span className="eyebrow">Pista en vivo</span>
-                          <h4>AÃ±adir Pista Operativa</h4>
+                          <h4>Añadir Pista Operativa</h4>
                         </div>
 
                         <div className="form-group">
-                          <label className="form-label">Etapa de sesiÃ³n</label>
+                          <label className="form-label">Etapa de sesión</label>
                           <select
                             className="form-select"
                             onChange={(event) =>
@@ -3411,7 +3545,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
               ) : (
                 <div className="empty-state">
                   <strong>Seleccione una LiveSession programada.</strong>
-                  <p>El detalle de la captura muestra el flujo de etapas de la sesiÃ³n copiado de la misiÃ³n de origen.</p>
+                  <p>El detalle de la captura muestra el flujo de etapas de la sesión copiado de la misión de origen.</p>
                 </div>
               )}
             </section>

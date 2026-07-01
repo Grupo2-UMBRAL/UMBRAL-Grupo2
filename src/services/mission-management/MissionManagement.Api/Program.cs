@@ -24,6 +24,11 @@ if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<MissionManagementDbContext>();
     await dbContext.Database.MigrateAsync();
+
+    if (builder.Configuration.GetValue("Persistence:SeedSampleMissions", false))
+    {
+        await SampleMissionSeeder.SeedAsync(dbContext);
+    }
 }
 
 app.Run();

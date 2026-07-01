@@ -110,6 +110,7 @@ services:
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-mission-management-api
       Persistence__ApplyMigrationsOnStartup: "true"
+      Persistence__SeedSampleMissions: "true"
     ports:
       - "${MISSION_MANAGEMENT_PORT}:8080"
     depends_on:

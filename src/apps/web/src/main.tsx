@@ -17,6 +17,7 @@ import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
 import { DocumentLoadInstrumentation } from '@opentelemetry/instrumentation-document-load';
 import { ZoneContextManager } from '@opentelemetry/context-zone';
+import { metrics } from '@opentelemetry/api';
 import './index.css'
 import App from './App.tsx'
 
@@ -47,6 +48,7 @@ const meterProvider = new MeterProvider({
     })
   ]
 });
+metrics.setGlobalMeterProvider(meterProvider);
 
 registerInstrumentations({
   instrumentations: [

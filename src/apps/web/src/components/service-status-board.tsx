@@ -69,7 +69,7 @@ export function ServiceStatusBoard({
         results[i] = {
           label: ep.label,
           status: "error",
-          detail: err instanceof Error ? err.message : "Error de conexiÃ³n",
+          detail: err instanceof Error ? err.message : "Error de conexión",
         };
       }
       setChecks([...results]);
