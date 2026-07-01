@@ -1,11 +1,14 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using SessionManagement.Infrastructure.Persistence;
 
 #nullable disable
 
 namespace SessionManagement.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(SessionManagementDbContext))]
     [Migration("20260603153000_AddTriviaSubmissionsAndValidationOverrides")]
     public partial class AddTriviaSubmissionsAndValidationOverrides : Migration
     {

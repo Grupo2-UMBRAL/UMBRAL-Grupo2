@@ -1514,9 +1514,9 @@ tr.clickable {
 
 .stage-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   background: var(--bg-raised);
   border: 1px solid var(--border);
@@ -1536,8 +1536,8 @@ tr.clickable {
 .stage-item-info {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
   min-width: 0;
 }
 
@@ -1567,7 +1567,7 @@ tr.clickable {
 .stage-meta {
   color: var(--text-muted);
   font-size: var(--text-xs);
-  white-space: nowrap;
+  line-height: 1.5;
 }
 
 /* ----------------------------------------------------------------
