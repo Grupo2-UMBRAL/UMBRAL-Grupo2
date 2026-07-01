@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
 import type { WebShellRole } from "@/lib/roles";
 import { Link } from "react-router-dom";
@@ -17,6 +17,7 @@ export function DashboardLayout({
   headerActions,
 }: DashboardLayoutProps) {
   const { user, roles, logout } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const initials = user
     ? (user.displayName || user.username)
@@ -28,7 +29,7 @@ export function DashboardLayout({
     : "U";
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
@@ -89,7 +90,22 @@ export function DashboardLayout({
       {/* Main content */}
       <div className="main-area">
         <header className="content-header">
-          <h2>{title}</h2>
+          <div className="content-header-left">
+            <button
+              className="btn btn-ghost btn-sm sidebar-toggle"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              type="button"
+              aria-label={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
+              title={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <h2>{title}</h2>
+          </div>
           {headerActions && (
             <div className="content-header-actions">{headerActions}</div>
           )}

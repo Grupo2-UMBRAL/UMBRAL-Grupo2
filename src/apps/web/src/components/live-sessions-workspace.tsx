@@ -368,6 +368,7 @@ type LifecycleActionViewModel = {
   label: string;
   requiresConfirmation: boolean;
   disabled: boolean;
+  available: boolean;
 };
 
 type LiveSessionOverviewDashboardProps = {
@@ -390,7 +391,7 @@ type LiveSessionOverviewDashboardProps = {
   inactivityThresholdMinutes: number;
   isLoadingSessionTeamDetail: boolean;
   overridePendingSubmissionId: string | null;
-  onSelectSessionTeam: (sessionTeamId: string) => void;
+  onSelectSessionTeam: (sessionTeamId: string | null) => void;
   onRefreshSessionTeamDetail: () => void;
   onInactivityThresholdChange: (nextValue: number) => void;
   onOverrideSubmission: (submissionId: string, reason: string) => void;
@@ -742,6 +743,67 @@ function getStageLabel(stage: CurrentSessionStageSnapshot | null) {
   return `#${stage.sessionStageOrder} ${stage.name}`;
 }
 
+type StageProgressBlockStatus = "done" | "current" | "pending";
+
+type StageProgressBlock = {
+  order: number;
+  name: string;
+  status: StageProgressBlockStatus;
+};
+
+// Maps a team onto one block per Session Stage: stages before the team's current
+// one are done, the current one is highlighted, the rest are pending. A team that
+// finished the flow shows every block as done.
+function getTeamStageProgress(
+  team: LiveSessionOverviewTeam,
+  orderedStages: LiveSessionStage[]
+): StageProgressBlock[] {
+  const isCompleted = team.progressState === "Completed";
+  const currentOrder = team.currentStage?.sessionStageOrder ?? 0;
+
+  return orderedStages.map((stage) => {
+    let status: StageProgressBlockStatus;
+    if (isCompleted || stage.sessionStageOrder < currentOrder) {
+      status = "done";
+    } else if (stage.sessionStageOrder === currentOrder) {
+      status = "current";
+    } else {
+      status = "pending";
+    }
+
+    return { order: stage.sessionStageOrder, name: stage.name, status };
+  });
+}
+
+function TeamStageProgress({ blocks }: { blocks: StageProgressBlock[] }) {
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  const doneCount = blocks.filter((block) => block.status === "done").length;
+  const currentBlock = blocks.find((block) => block.status === "current");
+  const label = currentBlock
+    ? `Etapa ${currentBlock.order} de ${blocks.length}`
+    : doneCount === blocks.length
+      ? `Completó las ${blocks.length} etapas`
+      : `Sin iniciar · ${blocks.length} etapas`;
+
+  return (
+    <div className="stage-progress">
+      <div className="stage-progress-track">
+        {blocks.map((block) => (
+          <span
+            className={`stage-progress-block is-${block.status}`}
+            key={block.order}
+            title={`Etapa #${block.order}: ${block.name}`}
+          />
+        ))}
+      </div>
+      <span className="stage-progress-label">{label}</span>
+    </div>
+  );
+}
+
 function isSnapshotRefreshRequired(refreshPolicy: SnapshotRefreshPolicy) {
   return refreshPolicy === 2 || refreshPolicy === "RefreshSnapshot";
 }
@@ -1012,6 +1074,7 @@ type SessionTeamDetailPanelProps = {
   onInactivityThresholdChange: (nextValue: number) => void;
   onRefresh: () => void;
   onOverrideSubmission: (submissionId: string, reason: string) => void;
+  onClose: () => void;
 };
 
 function SessionTeamDetailPanel({
@@ -1022,7 +1085,8 @@ function SessionTeamDetailPanel({
   overridePendingSubmissionId,
   onInactivityThresholdChange,
   onRefresh,
-  onOverrideSubmission
+  onOverrideSubmission,
+  onClose
 }: SessionTeamDetailPanelProps) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [showTriviaOnly, setShowTriviaOnly] = useState(false);
@@ -1042,6 +1106,12 @@ function SessionTeamDetailPanel({
   if (!detail) {
     return (
       <aside className="drawer">
+        <div className="drawer-header">
+          <span className="eyebrow">Detalles del equipo de sesión</span>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} type="button">
+            Cerrar
+          </button>
+        </div>
         <div className="empty-state">
           <strong>Seleccione un equipo de la sesión.</strong>
           <p>Los detalles del operador se muestran aquí con la actividad, pistas, envíos y estado de inactividad.</p>
@@ -1064,9 +1134,14 @@ function SessionTeamDetailPanel({
           <h4>{detail.teamName}</h4>
           <span className="text-muted text-sm">{detail.participantCount} participante(s)</span>
         </div>
-        <span className={detail.isInactive ? "badge badge-red" : "badge badge-green"}>
-          {detail.isInactive ? "Inactivo" : "Activo"}
-        </span>
+        <div className="row-sm">
+          <span className={detail.isInactive ? "badge badge-red" : "badge badge-green"}>
+            {detail.isInactive ? "Inactivo" : "Activo"}
+          </span>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} type="button">
+            Cerrar
+          </button>
+        </div>
       </div>
 
       <div className="drawer-body">
@@ -1288,6 +1363,9 @@ function LiveSessionOverviewDashboard({
   const remainingSeconds = overview?.remainingSeconds;
   const lastSyncLabel = formatShortTimestamp(overview?.sync.lastUpdatedUtc);
   const overviewIsStale = connectionState.kind !== "connected";
+  const orderedStages = [...(liveSession.sessionStageFlow ?? [])].sort(
+    (a, b) => a.sessionStageOrder - b.sessionStageOrder
+  );
 
   return (
     <div className="stack-lg">
@@ -1353,6 +1431,7 @@ function LiveSessionOverviewDashboard({
                 disabled={action.disabled || lifecycleActionPending !== null}
                 key={action.action}
                 onClick={() => onLifecycleAction(action.action)}
+                style={action.action === "cancel" ? { marginLeft: "auto" } : undefined}
                 type="button"
               >
                 {lifecycleActionPending === action.action ? "Actualizando..." : action.label}
@@ -1380,7 +1459,7 @@ function LiveSessionOverviewDashboard({
         </div>
 
         {teams.length > 0 ? (
-          <div className="split-layout">
+          <div className={selectedSessionTeamId ? "split-layout" : ""}>
             <div className="stack-sm">
               {teams.map((team) => {
                 const isSelected = team.sessionTeamId === selectedSessionTeamId;
@@ -1389,7 +1468,7 @@ function LiveSessionOverviewDashboard({
                   <button
                     className={isSelected ? "card card-compact clickable is-selected" : "card card-compact clickable"}
                     key={team.sessionTeamId}
-                    onClick={() => onSelectSessionTeam(team.sessionTeamId)}
+                    onClick={() => onSelectSessionTeam(isSelected ? null : team.sessionTeamId)}
                     type="button"
                   >
                     <div className="row-between">
@@ -1399,6 +1478,8 @@ function LiveSessionOverviewDashboard({
                       </div>
                       <span className={getProgressBadgeClass(team.progressState)}>{translateProgressState(team.progressState)}</span>
                     </div>
+
+                    <TeamStageProgress blocks={getTeamStageProgress(team, orderedStages)} />
 
                     <div className="detail-panel">
                       <div className="detail-row">
@@ -1423,17 +1504,20 @@ function LiveSessionOverviewDashboard({
               })}
             </div>
 
-            <SessionTeamDetailPanel
-              detail={sessionTeamDetail}
-              error={sessionTeamDetailError}
-              inactivityThresholdMinutes={inactivityThresholdMinutes}
-              isLoading={isLoadingSessionTeamDetail}
-              key={selectedSessionTeamId ?? "empty-session-team-detail"}
-              onInactivityThresholdChange={onInactivityThresholdChange}
-              onOverrideSubmission={onOverrideSubmission}
-              onRefresh={onRefreshSessionTeamDetail}
-              overridePendingSubmissionId={overridePendingSubmissionId}
-            />
+            {selectedSessionTeamId ? (
+              <SessionTeamDetailPanel
+                detail={sessionTeamDetail}
+                error={sessionTeamDetailError}
+                inactivityThresholdMinutes={inactivityThresholdMinutes}
+                isLoading={isLoadingSessionTeamDetail}
+                key={selectedSessionTeamId ?? "empty-session-team-detail"}
+                onClose={() => onSelectSessionTeam(null)}
+                onInactivityThresholdChange={onInactivityThresholdChange}
+                onOverrideSubmission={onOverrideSubmission}
+                onRefresh={onRefreshSessionTeamDetail}
+                overridePendingSubmissionId={overridePendingSubmissionId}
+              />
+            ) : null}
           </div>
         ) : (
           <div className="empty-state">
@@ -1546,40 +1630,49 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       return [];
     }
 
+    const state = selectedLiveSession.state;
+
+    // `available` = the action makes sense in the current state (shown to the operator).
+    // `disabled`  = available but blocked by a precondition (e.g. Start needs a team).
     const actions: LifecycleActionViewModel[] = [
       {
         action: "start",
         label: "Iniciar sesión",
         requiresConfirmation: true,
-        disabled: selectedLiveSession.state !== "Scheduled" || selectedLiveSession.registeredSessionTeamCount === 0
-      },
-      {
-        action: "pause",
-        label: "Pausar sesión",
-        requiresConfirmation: true,
-        disabled: selectedLiveSession.state !== "Active"
+        available: state === "Scheduled",
+        disabled: selectedLiveSession.registeredSessionTeamCount === 0
       },
       {
         action: "resume",
         label: "Reanudar sesión",
         requiresConfirmation: false,
-        disabled: selectedLiveSession.state !== "Paused"
+        available: state === "Paused",
+        disabled: false
+      },
+      {
+        action: "pause",
+        label: "Pausar sesión",
+        requiresConfirmation: true,
+        available: state === "Active",
+        disabled: false
       },
       {
         action: "finalize",
         label: "Finalizar sesión",
         requiresConfirmation: true,
-        disabled: !["Active", "Paused"].includes(selectedLiveSession.state)
+        available: ["Active", "Paused"].includes(state),
+        disabled: false
       },
       {
         action: "cancel",
         label: "Cancelar sesión",
         requiresConfirmation: true,
-        disabled: !["Scheduled", "Active", "Paused"].includes(selectedLiveSession.state)
+        available: ["Scheduled", "Active", "Paused"].includes(state),
+        disabled: false
       }
     ];
 
-    return actions;
+    return actions.filter((action) => action.available);
   }, [selectedLiveSession]);
 
   const missionSummary = useMemo(() => {
@@ -1872,7 +1965,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     void loadSessionTeamDetail(selectedLiveSessionId, selectedSessionTeamId, inactivityThresholdMinutes);
   }, [inactivityThresholdMinutes, loadSessionTeamDetail, selectedLiveSessionId, selectedSessionTeamId]);
 
-  function handleSelectSessionTeam(sessionTeamId: string) {
+  function handleSelectSessionTeam(sessionTeamId: string | null) {
     setSelectedSessionTeamId(sessionTeamId);
     setSelectedSessionTeamDetail(null);
     setSessionTeamDetailError(null);
@@ -3114,6 +3207,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                               onClick={() => {
                                 void handleLifecycleAction(action.action);
                               }}
+                              style={action.action === "cancel" ? { marginLeft: "auto" } : undefined}
                               type="button"
                             >
                               {lifecycleActionPending === action.action ? "Actualizando..." : action.label}
