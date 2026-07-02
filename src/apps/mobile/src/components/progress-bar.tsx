@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 type ProgressBarProps = {
   completed: number;
@@ -28,18 +29,18 @@ const styles = StyleSheet.create({
     gap: 6
   },
   track: {
-    backgroundColor: "#e4ebe1",
+    backgroundColor: colors.state.locked.fill,
     borderRadius: 999,
     height: 14,
     overflow: "hidden"
   },
   fill: {
-    backgroundColor: "#2d6a4f",
+    backgroundColor: colors.brand.primary,
     borderRadius: 999,
     height: "100%"
   },
   caption: {
-    color: "#4d5e64",
+    color: colors.text.secondary,
     fontSize: 13,
     fontWeight: "700"
   }

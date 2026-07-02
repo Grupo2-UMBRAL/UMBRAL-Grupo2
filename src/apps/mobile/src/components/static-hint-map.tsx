@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 type StaticHintMapProps = {
   latitude: number;
@@ -39,20 +40,20 @@ export function StaticHintMap({ latitude, longitude }: StaticHintMapProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f2f6f7",
-    borderColor: "#c8d7dc",
+    backgroundColor: colors.surface.raised,
+    borderColor: colors.surface.raisedBorder,
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,
     padding: 14
   },
   title: {
-    color: "#17313b",
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: "700"
   },
   mapFrame: {
-    backgroundColor: "#dcecef",
+    backgroundColor: colors.surface.mapFrame,
     borderRadius: 16,
     height: 140,
     overflow: "hidden",
@@ -75,8 +76,8 @@ const styles = StyleSheet.create({
     left: "50%"
   },
   pin: {
-    backgroundColor: "#d94f30",
-    borderColor: "#fffaf5",
+    backgroundColor: colors.state.error.textAlt,
+    borderColor: colors.surface.card,
     borderRadius: 10,
     borderWidth: 2,
     height: 16,
@@ -94,12 +95,12 @@ const styles = StyleSheet.create({
     top: 10
   },
   compassLabel: {
-    color: "#40616d",
+    color: colors.text.tertiary,
     fontSize: 12,
     fontWeight: "700"
   },
   coordinates: {
-    color: "#40616d",
+    color: colors.text.tertiary,
     fontSize: 13,
     fontWeight: "600"
   }

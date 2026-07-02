@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 export type StageNodeState = "completed" | "current" | "locked";
 
@@ -14,9 +15,9 @@ type ProgressTrackProps = {
 };
 
 const nodeTheme: Record<StageNodeState, { dot: string; ring: string; label: string; glyph: string }> = {
-  completed: { dot: "#2d6a4f", ring: "#74c69d", label: "#17313b", glyph: "✓" },
-  current: { dot: "#1e6f8c", ring: "#9cd0e2", label: "#17313b", glyph: "★" },
-  locked: { dot: "#cdd8c9", ring: "#e4ebe1", label: "#8a978f", glyph: "🔒" }
+  completed: { dot: colors.brand.primary, ring: colors.brand.primaryRing, label: colors.text.primary, glyph: "✓" },
+  current: { dot: colors.brand.secondary, ring: colors.brand.secondaryRing, label: colors.text.primary, glyph: "★" },
+  locked: { dot: colors.state.locked.ring, ring: colors.state.locked.fill, label: colors.state.locked.text, glyph: "🔒" }
 };
 
 export function ProgressTrack({ nodes }: ProgressTrackProps) {
@@ -38,7 +39,7 @@ export function ProgressTrack({ nodes }: ProgressTrackProps) {
                 <View
                   style={[
                     styles.connector,
-                    { backgroundColor: node.state === "completed" ? "#74c69d" : "#e4ebe1" }
+                    { backgroundColor: node.state === "completed" ? colors.brand.primaryRing : colors.state.locked.fill }
                   ]}
                 />
               )}
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     width: 40
   },
   glyph: {
-    color: "#f7fbfc",
+    color: colors.text.onBrand,
     fontSize: 16,
     fontWeight: "800"
   },
@@ -92,8 +93,8 @@ const styles = StyleSheet.create({
     width: 4
   },
   card: {
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 18,
     borderWidth: 1,
     flex: 1,
@@ -102,20 +103,20 @@ const styles = StyleSheet.create({
     padding: 14
   },
   currentCard: {
-    borderColor: "#1e6f8c",
+    borderColor: colors.brand.secondary,
     borderWidth: 2,
-    backgroundColor: "#eef7fb"
+    backgroundColor: colors.state.info.fillAlt
   },
   lockedCard: {
-    backgroundColor: "#f3f1ec",
-    borderColor: "#e4ebe1"
+    backgroundColor: colors.state.locked.cardFill,
+    borderColor: colors.state.locked.fill
   },
   label: {
     fontSize: 16,
     fontWeight: "800"
   },
   sublabel: {
-    color: "#6b7a72",
+    color: colors.text.muted,
     fontSize: 13,
     lineHeight: 19
   }

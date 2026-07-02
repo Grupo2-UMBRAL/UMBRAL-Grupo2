@@ -70,7 +70,9 @@ The web interface should prioritize clarity, speed, and situational awareness.
 
 ## 4. Visual language
 
-The reference direction is warm, soft, and clear.
+The reference direction is warm, soft, and clear. For concrete shapes, color tokens, and
+component rules for the mobile client, see
+[`mobile-shape-language.md`](./mobile-shape-language.md).
 
 ### What to keep
 

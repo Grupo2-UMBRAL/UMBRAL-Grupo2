@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { colors } from "../theme/tokens";
 
 type ScreenShellProps = {
   eyebrow?: string;
@@ -31,20 +32,20 @@ export function ScreenShell({
 
 export const shellStyles = StyleSheet.create({
   card: {
-    backgroundColor: "#fffaf5",
+    backgroundColor: colors.surface.card,
     borderRadius: 24,
     padding: 20,
     gap: 12,
     borderWidth: 1,
-    borderColor: "#eadcc8"
+    borderColor: colors.surface.cardBorder
   },
   cardTitle: {
-    color: "#17313b",
+    color: colors.text.primary,
     fontSize: 18,
     fontWeight: "700"
   },
   cardText: {
-    color: "#4d5e64",
+    color: colors.text.secondary,
     fontSize: 15,
     lineHeight: 22
   },
@@ -60,7 +61,7 @@ export const shellStyles = StyleSheet.create({
     gap: 10
   },
   mono: {
-    color: "#17313b",
+    color: colors.text.primary,
     fontFamily: "monospace",
     fontSize: 13
   }
@@ -69,7 +70,7 @@ export const shellStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f6efe6"
+    backgroundColor: colors.surface.base
   },
   content: {
     padding: 20,
@@ -79,20 +80,20 @@ const styles = StyleSheet.create({
     gap: 10
   },
   eyebrow: {
-    color: "#1e6f8c",
+    color: colors.brand.secondary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase"
   },
   title: {
-    color: "#17313b",
+    color: colors.text.primary,
     fontSize: 32,
     fontWeight: "800",
     lineHeight: 38
   },
   description: {
-    color: "#4d5e64",
+    color: colors.text.secondary,
     fontSize: 16,
     lineHeight: 24
   }

@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 type GameButtonVariant = "primary" | "secondary" | "ghost";
 
@@ -12,9 +13,9 @@ type GameButtonProps = {
 };
 
 const palette: Record<GameButtonVariant, { background: string; label: string; border: string }> = {
-  primary: { background: "#2d6a4f", label: "#f7fbfc", border: "#2d6a4f" },
-  secondary: { background: "#1e6f8c", label: "#f7fbfc", border: "#1e6f8c" },
-  ghost: { background: "transparent", label: "#17313b", border: "#c8d7dc" }
+  primary: { background: colors.brand.primary, label: colors.text.onBrand, border: colors.brand.primary },
+  secondary: { background: colors.brand.secondary, label: colors.text.onBrand, border: colors.brand.secondary },
+  ghost: { background: "transparent", label: colors.text.primary, border: colors.surface.raisedBorder }
 };
 
 export function GameButton({

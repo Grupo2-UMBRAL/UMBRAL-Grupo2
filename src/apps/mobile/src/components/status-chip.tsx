@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 type StatusTone = "neutral" | "info" | "success" | "warn" | "error";
 
@@ -8,11 +9,11 @@ type StatusChipProps = {
 };
 
 const toneStyles = {
-  neutral: { backgroundColor: "#efe7dc", color: "#5f5f55" },
-  info: { backgroundColor: "#d8ecf5", color: "#175f78" },
-  success: { backgroundColor: "#dff2dd", color: "#25613a" },
-  warn: { backgroundColor: "#f9e8c7", color: "#8a5d14" },
-  error: { backgroundColor: "#f7d9d9", color: "#9e2f2f" }
+  neutral: { backgroundColor: colors.state.neutral.fill, color: colors.state.neutral.text },
+  info: { backgroundColor: colors.state.info.fill, color: colors.state.info.text },
+  success: { backgroundColor: colors.state.success.fill, color: colors.state.success.text },
+  warn: { backgroundColor: colors.state.warn.fill, color: colors.state.warn.text },
+  error: { backgroundColor: colors.state.error.fill, color: colors.state.error.text }
 } satisfies Record<StatusTone, { backgroundColor: string; color: string }>;
 
 export function StatusChip({ label, tone = "neutral" }: StatusChipProps) {

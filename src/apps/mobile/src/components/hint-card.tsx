@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { StaticHintMap } from "./static-hint-map";
 import { StatusChip } from "./status-chip";
+import { colors } from "../theme/tokens";
 
 type HintCardProps = {
   content: string;
@@ -31,16 +32,16 @@ export function HintCard({ content, reason, isSolution = false, latitude, longit
 
 const styles = StyleSheet.create({
   hintCard: {
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,
     padding: 14
   },
   solutionCard: {
-    backgroundColor: "#fff1df",
-    borderColor: "#d28b39",
+    backgroundColor: colors.state.warn.fillAlt,
+    borderColor: colors.state.warn.textAlt,
     borderRadius: 18,
     borderWidth: 2,
     gap: 10,
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
     gap: 10
   },
   content: {
-    color: "#17313b",
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: "600",
     lineHeight: 23
