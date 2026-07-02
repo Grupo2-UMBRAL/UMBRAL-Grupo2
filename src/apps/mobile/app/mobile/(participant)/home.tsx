@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
     gap: 10
   },
   heroCard: {
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 26,
     borderWidth: 1,
     gap: 14,
@@ -223,20 +223,20 @@ const styles = StyleSheet.create({
     fontSize: 40
   },
   heroTitle: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 26,
     fontWeight: "900",
     lineHeight: 32
   },
   stageEyebrow: {
-    color: "#1e6f8c",
+    color: "#1CB0F6",
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.6,
     textTransform: "uppercase"
   },
   prompt: {
-    color: "#4d5e64",
+    color: "#777777",
     fontSize: 16,
     lineHeight: 23
   },
@@ -246,8 +246,8 @@ const styles = StyleSheet.create({
   },
   tile: {
     alignItems: "center",
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 20,
     borderWidth: 1,
     flex: 1,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     fontSize: 26
   },
   tileTitle: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 14,
     fontWeight: "800"
   },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14
   },
   signOutLabel: {
-    color: "#9e2f2f",
+    color: "#EA2B2B",
     fontSize: 15,
     fontWeight: "700"
   }

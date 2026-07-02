@@ -36,7 +36,7 @@ export default function ForbiddenPage() {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#9e2f2f",
+    backgroundColor: "#EA2B2B",
     borderRadius: 18,
     alignItems: "center",
     paddingHorizontal: 16,
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     opacity: 0.85
   },
   buttonLabel: {
-    color: "#fff8f8",
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700"
   }

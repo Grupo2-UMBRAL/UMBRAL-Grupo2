@@ -337,7 +337,7 @@ export default function RankingPage() {
 
       {rankingStatus === "loading" && !ranking ? (
         <View style={styles.inlineStatus}>
-          <ActivityIndicator color="#17313b" />
+          <ActivityIndicator color="#4B4B4B" />
           <Text style={styles.inlineStatusText}>Cargando ranking...</Text>
         </View>
       ) : null}
@@ -379,26 +379,26 @@ export default function RankingPage() {
 
 const styles = StyleSheet.create({
   ownTeamCard: {
-    borderColor: "#74c69d",
+    borderColor: "#58A700",
     borderWidth: 2
   },
   medal: {
     fontSize: 22
   },
   score: {
-    color: "#2d6a4f",
+    color: "#58CC02",
     fontSize: 22,
     fontWeight: "900"
   },
   secondaryButton: {
     alignItems: "center",
-    backgroundColor: "#17313b",
+    backgroundColor: "#4B4B4B",
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
   secondaryButtonLabel: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700"
   },
@@ -411,12 +411,12 @@ const styles = StyleSheet.create({
     gap: 10
   },
   inlineStatusText: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 14,
     fontWeight: "700"
   },
   error: {
-    color: "#9e2f2f",
+    color: "#EA2B2B",
     fontSize: 14,
     lineHeight: 20
   }

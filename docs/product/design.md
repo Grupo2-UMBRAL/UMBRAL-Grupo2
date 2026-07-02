@@ -70,14 +70,15 @@ The web interface should prioritize clarity, speed, and situational awareness.
 
 ## 4. Visual language
 
-The reference direction is warm, soft, and clear. For concrete shapes, color tokens, and
-component rules for the mobile client, see
-[`mobile-shape-language.md`](./mobile-shape-language.md).
+The web operator app stays warm, soft, and calm; the mobile participant app uses a brighter,
+Duolingo-inspired palette (vivid green/blue/red/yellow on a near-white background). Both keep
+soft rounded surfaces and clear hierarchy. For the mobile shapes, color tokens, and component
+rules, see [`mobile-shape-language.md`](./mobile-shape-language.md).
 
 ### What to keep
 
 - Soft rounded surfaces.
-- Light warm backgrounds.
+- Light, soft backgrounds (mobile: bright near-white; web: warm neutral).
 - Clear typographic hierarchy.
 - Pills, badges, and compact filters.
 - A single focal area per screen.
@@ -99,7 +100,9 @@ Color should guide meaning, not decorate.
 - Amber for attention, pending actions, and new hints.
 - Red for errors, blocking states, and destructive actions.
 
-The background should be a warm neutral, not a pure white.
+Backgrounds stay soft, never harsh: the mobile participant app uses a bright near-white "Polar"
+tone (`#F7F7F7`, see the mobile shape-language doc); the web operator app keeps a warm neutral.
+Neither uses pure white for the page background.
 
 ## 6. Interaction hierarchy
 

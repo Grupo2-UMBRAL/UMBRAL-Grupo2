@@ -353,21 +353,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#eadcc8",
-    color: "#17313b",
+    borderColor: "#E5E5E5",
+    color: "#4B4B4B",
     fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
   primaryButton: {
-    backgroundColor: "#1e6f8c",
+    backgroundColor: "#1CB0F6",
     borderRadius: 18,
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14
   },
   primaryButtonLabel: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700"
   },
@@ -375,45 +375,45 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#eadcc8",
+    borderColor: "#E5E5E5",
     paddingHorizontal: 14,
     paddingVertical: 10
   },
   modeButtonActive: {
-    backgroundColor: "#17313b",
-    borderColor: "#17313b"
+    backgroundColor: "#4B4B4B",
+    borderColor: "#4B4B4B"
   },
   modeButtonLabel: {
-    color: "#4d5e64",
+    color: "#777777",
     fontSize: 14,
     fontWeight: "700"
   },
   modeButtonLabelActive: {
-    color: "#f7fbfc"
+    color: "#FFFFFF"
   },
   teamCard: {
     backgroundColor: "#ffffff",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#eadcc8",
+    borderColor: "#E5E5E5",
     padding: 16
   },
   teamCardSelected: {
-    borderColor: "#1e6f8c",
-    backgroundColor: "#eaf6fa"
+    borderColor: "#1CB0F6",
+    backgroundColor: "#DDF4FF"
   },
   teamName: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 16,
     fontWeight: "700"
   },
   warning: {
-    color: "#98640f",
+    color: "#8C6E00",
     fontSize: 14,
     lineHeight: 20
   },
   error: {
-    color: "#9e2f2f",
+    color: "#EA2B2B",
     fontSize: 14,
     lineHeight: 20
   },

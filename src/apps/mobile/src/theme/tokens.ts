@@ -5,51 +5,51 @@
 
 export const colors = {
   surface: {
-    base: "#f6efe6",
-    card: "#fffaf5",
-    cardBorder: "#eadcc8",
-    raised: "#f2f6f7",
-    raisedBorder: "#c8d7dc",
-    mapFrame: "#dcecef"
+    base: "#F7F7F7",
+    card: "#FFFFFF",
+    cardBorder: "#E5E5E5",
+    raised: "#F7F7F7",
+    raisedBorder: "#E5E5E5",
+    mapFrame: "#DDF4FF"
   },
   text: {
-    primary: "#17313b",
-    secondary: "#4d5e64",
-    tertiary: "#40616d",
-    muted: "#6b7a72",
-    mutedAlt: "#8a978f",
-    onBrand: "#f7fbfc"
+    primary: "#4B4B4B",
+    secondary: "#777777",
+    tertiary: "#777777",
+    muted: "#777777",
+    mutedAlt: "#AFAFAF",
+    onBrand: "#FFFFFF"
   },
   brand: {
-    primary: "#2d6a4f",
-    primaryTint: "#d8f3dc",
-    primaryTintAlt: "#eef5f1",
-    primaryStrong: "#1b4332",
-    primaryRing: "#74c69d",
-    secondary: "#1e6f8c",
-    secondaryTint: "#d8ecf5",
-    secondaryTintAlt: "#eaf6fa",
-    secondaryRing: "#9cd0e2"
+    primary: "#58CC02",
+    primaryTint: "#EAF7D6",
+    primaryTintAlt: "#EAF7D6",
+    primaryStrong: "#58A700",
+    primaryRing: "#58A700",
+    secondary: "#1CB0F6",
+    secondaryTint: "#DDF4FF",
+    secondaryTintAlt: "#DDF4FF",
+    secondaryRing: "#1899D6"
   },
   state: {
-    success: { fill: "#dff2dd", fillAlt: "#d8f3dc", text: "#25613a", textAlt: "#2d6a4f" },
-    info: { fill: "#d8ecf5", fillAlt: "#eef7fb", text: "#175f78", textAlt: "#1e6f8c" },
+    success: { fill: "#EAF7D6", fillAlt: "#EAF7D6", text: "#58A700", textAlt: "#58CC02" },
+    info: { fill: "#DDF4FF", fillAlt: "#DDF4FF", text: "#1899D6", textAlt: "#1CB0F6" },
     warn: {
-      fill: "#f9e8c7",
-      fillAlt: "#fff1df",
-      fillMuted: "#f2e7de",
-      text: "#8a5d14",
-      textAlt: "#d28b39",
-      borderMuted: "#d1ab89"
+      fill: "#FFF4CC",
+      fillAlt: "#FFF4CC",
+      fillMuted: "#FFF4CC",
+      text: "#8C6E00",
+      textAlt: "#FFC800",
+      borderMuted: "#FFC800"
     },
-    error: { fill: "#f7d9d9", fillAlt: "#ffe5e5", border: "#ef9a9a", text: "#9e2f2f", textAlt: "#d94f30" },
-    neutral: { fill: "#efe7dc", text: "#5f5f55" },
-    locked: { fill: "#e4ebe1", ring: "#cdd8c9", text: "#8a978f", cardFill: "#f3f1ec" },
-    disabled: { fill: "#9aa6a1", text: "#f7fbfc" }
+    error: { fill: "#FFE5E5", fillAlt: "#ffe5e5", border: "#FF4B4B", text: "#EA2B2B", textAlt: "#FF4B4B" },
+    neutral: { fill: "#F7F7F7", text: "#777777" },
+    locked: { fill: "#E5E5E5", ring: "#E5E5E5", text: "#AFAFAF", cardFill: "#F7F7F7" },
+    disabled: { fill: "#E5E5E5", text: "#FFFFFF" }
   },
   overlay: {
     scrim: "#000000",
-    text: "#dce8ea"
+    text: "#E5E5E5"
   }
 } as const;
 
@@ -77,9 +77,10 @@ export const space = {
 } as const;
 
 /**
- * `undefined` falls back to the RN/Expo platform system font. Swap to "Nunito_800ExtraBold" /
- * "Nunito_700Bold" / "Nunito_600SemiBold" once `@expo-google-fonts/nunito` is installed and
- * loaded via `useFonts` — see docs/product/mobile-shape-language.md §10.
+ * Web already renders in Nunito via `app/+html.tsx` (Google Fonts link + default body font), so
+ * these can stay `undefined` (system-font fallback) on native. To activate Nunito on device, swap
+ * to "Nunito_800ExtraBold" / "Nunito_700Bold" / "Nunito_600SemiBold" once `@expo-google-fonts/nunito`
+ * is installed and loaded via `useFonts` — see docs/product/mobile-shape-language.md §10.
  */
 export const fontFamily = {
   display: undefined,

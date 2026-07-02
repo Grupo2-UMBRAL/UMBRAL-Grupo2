@@ -21,16 +21,16 @@ export default function ParticipantLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: "#f6efe6"
+          backgroundColor: "#F7F7F7"
         },
         headerTitleStyle: {
-          color: "#17313b",
+          color: "#4B4B4B",
           fontWeight: "700"
         },
         headerShadowVisible: false,
-        headerTintColor: "#17313b",
+        headerTintColor: "#4B4B4B",
         contentStyle: {
-          backgroundColor: "#f6efe6"
+          backgroundColor: "#F7F7F7"
         }
       }}
     >

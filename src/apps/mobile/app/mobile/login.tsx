@@ -90,21 +90,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#eadcc8",
-    color: "#17313b",
+    borderColor: "#E5E5E5",
+    color: "#4B4B4B",
     fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
   primaryButton: {
-    backgroundColor: "#1e6f8c",
+    backgroundColor: "#1CB0F6",
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 16,
     alignItems: "center"
   },
   primaryButtonLabel: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700"
   },
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     opacity: 0.85
   },
   error: {
-    color: "#9e2f2f",
+    color: "#EA2B2B",
     fontSize: 14,
     lineHeight: 20
   }

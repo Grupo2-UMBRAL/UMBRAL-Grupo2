@@ -12,10 +12,28 @@ type GameButtonProps = {
   icon?: string;
 };
 
-const palette: Record<GameButtonVariant, { background: string; label: string; border: string }> = {
-  primary: { background: colors.brand.primary, label: colors.text.onBrand, border: colors.brand.primary },
-  secondary: { background: colors.brand.secondary, label: colors.text.onBrand, border: colors.brand.secondary },
-  ghost: { background: "transparent", label: colors.text.primary, border: colors.surface.raisedBorder }
+const palette: Record<
+  GameButtonVariant,
+  { background: string; label: string; border: string; shadow: string }
+> = {
+  primary: {
+    background: colors.brand.primary,
+    label: colors.text.onBrand,
+    border: colors.brand.primary,
+    shadow: colors.brand.primaryStrong
+  },
+  secondary: {
+    background: colors.brand.secondary,
+    label: colors.text.onBrand,
+    border: colors.brand.secondary,
+    shadow: colors.brand.secondaryRing
+  },
+  ghost: {
+    background: "transparent",
+    label: colors.text.primary,
+    border: colors.surface.raisedBorder,
+    shadow: colors.surface.raisedBorder
+  }
 };
 
 export function GameButton({
@@ -36,7 +54,7 @@ export function GameButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: tone.background, borderColor: tone.border },
+        { backgroundColor: tone.background, borderColor: tone.border, borderBottomColor: tone.shadow },
         isBlocked && styles.blocked,
         pressed && !isBlocked && styles.pressed
       ]}
@@ -58,6 +76,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 20,
     borderWidth: 1.5,
+    borderBottomWidth: 4,
     justifyContent: "center",
     minHeight: 56,
     paddingHorizontal: 18,
@@ -80,6 +99,8 @@ const styles = StyleSheet.create({
     opacity: 0.5
   },
   pressed: {
-    opacity: 0.85
+    transform: [{ translateY: 2 }],
+    borderBottomWidth: 2,
+    marginTop: 2
   }
 });

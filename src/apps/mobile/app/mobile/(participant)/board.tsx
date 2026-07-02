@@ -675,7 +675,7 @@ export default function BoardPage() {
               </Text>
               {submitting ? (
                 <View style={styles.inlineStatus}>
-                  <ActivityIndicator color="#f7fbfc" />
+                  <ActivityIndicator color="#FFFFFF" />
                   <Text style={styles.inlineStatusText}>Sending scanned evidence...</Text>
                 </View>
               ) : null}
@@ -701,18 +701,18 @@ export default function BoardPage() {
 const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
-    backgroundColor: "#2d6a4f",
+    backgroundColor: "#58CC02",
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
   primaryButtonLabel: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800"
   },
   disabledButton: {
-    backgroundColor: "#9aa6a1"
+    backgroundColor: "#E5E5E5"
   },
   inlineStatus: {
     alignItems: "center",
@@ -720,13 +720,13 @@ const styles = StyleSheet.create({
     gap: 10
   },
   inlineStatusText: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700"
   },
   feedbackSuccess: {
-    backgroundColor: "#d8f3dc",
-    borderColor: "#74c69d",
+    backgroundColor: "#EAF7D6",
+    borderColor: "#58A700",
     borderRadius: 16,
     borderWidth: 1,
     gap: 8,
@@ -734,25 +734,25 @@ const styles = StyleSheet.create({
   },
   feedbackError: {
     backgroundColor: "#ffe5e5",
-    borderColor: "#ef9a9a",
+    borderColor: "#FF4B4B",
     borderRadius: 16,
     borderWidth: 1,
     gap: 8,
     padding: 12
   },
   feedbackText: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20
   },
   warning: {
-    color: "#9e6f00",
+    color: "#8C6E00",
     fontSize: 14,
     lineHeight: 20
   },
   choicePrompt: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20
@@ -764,8 +764,8 @@ const styles = StyleSheet.create({
   },
   choiceButton: {
     alignItems: "center",
-    backgroundColor: "#f7fbfc",
-    borderColor: "#b8c8cc",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 16,
     borderWidth: 1.5,
     flexBasis: "47%",
@@ -776,47 +776,47 @@ const styles = StyleSheet.create({
     paddingVertical: 12
   },
   choiceButtonSelected: {
-    backgroundColor: "#d8f3dc",
-    borderColor: "#2d6a4f"
+    backgroundColor: "#EAF7D6",
+    borderColor: "#58CC02"
   },
   choiceButtonDisabled: {
     opacity: 0.5
   },
   choiceButtonLabel: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center"
   },
   choiceButtonLabelSelected: {
-    color: "#1b4332",
+    color: "#58A700",
     fontWeight: "800"
   },
   finalizedEvidenceNotice: {
-    backgroundColor: "#f2e7de",
-    borderColor: "#d1ab89",
+    backgroundColor: "#FFF4CC",
+    borderColor: "#FFC800",
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
     padding: 12
   },
   resolutionsSection: {
-    backgroundColor: "#eef5f1",
-    borderColor: "#bed8c9",
+    backgroundColor: "#EAF7D6",
+    borderColor: "#58CC02",
     borderRadius: 18,
     borderWidth: 1,
     gap: 14,
     padding: 14
   },
   resolutionsTitle: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 22,
     fontWeight: "900",
     lineHeight: 28
   },
   resolutionStageCard: {
-    backgroundColor: "#f7fbfc",
-    borderColor: "#c8d7dc",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 18,
     borderWidth: 1,
     gap: 12,
@@ -827,29 +827,29 @@ const styles = StyleSheet.create({
     gap: 10
   },
   resolutionStageTitle: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 19,
     fontWeight: "900",
     lineHeight: 25
   },
   resolutionHintItem: {
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
     padding: 12
   },
   solutionItem: {
-    backgroundColor: "#fff1df",
-    borderColor: "#d28b39",
+    backgroundColor: "#FFF4CC",
+    borderColor: "#FFC800",
     borderRadius: 16,
     borderWidth: 2,
     gap: 10,
     padding: 12
   },
   resolutionHintText: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   },
   scannerFrame: {
     alignSelf: "center",
-    borderColor: "#f7fbfc",
+    borderColor: "#FFFFFF",
     borderRadius: 24,
     borderWidth: 3,
     height: 260,
@@ -882,23 +882,23 @@ const styles = StyleSheet.create({
     padding: 18
   },
   scannerTitle: {
-    color: "#f7fbfc",
+    color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "800"
   },
   scannerText: {
-    color: "#dce8ea",
+    color: "#E5E5E5",
     fontSize: 14,
     lineHeight: 20
   },
   scannerCancelButton: {
     alignItems: "center",
-    backgroundColor: "#f7fbfc",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingVertical: 12
   },
   scannerCancelLabel: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 15,
     fontWeight: "800"
   },
@@ -906,40 +906,40 @@ const styles = StyleSheet.create({
     opacity: 0.85
   },
   error: {
-    color: "#9e2f2f",
+    color: "#EA2B2B",
     fontSize: 14,
     lineHeight: 20
   },
   stageTitle: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 24,
     fontWeight: "800",
     lineHeight: 30
   },
   promptCard: {
-    backgroundColor: "#eef7fb",
-    borderColor: "#9cd0e2",
+    backgroundColor: "#DDF4FF",
+    borderColor: "#1899D6",
     borderRadius: 18,
     borderWidth: 1,
     gap: 8,
     padding: 16
   },
   promptLabel: {
-    color: "#175f78",
+    color: "#1899D6",
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
     textTransform: "uppercase"
   },
   promptText: {
-    color: "#17313b",
+    color: "#4B4B4B",
     fontSize: 18,
     fontWeight: "600",
     lineHeight: 26
   },
   hintItem: {
-    backgroundColor: "#fffaf5",
-    borderColor: "#eadcc8",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,
