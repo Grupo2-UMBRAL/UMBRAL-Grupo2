@@ -12,7 +12,8 @@ import { useSessionManagementConnection } from "../../../src/hooks/use-session-m
 import { useSession } from "../../../src/providers/session-provider";
 
 jest.mock("expo-router", () => ({
-  Redirect: ({ href }: { href: string }) => `Redirect:${href}`
+  Redirect: ({ href }: { href: string }) => `Redirect:${href}`,
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() })
 }));
 
 jest.mock("../../../src/providers/session-provider", () => ({
@@ -194,9 +195,9 @@ test("loads the Session Team snapshot on mount and renders current board data", 
     expect(screen.getByText("Decode the seal")).toBeTruthy();
   });
   expect(apiClient.getSessionTeamSnapshot).toHaveBeenCalledWith("team-1");
-  expect(screen.getByText("Alpha Team board")).toBeTruthy();
+  expect(screen.getByText("Equipo Alpha Team")).toBeTruthy();
   expect(screen.getByText("Look for the blue sigil.")).toBeTruthy();
-  expect(screen.getByText("Running")).toBeTruthy();
+  expect(screen.getByText("En juego")).toBeTruthy();
 });
 
 test("applies incremental SignalR hint unlocks to the visible hints list", async () => {
@@ -268,13 +269,10 @@ test("renders a static map only when the unlocked hint includes coordinates", as
   renderBoard(apiClient);
 
   await waitFor(() => {
-    expect(screen.getByText("Static map")).toBeTruthy();
+    expect(screen.getByText("Mapa de la pista")).toBeTruthy();
   });
 
   expect(screen.getByText(/Lat 10.50001 \| Lon -66.90001/)).toBeTruthy();
-  expect(
-    screen.getByText(/keeps the map hidden instead of rendering a broken state/i)
-  ).toBeTruthy();
 });
 
 test("renders final mission resolutions with stage metadata, solutions and maps", async () => {
@@ -341,11 +339,11 @@ test("renders final mission resolutions with stage metadata, solutions and maps"
   });
 
   expect(screen.getByText("Decode the seal")).toBeTruthy();
-  expect(screen.getByText("Stage 1")).toBeTruthy();
+  expect(screen.getByText("Etapa 1")).toBeTruthy();
   expect(screen.getByText("The answer is aurora.")).toBeTruthy();
-  expect(screen.getByText("Solution")).toBeTruthy();
+  expect(screen.getByText("Solución")).toBeTruthy();
   expect(screen.getByText(/Lat 10.50001 \| Lon -66.90001/)).toBeTruthy();
-  expect(screen.getByText("Evidence CTA disabled by lifecycle guard.")).toBeTruthy();
+  expect(screen.getByText("¡Sesión finalizada!")).toBeTruthy();
   expect(screen.queryByText("Eclipse")).toBeNull();
 });
 
@@ -454,7 +452,7 @@ test("renders timer and session state after realtime session state update", asyn
     signalRHandlers.ReceiveSessionStateChanged(statePayload);
   });
 
-  expect(screen.getByText("Paused")).toBeTruthy();
+  expect(screen.getByText("En pausa")).toBeTruthy();
   expect(screen.getByText("02:05")).toBeTruthy();
 });
 
@@ -472,7 +470,6 @@ test("shows degraded connection state while SignalR reconnects", async () => {
   await waitFor(() => {
     expect(screen.getByText("Reconectando")).toBeTruthy();
   });
-  expect(screen.getByText("Connection dropped. Waiting for SignalR reconnect.")).toBeTruthy();
 });
 
 test("resync callback fetches a fresh snapshot after SignalR reconnect", async () => {

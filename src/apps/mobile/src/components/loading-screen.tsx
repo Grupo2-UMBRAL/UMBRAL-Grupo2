@@ -5,7 +5,7 @@ type LoadingScreenProps = {
   message?: string;
 };
 
-export function LoadingScreen({ message = "Loading mobile shell..." }: LoadingScreenProps) {
+export function LoadingScreen({ message = "Cargando..." }: LoadingScreenProps) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color={colors.brand.secondary} />

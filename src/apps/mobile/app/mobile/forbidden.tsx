@@ -1,6 +1,9 @@
 import { Redirect, useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { GameButton } from "../../src/components/game-button";
+import { Mascot } from "../../src/components/mascot";
 import { ScreenShell, shellStyles } from "../../src/components/screen-shell";
+import { colors } from "../../src/theme/tokens";
 import { useSession } from "../../src/providers/session-provider";
 
 export default function ForbiddenPage() {
@@ -13,41 +16,29 @@ export default function ForbiddenPage() {
 
   return (
     <ScreenShell
-      eyebrow="Role rejected"
-      title="This shell only allows Participant."
-      description="Identity is valid, but the mobile shell does not expose Administrator or Operator routes."
+      eyebrow="Cuenta no compatible"
+      title="Esta app es solo para jugadores"
+      description="Tu cuenta es válida, pero el juego móvil es solo para participantes. Las cuentas de admin u operador se usan en la consola web."
     >
-      <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Current role set</Text>
-        <Text style={shellStyles.cardText}>{session?.roles.join(", ") ?? "No active session"}</Text>
+      <View style={styles.mascotRow}>
+        <Mascot mood="sad" size={104} />
       </View>
 
-      <Pressable
+      <GameButton
+        label="Cerrar sesión"
+        variant="secondary"
+        icon="↩"
         onPress={() => {
           void signOut().then(() => router.replace("/mobile/login"));
         }}
-        style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-      >
-        <Text style={styles.buttonLabel}>Sign out and return to login</Text>
-      </Pressable>
+      />
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: "#EA2B2B",
-    borderRadius: 18,
+  mascotRow: {
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16
-  },
-  buttonPressed: {
-    opacity: 0.85
-  },
-  buttonLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700"
+    gap: 8
   }
 });
