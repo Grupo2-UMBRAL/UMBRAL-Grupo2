@@ -51,6 +51,8 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
         }
 
         var serverTimeUtc = timeProvider.GetUtcNow();
+        var memberCount = liveSession.TeamParticipations
+            .Count(existingParticipation => existingParticipation.SessionTeamId == sessionTeam.Id);
         return new SessionTeamSnapshot(
             liveSession.Id,
             sessionTeam.Id,
@@ -60,7 +62,9 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             MapCurrentStage(liveSession.GetCurrentStageForTeam(sessionTeam.Id)),
             MapVisibleHints(liveSession, sessionTeam.Id),
             CreateSyncMetadata(liveSession, sessionTeam, serverTimeUtc),
-            MapAllStages(liveSession));
+            MapAllStages(liveSession),
+            memberCount,
+            liveSession.SessionStageFlow.Count);
     }
 
     private static UmbralDomainException CreateSessionTeamNotFoundException(Guid sessionTeamId)

@@ -31,7 +31,11 @@ public sealed record SessionTeamSnapshot(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CurrentSessionStageSnapshot? CurrentStage,
     IReadOnlyList<VisibleHintSnapshot> VisibleHints,
     SnapshotSyncMetadata Sync,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<CurrentSessionStageSnapshot>? AllStages);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<CurrentSessionStageSnapshot>? AllStages,
+    // MemberCount powers the lobby roster; TotalStages powers the linear stage progress. Both are
+    // safe to expose during play (no future stage content is revealed, only the count).
+    int MemberCount = 0,
+    int TotalStages = 0);
 
 // Participant-facing projection of the current Play. It intentionally exposes
 // only the selectable Choices (id + text). The correct choice id and any
