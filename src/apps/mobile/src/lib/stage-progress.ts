@@ -17,6 +17,18 @@ export function isTreasureHunt(gameType: string | undefined) {
   return gameType === "TreasureHunt" || gameType === "Treasure Hunt";
 }
 
+/** Player-friendly label for how a hint became visible (backend enum -> Spanish). */
+export function formatUnlockReason(reason: string | undefined) {
+  switch (reason) {
+    case "Manual":
+      return "Del operador";
+    case "Rule":
+      return "Automática";
+    default:
+      return reason ?? "Pista";
+  }
+}
+
 export function formatDifficulty(difficulty: string | undefined) {
   switch (difficulty) {
     case "Easy":
@@ -92,6 +104,34 @@ export function buildStageProgress(snapshot: SessionTeamSnapshot | null): StageP
   }
 
   const completed = Math.max(0, currentOrder - 1);
+
+  // During play the full stage list is hidden, but the snapshot exposes the stage COUNT — enough to
+  // draw the whole linear path (completed / current / locked) without leaking future stage content.
+  const totalStages = snapshot.totalStages ?? 0;
+  if (totalStages > 0) {
+    const nodes = Array.from({ length: totalStages }, (_, index) => {
+      const order = index + 1;
+      const isCurrent = order === currentOrder && Boolean(snapshot.currentStage);
+      const state: StageNode["state"] =
+        order < currentOrder ? "completed" : order === currentOrder ? "current" : "locked";
+
+      return {
+        key: isCurrent ? snapshot.currentStage!.missionStageId : `stage-${order}`,
+        label: isCurrent
+          ? `Etapa ${order} · ${snapshot.currentStage!.name}`
+          : `Etapa ${order}`,
+        sublabel: isCurrent
+          ? formatGameType(snapshot.currentStage!.gameType)
+          : order < currentOrder
+            ? "Superada"
+            : "Bloqueada",
+        state
+      };
+    });
+
+    return { completed, total: totalStages, nodes };
+  }
+
   const nodes: StageNode[] = [];
 
   for (let order = 1; order <= completed; order += 1) {

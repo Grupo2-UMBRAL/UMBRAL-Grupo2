@@ -21,7 +21,7 @@ export function StaticHintMap({ latitude, longitude }: StaticHintMapProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Static map</Text>
+      <Text style={styles.title}>Mapa de la pista</Text>
       <View style={styles.mapFrame}>
         <View style={styles.gridHorizontal} />
         <View style={styles.gridVertical} />

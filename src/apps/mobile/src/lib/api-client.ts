@@ -163,6 +163,10 @@ export type SessionTeamSnapshot = {
   visibleHints: VisibleHintSnapshot[];
   allStages?: CurrentSessionStageSnapshot[];
   sync: SnapshotSyncMetadata;
+  /** Players enrolled in this team (drives the lobby roster). Absent on older backends. */
+  memberCount?: number;
+  /** Total stages in the mission (drives the linear stage progress). Absent on older backends. */
+  totalStages?: number;
 };
 
 export const SnapshotRefreshPolicies = {
@@ -201,6 +205,49 @@ export type HintUnlockedPayload = {
   sessionTeamId: string;
   hint: VisibleHintSnapshot;
 };
+
+export type RegisterParticipantInput = {
+  username: string;
+  email: string;
+  password: string;
+};
+
+export type RegisterParticipantResult = {
+  userId: string;
+  username: string;
+};
+
+/**
+ * Public participant self-registration. Hits the user-management facade through the edge proxy
+ * (server-side Keycloak admin create + Participant role), so it needs no access token — it runs
+ * before the player has one. Mirrors the operator-create facade the web console already uses.
+ */
+export async function registerParticipant(input: RegisterParticipantInput) {
+  const config = getClientConfig();
+  const url = `${config.edgeProxyPublicBaseUrl}/user-management/api/participants`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      username: input.username.trim(),
+      email: input.email.trim(),
+      password: input.password
+    })
+  });
+
+  const body = await readResponseBody(response);
+
+  if (!response.ok) {
+    throw new ApiClientError(
+      readErrorMessage(body, "No pudimos crear tu cuenta."),
+      response.status,
+      readErrorCode(body)
+    );
+  }
+
+  return body as RegisterParticipantResult;
+}
 
 export function createAuthorizedApiClient(accessToken: string) {
   const config = getClientConfig();

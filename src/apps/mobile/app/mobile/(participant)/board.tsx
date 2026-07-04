@@ -1,5 +1,5 @@
-﻿import { CameraView } from "expo-camera";
-import { Redirect } from "expo-router";
+import { CameraView } from "expo-camera";
+import { Redirect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,10 +9,16 @@ import {
   Text,
   View
 } from "react-native";
+import { AnswerFeedbackSheet, type AnswerFeedback } from "../../../src/components/answer-feedback";
+import { GameButton } from "../../../src/components/game-button";
 import { LoadingScreen } from "../../../src/components/loading-screen";
+import { Mascot } from "../../../src/components/mascot";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
+import { SessionLobby } from "../../../src/components/session-lobby";
+import { StageProgressBar } from "../../../src/components/stage-progress-bar";
 import { StaticHintMap } from "../../../src/components/static-hint-map";
 import { StatusChip } from "../../../src/components/status-chip";
+import { colors } from "../../../src/theme/tokens";
 import {
   ApiClientError,
   SnapshotRefreshPolicies,
@@ -28,6 +34,7 @@ import {
   basePointsForDifficulty,
   formatDifficulty,
   formatGameType,
+  formatUnlockReason,
   isTreasureHunt
 } from "../../../src/lib/stage-progress";
 import {
@@ -37,41 +44,58 @@ import {
 import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useSession } from "../../../src/providers/session-provider";
 
-type SubmissionFeedback =
-  | { tone: "success"; title: string; detail: string }
-  | { tone: "error"; title: string; detail: string }
-  | null;
+type ConnectionTone = "neutral" | "info" | "success" | "warn" | "error";
 
-function resolveSessionTone(state: string | null) {
+type TeamScore = { score: number; rank: number };
+
+function resolveSessionState(state: string | null): { label: string; tone: ConnectionTone } {
   switch (state) {
     case "Running":
     case "Active":
-      return "success";
+      return { label: "En juego", tone: "success" };
     case "Paused":
-      return "warn";
-    case "Canceled":
+      return { label: "En pausa", tone: "warn" };
     case "Finalized":
-      return "error";
+      return { label: "Finalizada", tone: "neutral" };
+    case "Canceled":
+      return { label: "Cancelada", tone: "error" };
     default:
-      return "info";
+      return { label: "Por iniciar", tone: "info" };
   }
 }
 
-function resolveConnectionTone(kind: string) {
+function resolveConnection(kind: string): { label: string; tone: ConnectionTone } {
   switch (kind) {
     case "connected":
-      return "success";
+      return { label: "En línea", tone: "success" };
     case "reconnecting":
-      return "warn";
+      return { label: "Reconectando", tone: "warn" };
     case "error":
-      return "error";
+      return { label: "Sin conexión", tone: "error" };
+    case "connecting":
+      return { label: "Conectando", tone: "info" };
     default:
-      return "info";
+      return { label: "Desconectado", tone: "neutral" };
+  }
+}
+
+function toneColor(tone: ConnectionTone) {
+  switch (tone) {
+    case "success":
+      return colors.brand.primary;
+    case "warn":
+      return colors.state.warn.textAlt;
+    case "error":
+      return colors.state.error.textAlt;
+    case "info":
+      return colors.brand.secondary;
+    default:
+      return colors.text.mutedAlt;
   }
 }
 
 function readErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Participant board request failed.";
+  return error instanceof Error ? error.message : "No pudimos actualizar tu tablero.";
 }
 
 function formatCountdown(remainingSeconds: number | null) {
@@ -116,6 +140,7 @@ function groupHintsByStage(hints: VisibleHintSnapshot[]) {
 }
 
 export default function BoardPage() {
+  const router = useRouter();
   const { session } = useSession();
   const config = useMemo(() => getClientConfig(), []);
   const apiClient = useMemo(
@@ -130,7 +155,8 @@ export default function BoardPage() {
   const [scannerVisible, setScannerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<SubmissionFeedback>(null);
+  const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
+  const [teamScore, setTeamScore] = useState<TeamScore | null>(null);
 
   const refreshSnapshot = useCallback(async () => {
     if (!apiClient || !storedEnrollment) {
@@ -146,6 +172,30 @@ export default function BoardPage() {
       setSnapshotError(readErrorMessage(error));
     }
   }, [apiClient, storedEnrollment]);
+
+  const refreshScore = useCallback(async (liveSessionId: string) => {
+    if (!session || !storedEnrollment || typeof fetch !== "function") {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${config.edgeProxyPublicBaseUrl}/scoring-monitoring/api/scoring-monitoring/sessions/${liveSessionId}/ranking`,
+        { headers: { Authorization: `Bearer ${session.accessToken}` } }
+      );
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        items?: { sessionTeamId: string; visibleScore: number; rank: number }[];
+      };
+      const own = payload.items?.find((item) => item.sessionTeamId === storedEnrollment.teamId);
+      setTeamScore(own ? { score: own.visibleScore, rank: own.rank } : null);
+    } catch {
+      // Score is best-effort; a failed ranking fetch never blocks the board.
+    }
+  }, [config.edgeProxyPublicBaseUrl, session, storedEnrollment]);
 
   useEffect(() => {
     let active = true;
@@ -297,13 +347,20 @@ export default function BoardPage() {
 
   const currentStage = snapshot?.currentStage;
   const triviaChoices = currentStage?.choices ?? [];
-  const completedStages = currentStage ? Math.max(0, currentStage.sessionStageOrder - 1) : 0;
   const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
   const treasureHuntStage = isTreasureHunt(currentStage?.gameType);
   const currentSessionState = snapshot?.sessionState ?? null;
   const isFinalized = currentSessionState === "Finalized";
+  const isCanceled = currentSessionState === "Canceled";
+  const isPlaying =
+    currentSessionState === "Running" || currentSessionState === "Active" || currentSessionState === "Paused";
+  const isLobby = !isPlaying && !isFinalized && !isCanceled;
   const actionBlocked = currentSessionState !== "Running" && currentSessionState !== "Active";
   const countdown = formatCountdown(remainingSeconds);
+  const sessionMeta = resolveSessionState(currentSessionState);
+  const connectionMeta = resolveConnection(connectionState.kind);
+  const totalStages = snapshot?.totalStages ?? 0;
+  const memberCount = snapshot?.memberCount ?? 1;
   const visibleGameplayHints = useMemo(
     () => snapshot?.visibleHints.filter((hint) => !hint.isSolution) ?? [],
     [snapshot?.visibleHints]
@@ -312,6 +369,27 @@ export default function BoardPage() {
     () => groupHintsByStage(snapshot?.visibleHints ?? []),
     [snapshot?.visibleHints]
   );
+
+  // While waiting in the lobby there is no realtime "player joined" event, so poll the snapshot to
+  // show the roster fill up (and to auto-leave when the operator starts the session).
+  useEffect(() => {
+    if (!isLobby || !storedEnrollment) {
+      return;
+    }
+
+    const intervalId = setInterval(() => void refreshSnapshot(), 4000);
+    return () => clearInterval(intervalId);
+  }, [isLobby, storedEnrollment, refreshSnapshot]);
+
+  // Keep the team score fresh: on load, on stage advance, and when the session ends.
+  useEffect(() => {
+    const liveSessionId = snapshot?.liveSessionId;
+    if (!liveSessionId) {
+      return;
+    }
+
+    void refreshScore(liveSessionId);
+  }, [refreshScore, snapshot?.liveSessionId, snapshot?.sessionState, snapshot?.currentStage?.sessionStageOrder]);
 
   async function submitQrEvidence(qrHash: string) {
     if (!apiClient || !storedEnrollment) {
@@ -337,11 +415,12 @@ export default function BoardPage() {
           ? {
               tone: "success",
               title: "Evidencia Aceptada",
-              detail: "Código correcto. Tu Session Team avanzó a la siguiente etapa."
+              detail: "¡Código correcto! Avanzas a la siguiente etapa.",
+              points: stagePoints
             }
           : {
               tone: "error",
-              title: "Evidencia Rechazada",
+              title: "¡Uy, casi!",
               detail: "Código incorrecto, inténtalo de nuevo."
             }
       );
@@ -351,10 +430,10 @@ export default function BoardPage() {
       const detail =
         error instanceof ApiClientError
           ? error.message
-          : "No pudimos enviar la evidencia QR.";
+          : "No pudimos enviar el código. Revisa tu conexión.";
       setFeedback({
         tone: "error",
-        title: "Evidencia Rechazada",
+        title: "No se pudo enviar",
         detail
       });
       setScannerVisible(false);
@@ -386,11 +465,12 @@ export default function BoardPage() {
           ? {
               tone: "success",
               title: "Respuesta correcta",
-              detail: "Validation Outcome aceptado. Sigue con la siguiente hoja."
+              detail: "¡Bien hecho! Vas por buen camino.",
+              points: stagePoints
             }
           : {
               tone: "error",
-              title: "Respuesta incorrecta",
+              title: "¡Uy, casi!",
               detail: "Respuesta incorrecta, intenta de nuevo."
             }
       );
@@ -402,10 +482,10 @@ export default function BoardPage() {
       const detail =
         error instanceof ApiClientError
           ? error.message
-          : "No pudimos enviar la respuesta Trivia.";
+          : "No pudimos enviar tu respuesta. Revisa tu conexión.";
       setFeedback({
         tone: "error",
-        title: "Respuesta incorrecta",
+        title: "No se pudo enviar",
         detail
       });
     } finally {
@@ -414,11 +494,11 @@ export default function BoardPage() {
   }
 
   if (!session) {
-    return <LoadingScreen message="Checking participant session..." />;
+    return <LoadingScreen message="Verificando tu sesión..." />;
   }
 
   if (loadingEnrollment) {
-    return <LoadingScreen message="Checking Session Team enrollment..." />;
+    return <LoadingScreen message="Buscando tu equipo..." />;
   }
 
   if (!storedEnrollment) {
@@ -426,237 +506,252 @@ export default function BoardPage() {
   }
 
   if (!snapshot) {
-    return <LoadingScreen message="Loading Session Team snapshot..." />;
+    return <LoadingScreen message="Cargando tu tablero..." />;
   }
 
   return (
     <ScreenShell
-      eyebrow="Tablero del equipo"
-      title={`${snapshot.teamName} board`}
+      eyebrow="Tablero"
+      title={`Equipo ${snapshot.teamName}`}
       description="Resuelve la etapa actual, revisa tus pistas y envía tu evidencia en tiempo real."
     >
-      <View style={shellStyles.card}>
-        <View style={shellStyles.row}>
-          <StatusChip
-            label={currentSessionState ?? "Awaiting lifecycle event"}
-            tone={resolveSessionTone(currentSessionState)}
-          />
-          <StatusChip label={connectionState.kind === "reconnecting" ? "Reconectando" : connectionState.kind} tone={resolveConnectionTone(connectionState.kind)} />
-          <StatusChip label={snapshot.progressState} tone="info" />
-        </View>
-        <Text style={shellStyles.cardText}>{connectionState.detail}</Text>
-        {snapshotError ? <Text style={styles.error}>{snapshotError}</Text> : null}
-      </View>
-
-      <View style={shellStyles.card}>
-        <View style={shellStyles.row}>
-          <StatusChip label={`${completedStages} superadas`} tone="success" />
-          <StatusChip
-            label={currentStage ? `Etapa ${currentStage.sessionStageOrder}` : "Sin etapa activa"}
-            tone="info"
-          />
-          {countdown ? <StatusChip label={countdown} tone="warn" /> : null}
-        </View>
-        {currentStage ? (
-          <>
-            <View style={shellStyles.row}>
-              <StatusChip label={formatGameType(currentStage.gameType)} tone="info" />
-              {currentStage.difficulty ? (
-                <StatusChip label={formatDifficulty(currentStage.difficulty)} tone="neutral" />
-              ) : null}
-              {stagePoints ? <StatusChip label={`${stagePoints} pts`} tone="success" /> : null}
-            </View>
-            <Text style={styles.stageTitle}>{currentStage.name}</Text>
-            {currentStage.prompt ? (
-              <View style={styles.promptCard}>
-                <Text style={styles.promptLabel}>
-                  {treasureHuntStage ? "🧭 Tu misión" : "🧩 Pregunta"}
-                </Text>
-                <Text style={styles.promptText}>{currentStage.prompt}</Text>
+      {isLobby ? (
+        <SessionLobby
+          teamName={snapshot.teamName}
+          memberCount={memberCount}
+          connectionLabel={connectionMeta.label}
+          connectionTone={connectionMeta.tone}
+        />
+      ) : isFinalized ? (
+        <>
+          <View style={shellStyles.card}>
+            <View style={styles.headerRow}>
+              <StatusChip label={sessionMeta.label} tone={sessionMeta.tone} />
+              <View style={styles.connRow}>
+                <View style={[styles.connDot, { backgroundColor: toneColor(connectionMeta.tone) }]} />
+                <Text style={styles.connLabel}>{connectionMeta.label}</Text>
               </View>
-            ) : null}
-          </>
-        ) : (
-          <Text style={shellStyles.cardText}>
-            Tu equipo aún no tiene una etapa jugable visible.
-          </Text>
-        )}
-      </View>
-
-      {feedback ? (
-        <View style={feedback.tone === "success" ? styles.feedbackSuccess : styles.feedbackError}>
-          <Text style={styles.feedbackText}>{feedback.title}</Text>
-          <Text style={shellStyles.cardText}>{feedback.detail}</Text>
-        </View>
-      ) : null}
-
-      <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>
-          {treasureHuntStage ? "Escanea el QR del tesoro" : "Tu respuesta"}
-        </Text>
-        <Text style={shellStyles.cardText}>
-          {treasureHuntStage
-            ? "Encuentra el punto de la pista y escanea su código QR para validar la etapa."
-            : "Selecciona la respuesta correcta. La validación es inmediata."}
-        </Text>
-        {actionBlocked ? (
-          <Text style={styles.warning}>Evidence CTA disabled by lifecycle guard.</Text>
-        ) : null}
-        {isFinalized ? (
-          <View style={styles.finalizedEvidenceNotice}>
-            <StatusChip label="Finalized" tone="error" />
-            <Text style={shellStyles.cardText}>Los envíos están cerrados para esta sesión.</Text>
+            </View>
           </View>
-        ) : treasureHuntStage ? (
-          <Pressable
-            disabled={actionBlocked || submitting}
-            onPress={() => {
-              setScannerVisible(true);
-            }}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (actionBlocked || submitting) && styles.disabledButton,
-              pressed && styles.buttonPressed
-            ]}
-          >
-            <Text style={styles.primaryButtonLabel}>
-              {submitting ? "Enviando QR..." : "Escanear QR"}
-            </Text>
-          </Pressable>
-        ) : (
-          <>
-            <Text style={styles.choicePrompt}>Selecciona la respuesta correcta</Text>
-            <View style={styles.choiceGrid}>
-              {triviaChoices.map((choice) => {
-                const isSelected = selectedChoiceId === choice.id;
+
+          <View style={styles.resultHero}>
+            <Mascot mood="celebrate" size={96} />
+            <Text style={styles.resultTitle}>¡Sesión finalizada!</Text>
+            {teamScore ? (
+              <>
+                <Text style={styles.resultPlace}>Terminaste en el puesto #{teamScore.rank}</Text>
+                <Text style={styles.resultScore}>{teamScore.score}</Text>
+                <Text style={styles.resultScoreLabel}>puntos conseguidos</Text>
+              </>
+            ) : (
+              <Text style={styles.resultPlace}>Revisa la clasificación para ver tu puntaje final.</Text>
+            )}
+            <GameButton
+              label="Ver clasificación"
+              icon="🏆"
+              onPress={() => router.push("/mobile/ranking")}
+            />
+          </View>
+
+          <View style={styles.resolutionsSection}>
+            <Text style={styles.resolutionsTitle}>Resoluciones de la Misión</Text>
+            {(snapshot.allStages ?? []).length ? (
+              snapshot.allStages?.map((stage) => {
+                const stageHints = resolutionHintsByStage[stage.missionStageId] ?? [];
 
                 return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    disabled={actionBlocked || submitting}
-                    key={choice.id}
-                    onPress={() => {
-                      setSelectedChoiceId(choice.id);
-                    }}
-                    style={({ pressed }) => [
-                      styles.choiceButton,
-                      isSelected && styles.choiceButtonSelected,
-                      (actionBlocked || submitting) && styles.choiceButtonDisabled,
-                      pressed && styles.buttonPressed
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.choiceButtonLabel,
-                        isSelected && styles.choiceButtonLabelSelected
-                      ]}
-                    >
-                      {choice.text}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Pressable
-              disabled={actionBlocked || submitting || !selectedChoiceId}
-              onPress={() => {
-                void submitTriviaEvidence();
-              }}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (actionBlocked || submitting || !selectedChoiceId) && styles.disabledButton,
-                pressed && styles.buttonPressed
-              ]}
-            >
-              <Text style={styles.primaryButtonLabel}>
-                {submitting ? "Enviando..." : "Enviar"}
-              </Text>
-            </Pressable>
-          </>
-        )}
-      </View>
-
-      {isFinalized ? (
-        <View style={styles.resolutionsSection}>
-          <Text style={styles.resolutionsTitle}>Resoluciones de la Misión</Text>
-          {(snapshot.allStages ?? []).length ? (
-            snapshot.allStages?.map((stage) => {
-              const stageHints = resolutionHintsByStage[stage.missionStageId] ?? [];
-
-              return (
-                <View key={stage.missionStageId} style={styles.resolutionStageCard}>
-                  <View style={styles.resolutionStageHeader}>
-                    <Text style={styles.resolutionStageTitle}>{stage.name}</Text>
-                    <StatusChip label={`Stage ${stage.sessionStageOrder}`} tone="neutral" />
-                  </View>
-                  <View style={shellStyles.row}>
-                    <StatusChip label={stage.difficulty} tone="info" />
-                    <StatusChip label={stage.gameType} tone="success" />
-                  </View>
-                  <Text style={shellStyles.cardText}>{stage.prompt}</Text>
-                  {stageHints.length ? (
-                    stageHints.map((hint) => (
-                      <View
-                        key={hint.hintId}
-                        style={hint.isSolution ? styles.solutionItem : styles.resolutionHintItem}
-                      >
-                        <View style={shellStyles.row}>
-                          <StatusChip
-                            label={hint.isSolution ? "Solution" : "Hint"}
-                            tone={hint.isSolution ? "warn" : "info"}
-                          />
-                          <StatusChip label={hint.unlockReason} tone="neutral" />
+                  <View key={stage.missionStageId} style={styles.resolutionStageCard}>
+                    <View style={styles.resolutionStageHeader}>
+                      <Text style={styles.resolutionStageTitle}>{stage.name}</Text>
+                      <StatusChip label={`Etapa ${stage.sessionStageOrder}`} tone="neutral" />
+                    </View>
+                    <View style={shellStyles.row}>
+                      <StatusChip label={formatDifficulty(stage.difficulty)} tone="info" />
+                      <StatusChip label={formatGameType(stage.gameType)} tone="success" />
+                    </View>
+                    <Text style={shellStyles.cardText}>{stage.prompt}</Text>
+                    {stageHints.length ? (
+                      stageHints.map((hint) => (
+                        <View
+                          key={hint.hintId}
+                          style={hint.isSolution ? styles.solutionItem : styles.resolutionHintItem}
+                        >
+                          <View style={shellStyles.row}>
+                            <StatusChip
+                              label={hint.isSolution ? "Solución" : "Pista"}
+                              tone={hint.isSolution ? "warn" : "info"}
+                            />
+                            <StatusChip label={formatUnlockReason(hint.unlockReason)} tone="neutral" />
+                          </View>
+                          <Text style={styles.resolutionHintText}>{hint.content}</Text>
+                          {isStaticMapReady(hint) ? (
+                            <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                          ) : null}
                         </View>
-                        <Text style={styles.resolutionHintText}>{hint.content}</Text>
-                        {isStaticMapReady(hint) ? (
-                          <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
-                        ) : null}
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={shellStyles.cardText}>No Hints registered for this stage.</Text>
-                  )}
-                </View>
-              );
-            })
-          ) : (
-            <View style={shellStyles.card}>
-              <StatusChip label="Awaiting resolutions" tone="warn" />
-              <Text style={shellStyles.cardText}>Session snapshot has no final stage list yet.</Text>
-            </View>
-          )}
+                      ))
+                    ) : (
+                      <Text style={shellStyles.cardText}>No se registraron pistas en esta etapa.</Text>
+                    )}
+                  </View>
+                );
+              })
+            ) : (
+              <View style={shellStyles.card}>
+                <StatusChip label="Preparando resultados" tone="warn" />
+                <Text style={shellStyles.cardText}>Todavía no hay un resumen de etapas.</Text>
+              </View>
+            )}
+          </View>
+        </>
+      ) : isCanceled ? (
+        <View style={styles.resultHero}>
+          <Mascot mood="sad" size={96} />
+          <Text style={styles.resultTitle}>Sesión cancelada</Text>
+          <Text style={styles.resultPlace}>El operador canceló esta sesión. Puedes volver al inicio.</Text>
+          <GameButton label="Ir al inicio" variant="secondary" icon="🏠" onPress={() => router.push("/mobile/home")} />
         </View>
       ) : (
-        <View style={shellStyles.section}>
-          <Text style={shellStyles.cardTitle}>Pistas</Text>
-          {visibleGameplayHints.length ? (
-            visibleGameplayHints.map((hint) => (
-              <View key={hint.hintId} style={styles.hintItem}>
-                <View style={shellStyles.row}>
-                  <StatusChip label="Hint" tone="info" />
-                  <StatusChip label={hint.unlockReason} tone="neutral" />
-                </View>
-                <Text style={shellStyles.cardText}>{hint.content}</Text>
-                {isStaticMapReady(hint) ? (
-                  <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
-                ) : (
-                  <Text style={shellStyles.cardText}>
-                    This Hint has no coordinates, so the mobile client keeps the map hidden instead of rendering a broken state.
-                  </Text>
-                )}
+        <>
+          <View style={shellStyles.card}>
+            <View style={styles.headerRow}>
+              <View style={styles.headerChips}>
+                <StatusChip label={sessionMeta.label} tone={sessionMeta.tone} />
+                {teamScore ? <StatusChip label={`${teamScore.score} pts`} tone="success" /> : null}
+                {countdown ? <StatusChip label={countdown} tone="warn" /> : null}
               </View>
-            ))
-          ) : (
-            <View style={shellStyles.card}>
-              <StatusChip label="No hints yet" tone="warn" />
-              <Text style={shellStyles.cardText}>
-                Hint Release will surface here after Session Operations unlocks content for this Session Team.
-              </Text>
+              <View style={styles.connRow}>
+                <View style={[styles.connDot, { backgroundColor: toneColor(connectionMeta.tone) }]} />
+                <Text style={styles.connLabel}>{connectionMeta.label}</Text>
+              </View>
             </View>
-          )}
-        </View>
+            {totalStages > 0 ? (
+              <StageProgressBar total={totalStages} currentOrder={currentStage?.sessionStageOrder ?? 0} />
+            ) : null}
+            {snapshotError ? <Text style={styles.error}>{snapshotError}</Text> : null}
+          </View>
+
+          <View style={shellStyles.card}>
+            {currentStage ? (
+              <>
+                <View style={shellStyles.row}>
+                  <StatusChip label={formatGameType(currentStage.gameType)} tone="info" />
+                  {currentStage.difficulty ? (
+                    <StatusChip label={formatDifficulty(currentStage.difficulty)} tone="neutral" />
+                  ) : null}
+                  {stagePoints ? <StatusChip label={`${stagePoints} pts`} tone="success" /> : null}
+                </View>
+                <Text style={styles.stageTitle}>{currentStage.name}</Text>
+                {currentStage.prompt ? (
+                  <View style={styles.promptCard}>
+                    <Text style={styles.promptLabel}>
+                      {treasureHuntStage ? "🧭 Tu misión" : "🧩 Pregunta"}
+                    </Text>
+                    <Text style={styles.promptText}>{currentStage.prompt}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={shellStyles.cardText}>
+                El operador aún no habilita una etapa jugable para tu equipo.
+              </Text>
+            )}
+          </View>
+
+          {currentStage ? (
+            <View style={shellStyles.card}>
+              <Text style={shellStyles.cardTitle}>
+                {treasureHuntStage ? "Escanea el QR del tesoro" : "Tu respuesta"}
+              </Text>
+              <Text style={shellStyles.cardText}>
+                {treasureHuntStage
+                  ? "Encuentra el punto de la pista y escanea su código QR para validar la etapa."
+                  : "Selecciona la respuesta correcta. La validación es inmediata."}
+              </Text>
+              {actionBlocked ? (
+                <Text style={styles.warning}>La sesión está en pausa. Espera a que el operador la reanude.</Text>
+              ) : treasureHuntStage ? (
+                <GameButton
+                  label={submitting ? "Enviando QR..." : "Escanear QR"}
+                  icon="📷"
+                  disabled={actionBlocked || submitting}
+                  loading={submitting}
+                  onPress={() => setScannerVisible(true)}
+                />
+              ) : (
+                <>
+                  <Text style={styles.choicePrompt}>Selecciona la respuesta correcta</Text>
+                  <View style={styles.choiceGrid}>
+                    {triviaChoices.map((choice) => {
+                      const isSelected = selectedChoiceId === choice.id;
+
+                      return (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: isSelected }}
+                          disabled={actionBlocked || submitting}
+                          key={choice.id}
+                          onPress={() => {
+                            setSelectedChoiceId(choice.id);
+                          }}
+                          style={({ pressed }) => [
+                            styles.choiceButton,
+                            isSelected && styles.choiceButtonSelected,
+                            (actionBlocked || submitting) && styles.choiceButtonDisabled,
+                            pressed && styles.buttonPressed
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.choiceButtonLabel,
+                              isSelected && styles.choiceButtonLabelSelected
+                            ]}
+                          >
+                            {choice.text}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <GameButton
+                    label={submitting ? "Enviando..." : "Enviar"}
+                    icon="✓"
+                    disabled={actionBlocked || submitting || !selectedChoiceId}
+                    loading={submitting}
+                    onPress={() => void submitTriviaEvidence()}
+                  />
+                </>
+              )}
+            </View>
+          ) : null}
+
+          <View style={shellStyles.section}>
+            <Text style={shellStyles.cardTitle}>Pistas</Text>
+            {visibleGameplayHints.length ? (
+              visibleGameplayHints.map((hint) => (
+                <View key={hint.hintId} style={styles.hintItem}>
+                  <View style={shellStyles.row}>
+                    <StatusChip label="Pista" tone="info" />
+                    <StatusChip label={formatUnlockReason(hint.unlockReason)} tone="neutral" />
+                  </View>
+                  <Text style={shellStyles.cardText}>{hint.content}</Text>
+                  {isStaticMapReady(hint) ? (
+                    <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                  ) : null}
+                </View>
+              ))
+            ) : (
+              <View style={shellStyles.card}>
+                <StatusChip label="Sin pistas aún" tone="warn" />
+                <Text style={shellStyles.cardText}>
+                  Cuando el operador libere una pista para tu equipo, aparecerá aquí al instante.
+                </Text>
+              </View>
+            )}
+          </View>
+        </>
       )}
+
+      <AnswerFeedbackSheet feedback={feedback} onContinue={() => setFeedback(null)} />
 
       <Modal animationType="slide" transparent={false} visible={scannerVisible}>
         <View style={styles.scannerModal}>
@@ -669,14 +764,14 @@ export default function BoardPage() {
           <View style={styles.scannerOverlay}>
             <View style={styles.scannerFrame} />
             <View style={styles.scannerInstructions}>
-              <Text style={styles.scannerTitle}>Scan stage QR</Text>
+              <Text style={styles.scannerTitle}>Escanea el QR</Text>
               <Text style={styles.scannerText}>
-                Keep the code inside the frame. Session Operations will validate the hash for the current stage only.
+                Mantén el código dentro del marco. Se valida al instante para tu etapa actual.
               </Text>
               {submitting ? (
                 <View style={styles.inlineStatus}>
-                  <ActivityIndicator color="#FFFFFF" />
-                  <Text style={styles.inlineStatusText}>Sending scanned evidence...</Text>
+                  <ActivityIndicator color={colors.text.onBrand} />
+                  <Text style={styles.inlineStatusText}>Enviando...</Text>
                 </View>
               ) : null}
               <Pressable
@@ -699,20 +794,31 @@ export default function BoardPage() {
 }
 
 const styles = StyleSheet.create({
-  primaryButton: {
+  headerRow: {
     alignItems: "center",
-    backgroundColor: "#58CC02",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14
+    flexDirection: "row",
+    justifyContent: "space-between"
   },
-  primaryButtonLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800"
+  headerChips: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
   },
-  disabledButton: {
-    backgroundColor: "#E5E5E5"
+  connRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8
+  },
+  connDot: {
+    borderRadius: 999,
+    height: 10,
+    width: 10
+  },
+  connLabel: {
+    color: colors.text.secondary,
+    fontSize: 13,
+    fontWeight: "700"
   },
   inlineStatus: {
     alignItems: "center",
@@ -720,39 +826,17 @@ const styles = StyleSheet.create({
     gap: 10
   },
   inlineStatusText: {
-    color: "#FFFFFF",
+    color: colors.text.onBrand,
     fontSize: 14,
     fontWeight: "700"
   },
-  feedbackSuccess: {
-    backgroundColor: "#EAF7D6",
-    borderColor: "#58A700",
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 8,
-    padding: 12
-  },
-  feedbackError: {
-    backgroundColor: "#ffe5e5",
-    borderColor: "#FF4B4B",
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 8,
-    padding: 12
-  },
-  feedbackText: {
-    color: "#4B4B4B",
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20
-  },
   warning: {
-    color: "#8C6E00",
+    color: colors.state.warn.text,
     fontSize: 14,
     lineHeight: 20
   },
   choicePrompt: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20
@@ -764,8 +848,8 @@ const styles = StyleSheet.create({
   },
   choiceButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E5E5",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 16,
     borderWidth: 1.5,
     flexBasis: "47%",
@@ -776,47 +860,74 @@ const styles = StyleSheet.create({
     paddingVertical: 12
   },
   choiceButtonSelected: {
-    backgroundColor: "#EAF7D6",
-    borderColor: "#58CC02"
+    backgroundColor: colors.brand.primaryTint,
+    borderColor: colors.brand.primary
   },
   choiceButtonDisabled: {
     opacity: 0.5
   },
   choiceButtonLabel: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center"
   },
   choiceButtonLabelSelected: {
-    color: "#58A700",
+    color: colors.brand.primaryStrong,
     fontWeight: "800"
   },
-  finalizedEvidenceNotice: {
-    backgroundColor: "#FFF4CC",
-    borderColor: "#FFC800",
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 10,
-    padding: 12
+  resultHero: {
+    alignItems: "center",
+    backgroundColor: colors.brand.primaryTint,
+    borderColor: colors.brand.primary,
+    borderRadius: 26,
+    borderWidth: 2,
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 28
+  },
+  resultTitle: {
+    color: colors.text.primary,
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  resultPlace: {
+    color: colors.text.primary,
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center"
+  },
+  resultScore: {
+    color: colors.brand.primaryStrong,
+    fontSize: 48,
+    fontWeight: "900",
+    lineHeight: 54
+  },
+  resultScoreLabel: {
+    color: colors.text.secondary,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase"
   },
   resolutionsSection: {
-    backgroundColor: "#EAF7D6",
-    borderColor: "#58CC02",
+    backgroundColor: colors.brand.primaryTintAlt,
+    borderColor: colors.brand.primaryRing,
     borderRadius: 18,
     borderWidth: 1,
     gap: 14,
     padding: 14
   },
   resolutionsTitle: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 22,
     fontWeight: "900",
     lineHeight: 28
   },
   resolutionStageCard: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E5E5",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 18,
     borderWidth: 1,
     gap: 12,
@@ -827,35 +938,35 @@ const styles = StyleSheet.create({
     gap: 10
   },
   resolutionStageTitle: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 19,
     fontWeight: "900",
     lineHeight: 25
   },
   resolutionHintItem: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E5E5",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
     padding: 12
   },
   solutionItem: {
-    backgroundColor: "#FFF4CC",
-    borderColor: "#FFC800",
+    backgroundColor: colors.state.warn.fillMuted,
+    borderColor: colors.state.warn.borderMuted,
     borderRadius: 16,
     borderWidth: 2,
     gap: 10,
     padding: 12
   },
   resolutionHintText: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21
   },
   scannerModal: {
-    backgroundColor: "#000",
+    backgroundColor: colors.overlay.scrim,
     flex: 1
   },
   cameraPreview: {
@@ -868,7 +979,7 @@ const styles = StyleSheet.create({
   },
   scannerFrame: {
     alignSelf: "center",
-    borderColor: "#FFFFFF",
+    borderColor: colors.text.onBrand,
     borderRadius: 24,
     borderWidth: 3,
     height: 260,
@@ -882,23 +993,23 @@ const styles = StyleSheet.create({
     padding: 18
   },
   scannerTitle: {
-    color: "#FFFFFF",
+    color: colors.text.onBrand,
     fontSize: 22,
     fontWeight: "800"
   },
   scannerText: {
-    color: "#E5E5E5",
+    color: colors.overlay.text,
     fontSize: 14,
     lineHeight: 20
   },
   scannerCancelButton: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface.card,
     borderRadius: 16,
     paddingVertical: 12
   },
   scannerCancelLabel: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 15,
     fontWeight: "800"
   },
@@ -906,40 +1017,40 @@ const styles = StyleSheet.create({
     opacity: 0.85
   },
   error: {
-    color: "#EA2B2B",
+    color: colors.state.error.text,
     fontSize: 14,
     lineHeight: 20
   },
   stageTitle: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 24,
     fontWeight: "800",
     lineHeight: 30
   },
   promptCard: {
-    backgroundColor: "#DDF4FF",
-    borderColor: "#1899D6",
+    backgroundColor: colors.brand.secondaryTint,
+    borderColor: colors.brand.secondaryRing,
     borderRadius: 18,
     borderWidth: 1,
     gap: 8,
     padding: 16
   },
   promptLabel: {
-    color: "#1899D6",
+    color: colors.brand.secondaryRing,
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
     textTransform: "uppercase"
   },
   promptText: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 18,
     fontWeight: "600",
     lineHeight: 26
   },
   hintItem: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E5E5",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
     borderRadius: 18,
     borderWidth: 1,
     gap: 10,

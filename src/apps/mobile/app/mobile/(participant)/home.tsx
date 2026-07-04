@@ -150,7 +150,7 @@ export default function HomePage() {
               <GameButton
                 label={isFinalized ? "Ver resultados" : "Continuar misión"}
                 icon={isFinalized ? "🏁" : isTreasureHunt(currentStage.gameType) ? "🧭" : "🧩"}
-                onPress={() => router.push("/mobile/board")}
+                onPress={() => router.push(isFinalized ? "/mobile/ranking" : "/mobile/board")}
               />
             </>
           ) : (
@@ -166,7 +166,7 @@ export default function HomePage() {
               <GameButton
                 label={isFinalized ? "Ver resultados" : "Abrir tablero"}
                 icon={isFinalized ? "🏁" : "🎮"}
-                onPress={() => router.push("/mobile/board")}
+                onPress={() => router.push(isFinalized ? "/mobile/ranking" : "/mobile/board")}
               />
             </>
           )}

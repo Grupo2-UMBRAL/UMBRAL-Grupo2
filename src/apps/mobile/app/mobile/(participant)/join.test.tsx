@@ -121,7 +121,7 @@ test("shows unavailable session error when join code is invalid", async () => {
   fireEvent.changeText(screen.getByPlaceholderText("ABC234"), "bad999");
 
   await waitFor(() => {
-    expect(screen.getByText("Session Join Code inválido o no registrado.")).toBeTruthy();
+    expect(screen.getByText("Código de sesión no válido o no encontrado.")).toBeTruthy();
   });
   expect(apiClient.listEnrollmentTeams).not.toHaveBeenCalled();
 });
@@ -136,11 +136,11 @@ test("blocks team actions and shows warning when enrollment window is closed", a
 
   await waitFor(() => {
     expect(
-      screen.getByText("Team Assignment Window está cerrada. No puedes crear ni unirte a equipos ahora.")
+      screen.getByText("Las inscripciones están cerradas. Pídele al operador que las abra para poder entrar.")
     ).toBeTruthy();
   });
-  expect(screen.queryByText("Join selected team")).toBeNull();
-  expect(screen.queryByText("Create Session Team")).toBeNull();
+  expect(screen.queryByText("Unirme al equipo")).toBeNull();
+  expect(screen.queryByText("Crear equipo")).toBeNull();
   expect(apiClient.listEnrollmentTeams).not.toHaveBeenCalled();
 });
 
@@ -168,7 +168,7 @@ test("joins existing team and stores enrollment context", async () => {
   });
 
   fireEvent.press(screen.getByText("Alpha Team"));
-  fireEvent.press(screen.getByText("Join selected team"));
+  fireEvent.press(screen.getByText("Unirme al equipo"));
 
   await waitFor(() => {
     expect(apiClient.joinSessionTeam).toHaveBeenCalledWith({
@@ -204,12 +204,12 @@ test("creates team and stores enrollment context", async () => {
 
   fireEvent.changeText(screen.getByPlaceholderText("ABC234"), "abc234");
   await waitFor(() => {
-    expect(screen.getByText("No Session Teams yet. Create the first one.")).toBeTruthy();
+    expect(screen.getByText("Aún no hay equipos. ¡Crea el primero!")).toBeTruthy();
   });
 
-  fireEvent.press(screen.getByText("Create team"));
-  fireEvent.changeText(screen.getByPlaceholderText("Session Team name"), "New Team");
-  fireEvent.press(screen.getByText("Create Session Team"));
+  fireEvent.press(screen.getByText("Crear uno"));
+  fireEvent.changeText(screen.getByPlaceholderText("Nombre del equipo"), "New Team");
+  fireEvent.press(screen.getByText("Crear equipo"));
 
   await waitFor(() => {
     expect(apiClient.createSessionTeam).toHaveBeenCalledWith({

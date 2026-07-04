@@ -124,7 +124,7 @@ test("loads ranking and highlights the participant team", async () => {
   render(<RankingPage />);
 
   await waitFor(() => {
-    expect(screen.getByText("Alpha Team standings")).toBeTruthy();
+    expect(screen.getByText("Clasificación en vivo")).toBeTruthy();
   });
 
   expect(screen.getByText(/puesto #1 con 200 pts/i)).toBeTruthy();

@@ -1,8 +1,10 @@
-﻿import { useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { GameButton } from "../../../src/components/game-button";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { StatusChip } from "../../../src/components/status-chip";
+import { colors } from "../../../src/theme/tokens";
 import {
   ApiClientError,
   createAuthorizedApiClient,
@@ -26,21 +28,21 @@ function normalizeJoinCode(value: string) {
 function readEnrollmentError(error: unknown) {
   if (error instanceof ApiClientError) {
     if (error.status === 404) {
-      return "Session Join Code inválido o no registrado.";
+      return "Código de sesión no válido o no encontrado.";
     }
 
     if (error.status === 409) {
-      return error.message || "La ventana de asignación está cerrada o el equipo no está disponible.";
+      return error.message || "Las inscripciones están cerradas o el equipo no está disponible.";
     }
 
     if (error.status >= 500) {
-      return "Session Operations no respondió correctamente. Intenta de nuevo.";
+      return "El servidor no respondió. Vuelve a intentarlo.";
     }
 
     return error.message;
   }
 
-  return "No se pudo conectar con Session Operations.";
+  return "No pudimos conectar con la sesión.";
 }
 
 export default function JoinPage() {
@@ -191,7 +193,7 @@ export default function JoinPage() {
 
     const requestedTeamName = teamName.trim();
     if (requestedTeamName.length < 3) {
-      setErrorMessage("Nombre de Session Team debe tener al menos 3 caracteres.");
+      setErrorMessage("El nombre del equipo debe tener al menos 3 caracteres.");
       return;
     }
 
@@ -212,32 +214,30 @@ export default function JoinPage() {
 
   return (
     <ScreenShell
-      eyebrow="Session Enrollment"
-      title="Join a LiveSession with your team."
-      description="Enter the Session Join Code, wait for Team Assignment Window validation, then join or create a Session Team."
+      eyebrow="Únete a una sesión"
+      title="Entra con tu equipo"
+      description="Pídele el código a tu operador, escríbelo abajo y únete o crea tu equipo."
     >
       <View style={shellStyles.card}>
-        <Text style={shellStyles.cardTitle}>Session Join Code</Text>
+        <Text style={shellStyles.cardTitle}>Código de sesión</Text>
         <TextInput
           autoCapitalize="characters"
           autoCorrect={false}
           onChangeText={(value) => setJoinCode(normalizeJoinCode(value))}
           placeholder="ABC234"
+          placeholderTextColor={colors.text.mutedAlt}
           style={styles.input}
           value={joinCode}
         />
-        <View style={shellStyles.row}>
-          <StatusChip label={validationState} tone={validationState === "open" ? "success" : validationState === "closed" ? "warn" : validationState === "invalid" || validationState === "error" ? "error" : "info"} />
-          {enrollmentStatus ? (
-            <StatusChip label={enrollmentStatus.sessionState} tone="info" />
-          ) : null}
-        </View>
         {validationState === "checking" ? (
-          <Text style={shellStyles.cardText}>Validando Join Code...</Text>
+          <Text style={shellStyles.cardText}>Comprobando código…</Text>
+        ) : null}
+        {validationState === "open" ? (
+          <StatusChip label="¡Código válido! Elige tu equipo" tone="success" />
         ) : null}
         {validationState === "closed" ? (
           <Text style={styles.warning}>
-            Team Assignment Window está cerrada. No puedes crear ni unirte a equipos ahora.
+            Las inscripciones están cerradas. Pídele al operador que las abra para poder entrar.
           </Text>
         ) : null}
         {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
@@ -245,7 +245,7 @@ export default function JoinPage() {
 
       {validationState === "open" ? (
         <View style={shellStyles.card}>
-          <Text style={shellStyles.cardTitle}>Choose Session Team</Text>
+          <Text style={shellStyles.cardTitle}>Tu equipo</Text>
           <View style={shellStyles.row}>
             <Pressable
               onPress={() => setEnrollmentMode("joinExisting")}
@@ -261,7 +261,7 @@ export default function JoinPage() {
                   enrollmentMode === "joinExisting" && styles.modeButtonLabelActive
                 ]}
               >
-                Join existing
+                Unirme a uno
               </Text>
             </Pressable>
             <Pressable
@@ -278,7 +278,7 @@ export default function JoinPage() {
                   enrollmentMode === "createTeam" && styles.modeButtonLabelActive
                 ]}
               >
-                Create team
+                Crear uno
               </Text>
             </Pressable>
           </View>
@@ -286,7 +286,7 @@ export default function JoinPage() {
           {enrollmentMode === "joinExisting" ? (
             <View style={shellStyles.list}>
               {teams.length === 0 ? (
-                <Text style={shellStyles.cardText}>No Session Teams yet. Create the first one.</Text>
+                <Text style={shellStyles.cardText}>Aún no hay equipos. ¡Crea el primero!</Text>
               ) : null}
               {teams.map((team) => (
                 <Pressable
@@ -299,47 +299,33 @@ export default function JoinPage() {
                   ]}
                 >
                   <Text style={styles.teamName}>{team.name}</Text>
+                  {selectedTeamId === team.id ? <Text style={styles.teamCheck}>✓</Text> : null}
                 </Pressable>
               ))}
-              <Pressable
+              <GameButton
+                label={submissionState === "submitting" ? "Uniéndote..." : "Unirme al equipo"}
+                icon="🚪"
                 disabled={!canJoinExisting}
-                onPress={() => {
-                  void handleJoinExistingTeam();
-                }}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  !canJoinExisting && styles.buttonDisabled,
-                  pressed && canJoinExisting && styles.buttonPressed
-                ]}
-              >
-                <Text style={styles.primaryButtonLabel}>
-                  {submissionState === "submitting" ? "Joining..." : "Join selected team"}
-                </Text>
-              </Pressable>
+                loading={submissionState === "submitting"}
+                onPress={() => void handleJoinExistingTeam()}
+              />
             </View>
           ) : (
             <View style={shellStyles.list}>
               <TextInput
                 onChangeText={setTeamName}
-                placeholder="Session Team name"
+                placeholder="Nombre del equipo"
+                placeholderTextColor={colors.text.mutedAlt}
                 style={styles.input}
                 value={teamName}
               />
-              <Pressable
+              <GameButton
+                label={submissionState === "submitting" ? "Creando..." : "Crear equipo"}
+                icon="✨"
                 disabled={!canCreateTeam}
-                onPress={() => {
-                  void handleCreateTeam();
-                }}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  !canCreateTeam && styles.buttonDisabled,
-                  pressed && canCreateTeam && styles.buttonPressed
-                ]}
-              >
-                <Text style={styles.primaryButtonLabel}>
-                  {submissionState === "submitting" ? "Creating..." : "Create Session Team"}
-                </Text>
-              </Pressable>
+                loading={submissionState === "submitting"}
+                onPress={() => void handleCreateTeam()}
+              />
             </View>
           )}
         </View>
@@ -350,78 +336,71 @@ export default function JoinPage() {
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    color: "#4B4B4B",
+    borderColor: colors.surface.cardBorder,
+    color: colors.text.primary,
     fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 14
   },
-  primaryButton: {
-    backgroundColor: "#1CB0F6",
-    borderRadius: 18,
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  primaryButtonLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700"
-  },
   modeButton: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface.card,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    paddingHorizontal: 14,
+    borderColor: colors.surface.cardBorder,
+    paddingHorizontal: 16,
     paddingVertical: 10
   },
   modeButtonActive: {
-    backgroundColor: "#4B4B4B",
-    borderColor: "#4B4B4B"
+    backgroundColor: colors.brand.secondary,
+    borderColor: colors.brand.secondary
   },
   modeButtonLabel: {
-    color: "#777777",
+    color: colors.text.secondary,
     fontSize: 14,
     fontWeight: "700"
   },
   modeButtonLabelActive: {
-    color: "#FFFFFF"
+    color: colors.text.onBrand
   },
   teamCard: {
-    backgroundColor: "#ffffff",
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.surface.cardBorder,
+    flexDirection: "row",
+    justifyContent: "space-between",
     padding: 16
   },
   teamCardSelected: {
-    borderColor: "#1CB0F6",
-    backgroundColor: "#DDF4FF"
+    borderColor: colors.brand.secondary,
+    borderWidth: 2,
+    backgroundColor: colors.brand.secondaryTint
   },
   teamName: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 16,
     fontWeight: "700"
   },
+  teamCheck: {
+    color: colors.brand.secondaryRing,
+    fontSize: 18,
+    fontWeight: "900"
+  },
   warning: {
-    color: "#8C6E00",
+    color: colors.state.warn.text,
     fontSize: 14,
     lineHeight: 20
   },
   error: {
-    color: "#EA2B2B",
+    color: colors.state.error.text,
     fontSize: 14,
     lineHeight: 20
-  },
-  buttonDisabled: {
-    opacity: 0.55
   },
   buttonPressed: {
     opacity: 0.85
   }
 });
-

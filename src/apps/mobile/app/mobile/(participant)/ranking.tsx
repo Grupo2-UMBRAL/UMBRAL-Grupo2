@@ -6,10 +6,13 @@ import {
 } from "@microsoft/signalr";
 import { Redirect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { GameButton } from "../../../src/components/game-button";
 import { LoadingScreen } from "../../../src/components/loading-screen";
+import { Mascot } from "../../../src/components/mascot";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { StatusChip } from "../../../src/components/status-chip";
+import { colors } from "../../../src/theme/tokens";
 import {
   createAuthorizedApiClient,
   type SessionTeamSnapshot
@@ -39,7 +42,7 @@ type RankingPayload = {
 type ApiClient = ReturnType<typeof createAuthorizedApiClient>;
 
 function readErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Ranking request failed.";
+  return error instanceof Error ? error.message : "No pudimos cargar la clasificación.";
 }
 
 function getRankingUrl(edgeProxyPublicBaseUrl: string, liveSessionId: string) {
@@ -53,7 +56,7 @@ function formatResolutionTime(value: string) {
 }
 
 function shortTeamId(sessionTeamId: string) {
-  return sessionTeamId.slice(0, 8);
+  return sessionTeamId.slice(0, 4).toUpperCase();
 }
 
 function resolveMedal(rank: number) {
@@ -72,16 +75,36 @@ function resolveMedal(rank: number) {
 function resolveRankingStatus(status: RankingStatus) {
   switch (status) {
     case "fresh":
-      return { label: "Ranking fresco", tone: "success" as const };
+      return { label: "Actualizado", tone: "success" as const };
     case "loading":
-      return { label: "Cargando ranking", tone: "warn" as const };
+      return { label: "Cargando", tone: "warn" as const };
     case "reconnecting":
       return { label: "Reconectando", tone: "warn" as const };
     case "error":
-      return { label: "Ranking no disponible", tone: "error" as const };
+      return { label: "No disponible", tone: "error" as const };
     default:
-      return { label: "Esperando ranking", tone: "info" as const };
+      return { label: "Esperando", tone: "info" as const };
   }
+}
+
+function CountUpScore({ value }: { value: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    anim.setValue(0);
+    const listenerId = anim.addListener(({ value: current }) => setDisplay(Math.round(current)));
+    Animated.timing(anim, {
+      toValue: value,
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false
+    }).start();
+
+    return () => anim.removeListener(listenerId);
+  }, [anim, value]);
+
+  return <Text style={styles.finalScore}>{display}</Text>;
 }
 
 async function fetchRanking(
@@ -290,11 +313,11 @@ export default function RankingPage() {
   }, [config.scoringHubUrl, refreshRanking, session, snapshot?.liveSessionId]);
 
   if (!session) {
-    return <LoadingScreen message="Checking participant session..." />;
+    return <LoadingScreen message="Verificando tu sesión..." />;
   }
 
   if (loadingEnrollment) {
-    return <LoadingScreen message="Checking Session Team enrollment..." />;
+    return <LoadingScreen message="Buscando tu equipo..." />;
   }
 
   if (!storedEnrollment) {
@@ -304,41 +327,78 @@ export default function RankingPage() {
   const status = resolveRankingStatus(rankingStatus);
   const ownTeamId = storedEnrollment.teamId;
   const ownRanking = ranking?.items.find((item) => item.sessionTeamId === ownTeamId);
+  const isFinalized = snapshot?.sessionState === "Finalized";
+  const podium = ranking?.items.slice(0, 3) ?? [];
 
   return (
     <ScreenShell
-      eyebrow="Ranking"
-      title={snapshot ? `${snapshot.teamName} standings` : "Session Team standings"}
+      eyebrow={isFinalized ? "🏁 Fin de la misión" : "Ranking"}
+      title={isFinalized ? "¡Resultados finales!" : "Clasificación en vivo"}
       description="Posiciones en vivo de tu sesión. Se ordena por puntaje y, en empate, por tiempo de resolución."
     >
+      {isFinalized && ownRanking ? (
+        <View style={styles.resultHero}>
+          <Mascot mood="celebrate" size={96} />
+          <Text style={styles.resultMedal}>{resolveMedal(ownRanking.rank) || "🎖️"}</Text>
+          <Text style={styles.resultPlace}>Terminaste en el puesto #{ownRanking.rank}</Text>
+          <CountUpScore value={ownRanking.visibleScore} />
+          <Text style={styles.resultPointsLabel}>puntos conseguidos</Text>
+        </View>
+      ) : null}
+
+      {isFinalized && podium.length ? (
+        <View style={styles.podium}>
+          {podium.map((entry) => {
+            const isOwnTeam = entry.sessionTeamId === ownTeamId;
+            return (
+              <View
+                key={entry.sessionTeamId}
+                style={[
+                  styles.podiumColumn,
+                  entry.rank === 1 && styles.podiumFirst,
+                  isOwnTeam && styles.podiumOwn
+                ]}
+              >
+                <Text style={styles.podiumMedal}>{resolveMedal(entry.rank)}</Text>
+                <Text style={styles.podiumTeam} numberOfLines={1}>
+                  {isOwnTeam ? storedEnrollment.teamName : `Equipo ${shortTeamId(entry.sessionTeamId)}`}
+                </Text>
+                <Text style={styles.podiumScore}>{entry.visibleScore} pts</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
       <View style={shellStyles.card}>
         <View style={shellStyles.row}>
           <StatusChip label={status.label} tone={status.tone} />
-          <StatusChip label="SignalR Scoring" tone="info" />
         </View>
         <Text style={shellStyles.cardText}>
           {ownRanking
             ? `Tu equipo va en puesto #${ownRanking.rank} con ${ownRanking.visibleScore} pts.`
-            : "Ranking listo cuando tu equipo sume su primer puntaje."}
+            : "La clasificación aparece cuando tu equipo sume su primer puntaje."}
         </Text>
         {rankingError ? <Text style={styles.error}>{rankingError}</Text> : null}
-        <Pressable
-          onPress={() => {
-            const liveSessionId = snapshot?.liveSessionId;
-            if (liveSessionId) {
-              void refreshRanking(liveSessionId);
-            }
-          }}
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-        >
-          <Text style={styles.secondaryButtonLabel}>Actualizar ranking</Text>
-        </Pressable>
+        {isFinalized ? null : (
+          <GameButton
+            label="Actualizar"
+            variant="ghost"
+            icon="↻"
+            onPress={() => {
+              const liveSessionId = snapshot?.liveSessionId;
+              if (liveSessionId) {
+                void refreshRanking(liveSessionId);
+              }
+            }}
+          />
+        )}
       </View>
 
       {rankingStatus === "loading" && !ranking ? (
         <View style={styles.inlineStatus}>
-          <ActivityIndicator color="#4B4B4B" />
-          <Text style={styles.inlineStatusText}>Cargando ranking...</Text>
+          <ActivityIndicator color={colors.text.primary} />
+          <Text style={styles.inlineStatusText}>Cargando clasificación...</Text>
         </View>
       ) : null}
 
@@ -357,7 +417,7 @@ export default function RankingPage() {
                   {isOwnTeam ? <StatusChip label="Tu equipo" tone="success" /> : null}
                 </View>
                 <Text style={shellStyles.cardTitle}>
-                  {isOwnTeam ? storedEnrollment.teamName : `Session Team ${shortTeamId(entry.sessionTeamId)}`}
+                  {isOwnTeam ? storedEnrollment.teamName : `Equipo ${shortTeamId(entry.sessionTeamId)}`}
                 </Text>
                 <Text style={styles.score}>{entry.visibleScore} pts</Text>
                 <Text style={shellStyles.mono}>Tiempo {formatResolutionTime(entry.resolutionTime)}</Text>
@@ -368,7 +428,7 @@ export default function RankingPage() {
           <View style={shellStyles.card}>
             <StatusChip label="Sin puntaje" tone="warn" />
             <Text style={shellStyles.cardText}>
-              El ranking aparecerá cuando una respuesta aceptada sume puntaje.
+              La clasificación aparecerá cuando una respuesta aceptada sume puntaje.
             </Text>
           </View>
         )}
@@ -378,32 +438,89 @@ export default function RankingPage() {
 }
 
 const styles = StyleSheet.create({
+  resultHero: {
+    alignItems: "center",
+    backgroundColor: colors.brand.primaryTint,
+    borderColor: colors.brand.primary,
+    borderRadius: 26,
+    borderWidth: 2,
+    gap: 6,
+    paddingHorizontal: 22,
+    paddingVertical: 26
+  },
+  resultMedal: {
+    fontSize: 44
+  },
+  resultPlace: {
+    color: colors.text.primary,
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  finalScore: {
+    color: colors.brand.primaryStrong,
+    fontSize: 52,
+    fontWeight: "900",
+    lineHeight: 58
+  },
+  resultPointsLabel: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6
+  },
+  podium: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center"
+  },
+  podiumColumn: {
+    alignItems: "center",
+    backgroundColor: colors.surface.card,
+    borderColor: colors.surface.cardBorder,
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 14
+  },
+  podiumFirst: {
+    backgroundColor: colors.state.warn.fillMuted,
+    borderColor: colors.state.warn.borderMuted,
+    paddingVertical: 22
+  },
+  podiumOwn: {
+    borderColor: colors.brand.primary,
+    borderWidth: 2
+  },
+  podiumMedal: {
+    fontSize: 26
+  },
+  podiumTeam: {
+    color: colors.text.primary,
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  podiumScore: {
+    color: colors.brand.primaryStrong,
+    fontSize: 14,
+    fontWeight: "900"
+  },
   ownTeamCard: {
-    borderColor: "#58A700",
+    borderColor: colors.brand.primaryStrong,
     borderWidth: 2
   },
   medal: {
     fontSize: 22
   },
   score: {
-    color: "#58CC02",
+    color: colors.brand.primary,
     fontSize: 22,
     fontWeight: "900"
-  },
-  secondaryButton: {
-    alignItems: "center",
-    backgroundColor: "#4B4B4B",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  secondaryButtonLabel: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700"
-  },
-  buttonPressed: {
-    opacity: 0.85
   },
   inlineStatus: {
     alignItems: "center",
@@ -411,12 +528,12 @@ const styles = StyleSheet.create({
     gap: 10
   },
   inlineStatusText: {
-    color: "#4B4B4B",
+    color: colors.text.primary,
     fontSize: 14,
     fontWeight: "700"
   },
   error: {
-    color: "#EA2B2B",
+    color: colors.state.error.text,
     fontSize: 14,
     lineHeight: 20
   }

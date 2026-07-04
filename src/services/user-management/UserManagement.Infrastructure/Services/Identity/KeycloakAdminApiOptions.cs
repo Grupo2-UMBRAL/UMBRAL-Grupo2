@@ -19,4 +19,6 @@ public sealed class KeycloakAdminApiOptions
     public string AdminPassword { get; init; } = string.Empty;
 
     public string OperatorRoleName { get; init; } = UmbralRoles.Operator;
+
+    public string ParticipantRoleName { get; init; } = UmbralRoles.Participant;
 }

@@ -126,4 +126,22 @@ public sealed class LiveSessionsController(ISender sender) : ControllerBase
             cancellationToken);
         return Ok(result);
     }
+
+    [HttpPost("{liveSessionId:guid}/stages/{missionStageId:guid}/hints")]
+    public async Task<ActionResult<LiveSessionStageHintResponse>> CreateOperationalHint(
+        Guid liveSessionId,
+        Guid missionStageId,
+        [FromBody] CreateOperationalHintRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new CreateOperationalHintCommand(
+                liveSessionId,
+                missionStageId,
+                request.Content,
+                request.Latitude,
+                request.Longitude),
+            cancellationToken);
+        return Ok(result);
+    }
 }
