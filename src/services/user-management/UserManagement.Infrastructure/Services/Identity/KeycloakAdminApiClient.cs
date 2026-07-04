@@ -109,11 +109,17 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         return new CreatedUserReference(recoveredUser.Id);
     }
 
-    public async Task AssignOperatorRoleAsync(string userId, CancellationToken cancellationToken)
+    public Task AssignOperatorRoleAsync(string userId, CancellationToken cancellationToken)
+        => AssignRealmRoleByNameAsync(userId, options.OperatorRoleName, cancellationToken);
+
+    public Task AssignParticipantRoleAsync(string userId, CancellationToken cancellationToken)
+        => AssignRealmRoleByNameAsync(userId, options.ParticipantRoleName, cancellationToken);
+
+    private async Task AssignRealmRoleByNameAsync(string userId, string roleName, CancellationToken cancellationToken)
     {
         var roleResponse = await SendAuthorizedAsync(
             HttpMethod.Get,
-            $"/admin/realms/{options.Realm}/roles/{options.OperatorRoleName}",
+            $"/admin/realms/{options.Realm}/roles/{roleName}",
             cancellationToken: cancellationToken);
         var role = await ReadJsonAsync<KeycloakRoleRepresentation>(roleResponse, cancellationToken);
 
