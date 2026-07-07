@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Moq;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Abstractions;
@@ -10,11 +11,13 @@ namespace UserManagement.UnitTests;
 public sealed class RotateOperatorPasswordCommandHandlerTests
 {
     private readonly Mock<IOperatorAdministrationPort> _portMock = new();
+    private readonly Mock<IEmailNotificationService> _emailMock = new();
     private readonly RotateOperatorPasswordCommandHandler _handler;
 
     public RotateOperatorPasswordCommandHandlerTests()
     {
-        _handler = new RotateOperatorPasswordCommandHandler(_portMock.Object);
+        var loggerMock = new Mock<ILogger<RotateOperatorPasswordCommandHandler>>();
+        _handler = new RotateOperatorPasswordCommandHandler(_portMock.Object, _emailMock.Object, loggerMock.Object);
     }
 
     private void SetupExistingUser(OperatorUser user) =>
@@ -85,5 +88,36 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
         _portMock.Verify(
             p => p.RotateOperatorPasswordAsync("user-1", "NewSecurePass1", It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ValidRequest_SendsPasswordRotatedEmail()
+    {
+        var user = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        SetupExistingUser(user);
+
+        await _handler.Handle(
+            new RotateOperatorPasswordCommand("user-1", "NewSecurePass1"), CancellationToken.None);
+
+        _emailMock.Verify(e => e.SendPasswordRotatedAsync(
+            "jdoe@example.com", "jdoe", "NewSecurePass1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_EmailFails_StillReturnsOperator()
+    {
+        var user = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        SetupExistingUser(user);
+
+        _emailMock.Setup(e => e.SendPasswordRotatedAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SMTP down"));
+
+        var result = await _handler.Handle(
+            new RotateOperatorPasswordCommand("user-1", "NewSecurePass1"), CancellationToken.None);
+
+        // Assert — operator is returned despite email failure
+        Assert.NotNull(result);
+        Assert.Equal("user-1", result.Id);
     }
 }

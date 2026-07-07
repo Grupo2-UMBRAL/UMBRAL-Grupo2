@@ -1,11 +1,15 @@
 using UserManagement.Application.Abstractions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
 using UserManagement.Domain.Entities;
 
 namespace UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
-public sealed class CreateOperatorCommandHandler(IOperatorAdministrationPort port)
+public sealed class CreateOperatorCommandHandler(
+    IOperatorAdministrationPort port,
+    IEmailNotificationService emailService,
+    ILogger<CreateOperatorCommandHandler> logger)
     : IRequestHandler<CreateOperatorCommand, OperatorUser>
 {
     public async Task<OperatorUser> Handle(CreateOperatorCommand request, CancellationToken cancellationToken)
@@ -65,6 +69,19 @@ public sealed class CreateOperatorCommandHandler(IOperatorAdministrationPort por
             throw new UmbralTechnicalException(
                 "operator_user_recovery_failed",
                 "Keycloak created the User but did not return it afterwards.");
+        }
+
+        // 4. Notification — fire-and-forget semantics; failure does NOT revert the operator.
+        try
+        {
+            await emailService.SendOperatorCredentialsAsync(
+                operatorUser.Email, operatorUser.Username, request.Password!.Trim(), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to send credentials email to {Email}. The operator was created successfully.",
+                operatorUser.Email);
         }
 
         return operatorUser;
