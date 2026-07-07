@@ -1,11 +1,15 @@
 using UserManagement.Application.Abstractions;
 using MediatR;
+using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
 using UserManagement.Domain.Entities;
 
 namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
 
-public sealed class RotateOperatorPasswordCommandHandler(IOperatorAdministrationPort port)
+public sealed class RotateOperatorPasswordCommandHandler(
+    IOperatorAdministrationPort port,
+    IEmailNotificationService emailService,
+    ILogger<RotateOperatorPasswordCommandHandler> logger)
     : IRequestHandler<RotateOperatorPasswordCommand, OperatorUser>
 {
     public async Task<OperatorUser> Handle(RotateOperatorPasswordCommand request, CancellationToken cancellationToken)
@@ -35,6 +39,19 @@ public sealed class RotateOperatorPasswordCommandHandler(IOperatorAdministration
         
         // This is where we satisfy the rule: "The correct flow must pass first through the User Microservice endpoint... then communicate internally with Keycloak"
         await port.RotateOperatorPasswordAsync(normalizedUserId, normalizedPassword, cancellationToken);
+
+        // Notification — fire-and-forget semantics; failure does NOT revert the password change.
+        try
+        {
+            await emailService.SendPasswordRotatedAsync(
+                operatorUser.Email, operatorUser.Username, normalizedPassword, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to send password-rotated email to {Email}. The password was changed successfully.",
+                operatorUser.Email);
+        }
 
         return operatorUser;
     }
@@ -70,4 +87,5 @@ public sealed class RotateOperatorPasswordCommandHandler(IOperatorAdministration
         return password;
     }
 }
+
 
