@@ -1,6 +1,7 @@
 import {
   type HintDraft,
   type SearchDraft,
+  difficultyOptions,
 } from "./mission-authoring-types";
 import {
   createEmptyHintDraft,
@@ -179,9 +180,8 @@ export function TreasureHuntChallengeEditor({
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Dificultad (override)</label>
-                <input
-                  className="form-input"
-                  list="difficulty-options"
+                <select
+                  className="form-select"
                   onChange={(event) =>
                     setSearchField(
                       search.clientId,
@@ -189,9 +189,15 @@ export function TreasureHuntChallengeEditor({
                       event.target.value,
                     )
                   }
-                  placeholder="Heredar del reto"
                   value={search.difficultyOverride}
-                />
+                >
+                  <option value="">Heredar del reto</option>
+                  {difficultyOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">

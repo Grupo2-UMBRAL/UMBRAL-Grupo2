@@ -23,7 +23,7 @@ import {
   summarizeItems,
   toMissionDraft,
 } from "./mission-authoring-model";
-import { MissionItemList } from "./mission-item-list";
+import { MissionBuilderFull } from "./mission-builder-full";
 
 type MissionsAdminWorkspaceProps = {
   accessToken: string;
@@ -121,6 +121,8 @@ export function MissionsAdminWorkspace({
   );
   const itemStats = useMemo(() => summarizeItems(draft.items), [draft.items]);
 
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+
   const loadMissions = useCallback(
     async (preferredMissionId?: string | null) => {
       const requestSequence = ++listRequestSequenceRef.current;
@@ -142,20 +144,6 @@ export function MissionsAdminWorkspace({
         }
 
         setMissions(payload);
-
-        const nextMissionId =
-          preferredMissionId &&
-          payload.some((mission) => mission.id === preferredMissionId)
-            ? preferredMissionId
-            : (payload[0]?.id ?? null);
-
-        setSelectedMissionId(nextMissionId);
-
-        if (!nextMissionId) {
-          setEditorMode("create");
-          setSelectedMission(null);
-          setDraft(createEmptyMissionDraft());
-        }
       } catch (error) {
         if (requestSequence !== listRequestSequenceRef.current) {
           return;
@@ -226,16 +214,6 @@ export function MissionsAdminWorkspace({
     });
   }, [loadMissions]);
 
-  useEffect(() => {
-    if (!selectedMissionId) {
-      return;
-    }
-
-    queueMicrotask(() => {
-      void loadMissionDetail(selectedMissionId);
-    });
-  }, [loadMissionDetail, selectedMissionId]);
-
   const updateDraftField = useCallback(
     (field: "name" | "description" | "maximumDurationMinutes", value: string) => {
       setDraft((current) => ({
@@ -250,20 +228,6 @@ export function MissionsAdminWorkspace({
     setDraft((current) => ({ ...current, items }));
   }, []);
 
-  const addRootSection = useCallback(() => {
-    setDraft((current) => ({
-      ...current,
-      items: [...current.items, createEmptySectionDraft()],
-    }));
-  }, []);
-
-  const addRootChallenge = useCallback(() => {
-    setDraft((current) => ({
-      ...current,
-      items: [...current.items, createEmptyChallengeDraft()],
-    }));
-  }, []);
-
   function handleCreateMode() {
     listRequestSequenceRef.current += 1;
     detailRequestSequenceRef.current += 1;
@@ -275,6 +239,20 @@ export function MissionsAdminWorkspace({
     setDraft(createEmptyMissionDraft());
     setFeedback(null);
     setErrorMessage(null);
+    setIsEditorOpen(true);
+  }
+
+  function handleOpenMission(id: string) {
+    setFeedback(null);
+    setSelectedMissionId(id);
+    setIsEditorOpen(true);
+    void loadMissionDetail(id);
+  }
+
+  function handleCloseEditor() {
+    setIsEditorOpen(false);
+    setSelectedMissionId(null);
+    void loadMissions();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -369,24 +347,41 @@ export function MissionsAdminWorkspace({
     }
   }
 
+  if (isEditorOpen) {
+    if (isLoadingDetail) {
+      return (
+        <div className="workspace-section">
+          <div className="loading-center">Cargando detalles de la misión…</div>
+        </div>
+      );
+    }
+
+    return (
+      <MissionBuilderFull
+        draft={draft}
+        onUpdateField={updateDraftField}
+        onItemsChange={setItems}
+        onSubmit={handleSubmit}
+        onCancel={handleCloseEditor}
+        isSubmitting={isSubmitting}
+        isEditMode={editorMode === "edit"}
+        validationIssue={errorMessage}
+        feedback={feedback}
+        onToggleActivation={handleActivationToggle}
+        missionIsActive={selectedMission?.isActive}
+      />
+    );
+  }
+
   return (
     <div className="workspace-section">
-      {/* Shared datalist so per-item difficulty overrides can suggest the
-          canonical values without forcing them. */}
-      <datalist id="difficulty-options">
-        {difficultyOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
-
       <div className="workspace-section-header">
         <div className="stack-sm">
           <span className="eyebrow">Diseño de misiones</span>
           <h2>Espacio de trabajo de Misiones</h2>
           <p className="text-muted">
-            Editor lineal de secciones y retos. Las secciones agrupan contenido
-            (pueden anidarse); los retos son Trivia o Treasure Hunt con sus
-            preguntas o búsquedas. Arrastra para reordenar.
+            Catálogo global de misiones estructuradas. Abre el editor para crear
+            o editar la jerarquía de secciones y retos.
           </p>
         </div>
       </div>
@@ -420,283 +415,74 @@ export function MissionsAdminWorkspace({
         ) : null}
         {feedback ? <div className="success-banner">{feedback}</div> : null}
 
-        <div className="split-layout-wide">
-          {/* ── Mission list panel ── */}
-          <section className="card stack">
-            <div className="card-header card-header-actions">
-              <div className="stack-sm">
-                <span className="eyebrow">Catálogo</span>
-                <h3>Misiones</h3>
-              </div>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={handleCreateMode}
-                type="button"
-              >
-                Nueva Misión
-              </button>
+        <section className="card stack">
+          <div className="card-header card-header-actions">
+            <div className="stack-sm">
+              <span className="eyebrow">Catálogo</span>
+              <h3>Misiones</h3>
             </div>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleCreateMode}
+              type="button"
+            >
+              Nueva Misión
+            </button>
+          </div>
 
-            {isLoadingList ? (
-              <div className="loading-center">Cargando Misiones…</div>
-            ) : null}
+          {isLoadingList ? (
+            <div className="loading-center">Cargando Misiones…</div>
+          ) : null}
 
-            {!isLoadingList && missions.length === 0 ? (
-              <div className="empty-state">
-                <strong>Aún no hay Misiones.</strong>
-                <p>
-                  Cree la primera Misión reutilizable para el catálogo del
-                  administrador.
-                </p>
-              </div>
-            ) : null}
+          {!isLoadingList && missions.length === 0 ? (
+            <div className="empty-state">
+              <strong>Aún no hay Misiones.</strong>
+              <p>
+                Cree la primera Misión reutilizable para el catálogo del
+                administrador.
+              </p>
+            </div>
+          ) : null}
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Estado</th>
-                    <th>Duración</th>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Estado</th>
+                  <th>Duración</th>
+                </tr>
+              </thead>
+              <tbody>
+                {missions.map((mission) => (
+                  <tr
+                    className="clickable"
+                    key={mission.id}
+                    onClick={() => handleOpenMission(mission.id)}
+                  >
+                    <td>
+                      <strong>{mission.name}</strong>
+                    </td>
+                    <td>
+                      <span
+                        className={
+                          mission.isActive
+                            ? "badge badge-green"
+                            : "badge badge-red"
+                        }
+                      >
+                        {mission.isActive ? "Activa" : "Inactiva"}
+                      </span>
+                    </td>
+                    <td className="mono text-sm">
+                      {mission.maximumDurationMinutes} min
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {missions.map((mission) => (
-                    <tr
-                      className={
-                        mission.id === selectedMissionId
-                          ? "clickable is-selected"
-                          : "clickable"
-                      }
-                      key={mission.id}
-                      onClick={() => {
-                        setFeedback(null);
-                        setSelectedMissionId(mission.id);
-                      }}
-                    >
-                      <td>
-                        <strong>{mission.name}</strong>
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            mission.isActive
-                              ? "badge badge-green"
-                              : "badge badge-red"
-                          }
-                        >
-                          {mission.isActive ? "Activa" : "Inactiva"}
-                        </span>
-                      </td>
-                      <td className="mono text-sm">
-                        {mission.maximumDurationMinutes} min
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* ── Mission editor panel ── */}
-          <section className="card stack">
-            <div className="card-header card-header-actions">
-              <div className="stack-sm">
-                <span className="eyebrow">
-                  {editorMode === "create" ? "Crear" : "Misión seleccionada"}
-                </span>
-                <h3>
-                  {editorMode === "create"
-                    ? "Nueva Misión"
-                    : (selectedMission?.name ?? "Detalles de la misión")}
-                </h3>
-              </div>
-              {selectedMission ? (
-                <span
-                  className={
-                    selectedMission.isActive
-                      ? "badge badge-green"
-                      : "badge badge-red"
-                  }
-                >
-                  {selectedMission.isActive ? "Activa" : "Inactiva"}
-                </span>
-              ) : null}
-            </div>
-
-            {isLoadingDetail ? (
-              <div className="loading-center">
-                Cargando detalles de la misión…
-              </div>
-            ) : null}
-
-            <form className="stack" onSubmit={handleSubmit}>
-              {/* Item stats */}
-              <div className="info-banner">
-                <div className="row-wrap" style={{ gap: "1rem" }}>
-                  <span>
-                    <strong>Secciones:</strong> {itemStats.sections}
-                  </span>
-                  <span>
-                    <strong>Retos:</strong> {itemStats.challenges}
-                  </span>
-                  <span>
-                    <strong>Preguntas:</strong> {itemStats.questions}
-                  </span>
-                  <span>
-                    <strong>Búsquedas:</strong> {itemStats.searches}
-                  </span>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Nombre</label>
-                <input
-                  className="form-input"
-                  maxLength={120}
-                  onChange={(event) =>
-                    updateDraftField("name", event.target.value)
-                  }
-                  required
-                  value={draft.name}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Descripción</label>
-                <textarea
-                  className="form-textarea"
-                  maxLength={1024}
-                  onChange={(event) =>
-                    updateDraftField("description", event.target.value)
-                  }
-                  required
-                  rows={4}
-                  value={draft.description}
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Duración máxima (minutos)</label>
-                  <input
-                    className="form-input"
-                    max={1440}
-                    min={1}
-                    onChange={(event) =>
-                      updateDraftField(
-                        "maximumDurationMinutes",
-                        event.target.value,
-                      )
-                    }
-                    required
-                    type="number"
-                    value={draft.maximumDurationMinutes}
-                  />
-                </div>
-              </div>
-
-              {/* ── Item list ── */}
-              <div className="card-section stack">
-                <div className="card-header card-header-actions">
-                  <div className="stack-sm">
-                    <span className="eyebrow">Estructura</span>
-                    <h4>Secciones y retos</h4>
-                  </div>
-                  <div className="row-sm">
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={addRootSection}
-                      type="button"
-                    >
-                      Agregar sección
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={addRootChallenge}
-                      type="button"
-                    >
-                      Agregar reto
-                    </button>
-                  </div>
-                </div>
-
-                {draft.items.length === 0 ? (
-                  <div className="empty-state">
-                    <strong>Aún no hay contenido.</strong>
-                    <p>
-                      Comienza con una sección para agrupar, o un reto jugable
-                      directo.
-                    </p>
-                  </div>
-                ) : (
-                  <MissionItemList
-                    depth={0}
-                    items={draft.items}
-                    onChange={setItems}
-                  />
-                )}
-              </div>
-
-              <div className="form-actions">
-                <button
-                  className="btn btn-primary"
-                  disabled={isSubmitting}
-                  type="submit"
-                >
-                  {editorMode === "create" ? "Crear Misión" : "Guardar cambios"}
-                </button>
-
-                {selectedMission ? (
-                  selectedMission.isActive ? (
-                    <button
-                      className="btn btn-danger"
-                      disabled={isSubmitting}
-                      onClick={() => handleActivationToggle("deactivate")}
-                      type="button"
-                    >
-                      Desactivar
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-success"
-                      disabled={isSubmitting}
-                      onClick={() => handleActivationToggle("activate")}
-                      type="button"
-                    >
-                      Activar
-                    </button>
-                  )
-                ) : null}
-              </div>
-            </form>
-
-            {selectedMission ? (
-              <div className="detail-panel">
-                <div className="detail-row">
-                  <span className="detail-label">ID de la misión</span>
-                  <span className="detail-value mono">
-                    {selectedMission.id}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Estado actual</span>
-                  <span className="detail-value">
-                    <span
-                      className={
-                        selectedMission.isActive
-                          ? "badge badge-green"
-                          : "badge badge-red"
-                      }
-                    >
-                      {selectedMission.isActive ? "Activa" : "Inactiva"}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            ) : null}
-          </section>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   );
