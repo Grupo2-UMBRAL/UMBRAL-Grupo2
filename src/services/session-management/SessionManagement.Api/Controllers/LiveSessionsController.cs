@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SessionManagement.Application.Features.Hints;
 using SessionManagement.Application.Features.LiveSessions;
 using SessionManagement.Application.Features.Penalties;
+using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Features.SessionSnapshots;
 using Umbral.ServiceDefaults;
@@ -112,6 +113,18 @@ public sealed class LiveSessionsController(ISender sender) : ControllerBase
                 request.Reason),
             cancellationToken);
         return Ok(result);
+    }
+
+    [HttpPost("{liveSessionId:guid}/session-teams")]
+    public async Task<ActionResult<RegisterTeamByOperatorResponse>> RegisterTeam(
+        Guid liveSessionId,
+        [FromBody] RegisterTeamByOperatorRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new RegisterTeamByOperatorCommand(liveSessionId, request.TeamName),
+            cancellationToken);
+        return Created($"api/session-management/live-sessions/{liveSessionId}/session-teams/{result.SessionTeamId}", result);
     }
 
     [HttpPost("{liveSessionId:guid}/hints/{hintId:guid}/release")]

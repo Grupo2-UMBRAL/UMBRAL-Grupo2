@@ -6,7 +6,7 @@ using UserManagement.Infrastructure.Keycloak;
 
 namespace UserManagement.Infrastructure;
 
-public static class IdentityAccessInfrastructureServiceCollectionExtensions
+public static class UserManagementInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddUserManagementInfrastructure(
         this IServiceCollection services,

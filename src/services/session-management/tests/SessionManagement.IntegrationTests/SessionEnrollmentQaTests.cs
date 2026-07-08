@@ -42,7 +42,6 @@ public sealed class SessionEnrollmentQaTests
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
             Guid.NewGuid(),
             "Team Cave",
-            "participant-1",
             joinCode,
             openedAtUtc.AddMinutes(6)));
 
@@ -62,9 +61,9 @@ public sealed class SessionEnrollmentQaTests
         var sessionTeam = liveSession.RegisterTeam(
             Guid.NewGuid(),
             "Team Cave",
-            "participant-1",
             joinCode,
             nowUtc);
+        liveSession.EnrollParticipantInTeam(sessionTeam.Id, "participant-1", joinCode, nowUtc);
 
         Assert.Equal("Team Cave", sessionTeam.Name);
         Assert.Single(liveSession.SessionTeams);
@@ -85,15 +84,15 @@ public sealed class SessionEnrollmentQaTests
         var firstTeam = liveSession.RegisterTeam(
             Guid.NewGuid(),
             "Team Cave",
-            "participant-1",
             joinCode,
             nowUtc);
+        liveSession.EnrollParticipantInTeam(firstTeam.Id, "participant-1", joinCode, nowUtc);
         var secondTeam = liveSession.RegisterTeam(
             Guid.NewGuid(),
             "Team River",
-            "participant-1",
             joinCode,
             nowUtc.AddMinutes(1));
+        liveSession.EnrollParticipantInTeam(secondTeam.Id, "participant-1", joinCode, nowUtc.AddMinutes(1));
 
         Assert.NotEqual(firstTeam.Id, secondTeam.Id);
         Assert.Equal(2, liveSession.SessionTeams.Count);

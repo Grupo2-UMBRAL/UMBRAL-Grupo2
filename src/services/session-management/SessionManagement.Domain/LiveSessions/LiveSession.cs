@@ -300,10 +300,14 @@ public sealed class LiveSession
         EnrollmentWindowClosedAtUtc = closedAtUtc;
     }
 
+    /// <summary>
+    /// Creates a Session Team on behalf of a participant, validating the presented join code and the
+    /// open enrollment window. This does not enrol the participant — the caller (Application layer)
+    /// orchestrates registration and enrollment by following this with <see cref="EnrollParticipantInTeam"/>.
+    /// </summary>
     public SessionTeam RegisterTeam(
         Guid sessionTeamId,
         string teamName,
-        string participantUserId,
         JoinCode presentedJoinCode,
         DateTimeOffset registeredAtUtc)
     {
@@ -320,7 +324,34 @@ public sealed class LiveSession
 
         var sessionTeam = SessionTeam.Create(Id, sessionTeamId, teamName, registeredAtUtc);
         SessionTeams.Add(sessionTeam);
-        EnrollParticipantInTeam(sessionTeam.Id, participantUserId, presentedJoinCode, registeredAtUtc);
+
+        return sessionTeam;
+    }
+
+    /// <summary>
+    /// Creates an empty Session Team on behalf of the operator so players can join it later. Unlike
+    /// <see cref="RegisterTeam"/>, this does not enrol a participant and does not require a join code
+    /// or an open enrollment window — the operator is trusted and may prepare teams before opening
+    /// enrollment. Only allowed while the LiveSession is still Scheduled (i.e. not started).
+    /// </summary>
+    public SessionTeam RegisterTeamByOperator(
+        Guid sessionTeamId,
+        string teamName,
+        DateTimeOffset createdAtUtc)
+    {
+        EnsureScheduled();
+
+        var normalizedTeamName = SessionTeam.NormalizeTeamName(teamName);
+        if (SessionTeams.Any(team => string.Equals(team.NormalizedName, normalizedTeamName, StringComparison.Ordinal)))
+        {
+            throw new UmbralDomainException(
+                "session_team_name_duplicate",
+                "Session Team name already exists in this LiveSession.",
+                UmbralFailureCategory.Conflict);
+        }
+
+        var sessionTeam = SessionTeam.Create(Id, sessionTeamId, teamName, createdAtUtc);
+        SessionTeams.Add(sessionTeam);
 
         return sessionTeam;
     }

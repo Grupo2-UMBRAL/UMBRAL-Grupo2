@@ -139,7 +139,8 @@ internal static class SampleLiveSessions
         var liveSession = Create(stages ?? TreasureStages(2));
         liveSession.AssignJoinCode(JoinCode());
         liveSession.OpenEnrollmentWindow(CreatedAt.AddMinutes(5));
-        liveSession.RegisterTeam(TeamId(1), "Team 1", "participant-1", JoinCode(), CreatedAt.AddMinutes(10));
+        var team = liveSession.RegisterTeam(TeamId(1), "Team 1", JoinCode(), CreatedAt.AddMinutes(10));
+        liveSession.EnrollParticipantInTeam(team.Id, "participant-1", JoinCode(), CreatedAt.AddMinutes(10));
         liveSession.Start(CreatedAt.AddMinutes(20));
         return liveSession;
     }

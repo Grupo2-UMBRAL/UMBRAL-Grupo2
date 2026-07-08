@@ -138,7 +138,7 @@ public sealed class LiveSessionLifecycleTests
         liveSession.AssignJoinCode(SampleLiveSessions.JoinCode());
         liveSession.OpenEnrollmentWindow(SampleLiveSessions.CreatedAt.AddMinutes(5));
         liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team 1", "participant-1", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(1), "Team 1", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(10));
         Assert.Null(liveSession.EnrollmentWindowClosedAtUtc);
 
@@ -157,6 +157,39 @@ public sealed class LiveSessionLifecycleTests
 
         Assert.Equal(LiveSessionStates.Active, liveSession.State);
         Assert.Null(liveSession.EnrollmentWindowOpenedAtUtc);
+    }
+
+    [Fact]
+    public void RegisterTeamByOperator_CreatesEmptyTeam_WithoutJoinCodeOrEnrollmentWindow()
+    {
+        var liveSession = SampleLiveSessions.Create(SampleLiveSessions.TreasureStages(2));
+
+        var team = liveSession.RegisterTeamByOperator(Guid.NewGuid(), "Operator Team", SampleLiveSessions.Now);
+
+        Assert.Equal("Operator Team", team.Name);
+        Assert.Contains(liveSession.SessionTeams, existing => existing.Id == team.Id);
+        Assert.Empty(liveSession.TeamParticipations);
+    }
+
+    [Fact]
+    public void RegisterTeamByOperator_Throws_WhenTeamNameDuplicated()
+    {
+        var liveSession = SampleLiveSessions.Create(SampleLiveSessions.TreasureStages(2));
+        liveSession.RegisterTeamByOperator(Guid.NewGuid(), "Duplicated", SampleLiveSessions.Now);
+
+        var exception = Assert.Throws<UmbralDomainException>(() =>
+            liveSession.RegisterTeamByOperator(Guid.NewGuid(), "duplicated", SampleLiveSessions.Now));
+
+        Assert.Equal("session_team_name_duplicate", exception.Code);
+    }
+
+    [Fact]
+    public void RegisterTeamByOperator_Throws_WhenNotScheduled()
+    {
+        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+
+        Assert.Throws<UmbralDomainException>(() =>
+            liveSession.RegisterTeamByOperator(Guid.NewGuid(), "Late Team", SampleLiveSessions.Now));
     }
 
     [Fact]
@@ -427,7 +460,7 @@ public sealed class LiveSessionEnrollmentTests
         var liveSession = SampleLiveSessions.Create(SampleLiveSessions.TreasureStages(2));
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team 1", "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.Now));
+            SampleLiveSessions.TeamId(1), "Team 1", SampleLiveSessions.JoinCode(), SampleLiveSessions.Now));
         Assert.Equal("live_session_join_code_not_generated", exception.Code);
     }
 
@@ -437,7 +470,7 @@ public sealed class LiveSessionEnrollmentTests
         var liveSession = OpenForEnrollment();
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team 1", "p1", JoinCode.Parse("WXYZ34"), SampleLiveSessions.Now));
+            SampleLiveSessions.TeamId(1), "Team 1", JoinCode.Parse("WXYZ34"), SampleLiveSessions.Now));
         Assert.Equal("join_code_invalid_for_live_session", exception.Code);
         Assert.Equal(UmbralFailureCategory.NotFound, exception.Category);
     }
@@ -449,7 +482,7 @@ public sealed class LiveSessionEnrollmentTests
         liveSession.AssignJoinCode(SampleLiveSessions.JoinCode());
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team 1", "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.Now));
+            SampleLiveSessions.TeamId(1), "Team 1", SampleLiveSessions.JoinCode(), SampleLiveSessions.Now));
         Assert.Equal("live_session_enrollment_window_not_active", exception.Code);
     }
 
@@ -458,11 +491,11 @@ public sealed class LiveSessionEnrollmentTests
     {
         var liveSession = OpenForEnrollment();
         liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team Alpha", "p1", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(1), "Team Alpha", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(6));
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(2), "team alpha", "p2", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(2), "team alpha", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(7)));
         Assert.Equal("session_team_name_duplicate", exception.Code);
     }
@@ -473,8 +506,10 @@ public sealed class LiveSessionEnrollmentTests
         var liveSession = OpenForEnrollment();
 
         var team = liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team Alpha", "p1", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(1), "Team Alpha", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(6));
+        liveSession.EnrollParticipantInTeam(
+            team.Id, "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.CreatedAt.AddMinutes(6));
 
         Assert.Single(liveSession.SessionTeams);
         Assert.Single(liveSession.TeamParticipations);
@@ -496,8 +531,10 @@ public sealed class LiveSessionEnrollmentTests
     {
         var liveSession = OpenForEnrollment();
         var team = liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team Alpha", "p1", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(1), "Team Alpha", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(6));
+        liveSession.EnrollParticipantInTeam(
+            team.Id, "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.CreatedAt.AddMinutes(6));
 
         liveSession.EnrollParticipantInTeam(
             team.Id, "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.CreatedAt.AddMinutes(7));
@@ -509,11 +546,13 @@ public sealed class LiveSessionEnrollmentTests
     public void EnrollParticipantInTeam_MovesParticipant_WhenAlreadyOnAnotherTeam()
     {
         var liveSession = OpenForEnrollment();
-        liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(1), "Team Alpha", "p1", SampleLiveSessions.JoinCode(),
+        var teamAlpha = liveSession.RegisterTeam(
+            SampleLiveSessions.TeamId(1), "Team Alpha", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(6));
+        liveSession.EnrollParticipantInTeam(
+            teamAlpha.Id, "p1", SampleLiveSessions.JoinCode(), SampleLiveSessions.CreatedAt.AddMinutes(6));
         var teamBravo = liveSession.RegisterTeam(
-            SampleLiveSessions.TeamId(2), "Team Bravo", "p2", SampleLiveSessions.JoinCode(),
+            SampleLiveSessions.TeamId(2), "Team Bravo", SampleLiveSessions.JoinCode(),
             SampleLiveSessions.CreatedAt.AddMinutes(7));
 
         liveSession.EnrollParticipantInTeam(

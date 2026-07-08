@@ -4,7 +4,7 @@ namespace UserManagement.Infrastructure.Keycloak;
 
 public sealed class KeycloakAdminApiOptions
 {
-    public const string SectionName = "IdentityAccess:Keycloak";
+    public const string SectionName = "UserManagement:Keycloak";
 
     public string BaseUrl { get; init; } = "http://keycloak:8080";
 
