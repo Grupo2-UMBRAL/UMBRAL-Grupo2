@@ -102,7 +102,8 @@ public sealed class EvidenceSubmissionAuditEventTests
 
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-20));
-        liveSession.RegisterTeam(TeamId, "Alpha Team", "participant-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-10));
+        var team = liveSession.RegisterTeam(TeamId, "Alpha Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-10));
+        liveSession.EnrollParticipantInTeam(team.Id, "participant-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-10));
         ForceState(liveSession, LiveSessionStates.Active);
         return liveSession;
     }

@@ -42,7 +42,6 @@ public sealed class SessionEnrollmentDomainTests
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.RegisterTeam(
             Guid.NewGuid(),
             "Team Cave",
-            "participant-1",
             joinCode,
             new DateTimeOffset(2026, 6, 2, 12, 0, 0, TimeSpan.Zero)));
 
@@ -59,7 +58,8 @@ public sealed class SessionEnrollmentDomainTests
         liveSession.AssignJoinCode(joinCode);
         liveSession.OpenEnrollmentWindow(nowUtc);
 
-        var team = liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", "participant-1", joinCode, nowUtc);
+        var team = liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", joinCode, nowUtc);
+        liveSession.EnrollParticipantInTeam(team.Id, "participant-1", joinCode, nowUtc);
 
         Assert.Equal("Team Cave", team.Name);
         Assert.Single(liveSession.SessionTeams);

@@ -7,7 +7,7 @@ using UserManagement.Infrastructure.Services.Email;
 
 namespace UserManagement.Infrastructure;
 
-public static class IdentityAccessInfrastructureServiceCollectionExtensions
+public static class UserManagementInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddUserManagementInfrastructure(
         this IServiceCollection services,

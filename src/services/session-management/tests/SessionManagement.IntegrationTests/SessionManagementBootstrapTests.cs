@@ -230,7 +230,8 @@ public sealed class LiveSessionDomainTests
         var startedAtUtc = new DateTimeOffset(2026, 6, 2, 12, 5, 0, TimeSpan.Zero);
         liveSession.AssignJoinCode(joinCode);
         liveSession.OpenEnrollmentWindow(openedAtUtc);
-        liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", "participant-1", joinCode, openedAtUtc);
+        var team = liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", joinCode, openedAtUtc);
+        liveSession.EnrollParticipantInTeam(team.Id, "participant-1", joinCode, openedAtUtc);
 
         liveSession.Start(startedAtUtc);
 
@@ -272,7 +273,8 @@ public sealed class LiveSessionDomainTests
         var liveSession = CreateLiveSession("Started session", nowUtc);
         liveSession.AssignJoinCode(joinCode);
         liveSession.OpenEnrollmentWindow(nowUtc);
-        liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", "participant-1", joinCode, nowUtc);
+        var team = liveSession.RegisterTeam(Guid.NewGuid(), "Team Cave", joinCode, nowUtc);
+        liveSession.EnrollParticipantInTeam(team.Id, "participant-1", joinCode, nowUtc);
         liveSession.Start(nowUtc.AddMinutes(5));
         return liveSession;
     }

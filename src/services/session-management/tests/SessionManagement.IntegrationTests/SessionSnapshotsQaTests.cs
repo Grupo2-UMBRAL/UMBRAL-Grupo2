@@ -459,8 +459,10 @@ public sealed class SessionSnapshotsQaTests
             ]);
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));
         liveSession.OpenEnrollmentWindow(NowUtc);
-        liveSession.RegisterTeam(AlphaTeamId, "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(1));
-        liveSession.RegisterTeam(BetaTeamId, "Beta Team", "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(2));
+        var alphaTeam = liveSession.RegisterTeam(AlphaTeamId, "Alpha Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(1));
+        liveSession.EnrollParticipantInTeam(alphaTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(1));
+        var betaTeam = liveSession.RegisterTeam(BetaTeamId, "Beta Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(2));
+        liveSession.EnrollParticipantInTeam(betaTeam.Id, "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(2));
 
         return liveSession;
     }

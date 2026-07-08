@@ -2,7 +2,6 @@ using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
-using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.SessionEnrollment;
@@ -33,9 +32,16 @@ public sealed class RegisterTeamHandler(
         }
 
         var nowUtc = timeProvider.GetUtcNow();
+
+        // Orchestrate the use case: create the team, then enrol the participant into it.
+        // The Domain exposes both as granular operations; sequencing them is the Handler's job.
         var sessionTeam = liveSession.RegisterTeam(
             Guid.NewGuid(),
             request.TeamName,
+            joinCode,
+            nowUtc);
+        liveSession.EnrollParticipantInTeam(
+            sessionTeam.Id,
             participantUserId.Value,
             joinCode,
             nowUtc);

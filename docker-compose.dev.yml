@@ -4,8 +4,8 @@ services:
     container_name: umbral-aspire-dashboard
     ports:
       - "18888:18888" # Dashboard UI
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4317"   # OTLP HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4317" # OTLP HTTP
     environment:
       DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
       DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: "http://0.0.0.0:4317"
@@ -98,13 +98,13 @@ services:
       Auth__Authority: ${AUTH_AUTHORITY}
       Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
       Auth__Audience: umbral-user-management-api
+      UserManagement__Keycloak__BaseUrl: http://keycloak:8080/auth
+      UserManagement__Keycloak__Realm: umbral
+      UserManagement__Keycloak__AdminRealm: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_REALM}
+      UserManagement__Keycloak__AdminClientId: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_CLIENT_ID}
+      UserManagement__Keycloak__AdminUsername: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_USERNAME}
+      UserManagement__Keycloak__AdminPassword: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD}
       Persistence__ApplyMigrationsOnStartup: "true"
-      IdentityAccess__Keycloak__BaseUrl: ${USER_MANAGEMENT_KEYCLOAK_BASE_URL}
-      IdentityAccess__Keycloak__Realm: ${USER_MANAGEMENT_KEYCLOAK_REALM}
-      IdentityAccess__Keycloak__AdminRealm: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_REALM}
-      IdentityAccess__Keycloak__AdminClientId: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_CLIENT_ID}
-      IdentityAccess__Keycloak__AdminUsername: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_USERNAME}
-      IdentityAccess__Keycloak__AdminPassword: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD}
       Email__Smtp__Host: ${SMTP_HOST}
       Email__Smtp__Port: ${SMTP_PORT}
       Email__Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
@@ -309,4 +309,3 @@ volumes:
   web-node-modules:
   mobile-node-modules:
   mobile-npm-cache:
-

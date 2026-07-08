@@ -355,22 +355,22 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
     {
         if (string.IsNullOrWhiteSpace(options.BaseUrl))
         {
-            throw new InvalidOperationException("Missing required configuration value 'IdentityAccess:Keycloak:BaseUrl'.");
+            throw new InvalidOperationException("Missing required configuration value 'UserManagement:Keycloak:BaseUrl'.");
         }
 
         if (string.IsNullOrWhiteSpace(options.Realm))
         {
-            throw new InvalidOperationException("Missing required configuration value 'IdentityAccess:Keycloak:Realm'.");
+            throw new InvalidOperationException("Missing required configuration value 'UserManagement:Keycloak:Realm'.");
         }
 
         if (string.IsNullOrWhiteSpace(options.AdminRealm))
         {
-            throw new InvalidOperationException("Missing required configuration value 'IdentityAccess:Keycloak:AdminRealm'.");
+            throw new InvalidOperationException("Missing required configuration value 'UserManagement:Keycloak:AdminRealm'.");
         }
 
         if (string.IsNullOrWhiteSpace(options.AdminClientId))
         {
-            throw new InvalidOperationException("Missing required configuration value 'IdentityAccess:Keycloak:AdminClientId'.");
+            throw new InvalidOperationException("Missing required configuration value 'UserManagement:Keycloak:AdminClientId'.");
         }
 
         if (string.IsNullOrWhiteSpace(options.AdminUsername) || string.IsNullOrWhiteSpace(options.AdminPassword))

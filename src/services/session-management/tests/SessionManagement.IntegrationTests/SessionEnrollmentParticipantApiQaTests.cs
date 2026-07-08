@@ -81,8 +81,10 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc);
-        var zuluTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Zulu Team", "creator-zulu", JoinCode.Parse("ABC234"), NowUtc);
-        var alphaTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
+        var zuluTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Zulu Team", JoinCode.Parse("ABC234"), NowUtc);
+        liveSession.EnrollParticipantInTeam(zuluTeam.Id, "creator-zulu", JoinCode.Parse("ABC234"), NowUtc);
+        var alphaTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", JoinCode.Parse("ABC234"), NowUtc);
+        liveSession.EnrollParticipantInTeam(alphaTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new ListSessionTeamsHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
@@ -110,7 +112,8 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc);
-        var sessionTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
+        var sessionTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", JoinCode.Parse("ABC234"), NowUtc);
+        liveSession.EnrollParticipantInTeam(sessionTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(
             dbContext,
@@ -137,7 +140,8 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-10));
-        var sessionTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-9));
+        var sessionTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-9));
+        liveSession.EnrollParticipantInTeam(sessionTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-9));
         liveSession.CloseEnrollmentWindow(NowUtc.AddMinutes(-1));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(
@@ -159,8 +163,10 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithJoinCode();
         liveSession.OpenEnrollmentWindow(NowUtc);
-        var firstTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
-        var secondTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Beta Team", "creator-beta", JoinCode.Parse("ABC234"), NowUtc);
+        var firstTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Alpha Team", JoinCode.Parse("ABC234"), NowUtc);
+        liveSession.EnrollParticipantInTeam(firstTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc);
+        var secondTeam = liveSession.RegisterTeam(Guid.NewGuid(), "Beta Team", JoinCode.Parse("ABC234"), NowUtc);
+        liveSession.EnrollParticipantInTeam(secondTeam.Id, "creator-beta", JoinCode.Parse("ABC234"), NowUtc);
         liveSession.EnrollParticipantInTeam(firstTeam.Id, "participant-1", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(1));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new JoinSessionTeamHandler(

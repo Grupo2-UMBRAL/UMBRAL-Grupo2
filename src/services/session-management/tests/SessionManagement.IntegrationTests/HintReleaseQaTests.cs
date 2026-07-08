@@ -346,8 +346,10 @@ public sealed class HintReleaseQaTests
             ]);
         liveSession.AssignJoinCode(JoinCode.Parse("ABC234"));
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-20));
-        liveSession.RegisterTeam(AlphaTeamId, "Alpha Team", "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
-        liveSession.RegisterTeam(BetaTeamId, "Beta Team", "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
+        var alphaTeam = liveSession.RegisterTeam(AlphaTeamId, "Alpha Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
+        liveSession.EnrollParticipantInTeam(alphaTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
+        var betaTeam = liveSession.RegisterTeam(BetaTeamId, "Beta Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
+        liveSession.EnrollParticipantInTeam(betaTeam.Id, "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
         ForceState(liveSession, LiveSessionStates.Active);
 
         return liveSession;
