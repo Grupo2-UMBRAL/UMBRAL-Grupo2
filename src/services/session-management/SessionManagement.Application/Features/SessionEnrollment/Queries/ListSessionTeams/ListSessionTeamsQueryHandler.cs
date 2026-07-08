@@ -1,4 +1,3 @@
-using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -8,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class ListSessionTeamsHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<ListSessionTeamsQuery, SessionTeamsResponse>
 {

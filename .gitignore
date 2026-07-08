@@ -6,6 +6,7 @@
 ## .NET
 bin/
 obj/
+artifacts/
 TestResults/
 *.user
 *.suo
@@ -57,3 +58,5 @@ id_rsa.pub
 exampleharness
 teach
 src/old services copy/
+##claude
+.claude/skills

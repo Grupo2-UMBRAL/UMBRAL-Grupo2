@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ScoringMonitoring.Application.Features.SessionEventLogs.Queries.GetSessionEventLog;
 
-public sealed class GetSessionEventLogHandler(IUnitOfWork unitOfWork, IRepository<SessionEventLog> sessionEventLogRepository)
+public sealed class GetSessionEventLogHandler(IRepository<SessionEventLog> sessionEventLogRepository)
     : IRequestHandler<GetSessionEventLogQuery, IReadOnlyList<SessionEventLogPayload>>
 {
     public async Task<IReadOnlyList<SessionEventLogPayload>> Handle(

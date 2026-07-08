@@ -1,4 +1,3 @@
-using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;

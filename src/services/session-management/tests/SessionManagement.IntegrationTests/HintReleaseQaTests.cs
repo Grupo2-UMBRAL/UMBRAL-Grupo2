@@ -93,7 +93,6 @@ public sealed class HintReleaseQaTests
         liveSession.ReleaseHint(AlphaTeamId, HintOneId, NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(1)));
@@ -224,7 +223,6 @@ public sealed class HintReleaseQaTests
         liveSession.ReleaseHint(AlphaTeamId, SolutionOneId, NowUtc.AddMinutes(2));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(3)));
@@ -246,7 +244,6 @@ public sealed class HintReleaseQaTests
         liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(5));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(6)));

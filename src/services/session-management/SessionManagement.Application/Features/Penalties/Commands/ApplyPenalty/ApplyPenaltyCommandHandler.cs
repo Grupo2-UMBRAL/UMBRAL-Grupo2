@@ -9,7 +9,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Penalties;
 
 public sealed class ApplyPenaltyHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     IScoringMonitoringClient scoringAuditClient)

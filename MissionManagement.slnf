@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "Umbral.sln",
+    "projects": [
+      "src\\services\\mission-management\\MissionManagement.Api\\MissionManagement.Api.csproj",
+      "src\\services\\mission-management\\MissionManagement.Application\\MissionManagement.Application.csproj",
+      "src\\services\\mission-management\\MissionManagement.Domain\\MissionManagement.Domain.csproj",
+      "src\\services\\mission-management\\MissionManagement.Infrastructure\\MissionManagement.Infrastructure.csproj",
+      "src\\services\\mission-management\\tests\\MissionManagement.UnitTests\\MissionManagement.UnitTests.csproj",
+      "src\\services\\mission-management\\tests\\MissionManagement.IntegrationTests\\MissionManagement.IntegrationTests.csproj",
+      "src\\shared\\Umbral.ServiceDefaults\\Umbral.ServiceDefaults.csproj"
+    ]
+  }
+}

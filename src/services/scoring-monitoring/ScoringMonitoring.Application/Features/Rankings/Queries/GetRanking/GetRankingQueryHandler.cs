@@ -5,7 +5,7 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Application.Features.Rankings.Queries.GetRanking;
 
 public sealed class GetRankingHandler(
-    IUnitOfWork unitOfWork, IRepository<Scoreboard> scoreboardRepository,
+    IRepository<Scoreboard> scoreboardRepository,
     TimeProvider timeProvider)
     : IRequestHandler<GetRankingQuery, RankingPayload>
 {

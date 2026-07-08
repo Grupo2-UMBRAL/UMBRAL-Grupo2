@@ -33,7 +33,7 @@ public sealed class SessionSnapshotsQaTests
         await using var dbContext = CreateDbContext();
         var liveSession = CreateLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new GetLiveSessionOverviewQueryHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
+        var handler = new GetLiveSessionOverviewQueryHandler(new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
 
         var overview = await handler.Handle(new GetLiveSessionOverviewQuery(liveSession.Id), CancellationToken.None);
 
@@ -73,7 +73,6 @@ public sealed class SessionSnapshotsQaTests
         var liveSession = CreateLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc));
@@ -126,7 +125,6 @@ public sealed class SessionSnapshotsQaTests
         liveSession.SubmitTriviaAnswer(BetaTeamId, WrongChoiceId, NowUtc.AddMinutes(5));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(6)));
 
@@ -153,7 +151,6 @@ public sealed class SessionSnapshotsQaTests
         liveSession.SubmitTriviaAnswer(AlphaTeamId, WrongChoiceId, NowUtc.AddMinutes(5));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 
@@ -174,7 +171,6 @@ public sealed class SessionSnapshotsQaTests
         liveSession.SubmitTriviaAnswer(AlphaTeamId, WrongChoiceId, NowUtc.AddMinutes(15));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 
@@ -194,7 +190,6 @@ public sealed class SessionSnapshotsQaTests
         liveSession.SubmitTriviaAnswer(AlphaTeamId, SealChoiceId, NowUtc.AddMinutes(5));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(8)));
 
@@ -221,7 +216,6 @@ public sealed class SessionSnapshotsQaTests
         var rejectedQrSubmission = liveSession.SubmitEvidence(AlphaTeamId, "wrong-qr", NowUtc.AddMinutes(8));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamDetailQueryHandler(
-            dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc.AddMinutes(20)));
 

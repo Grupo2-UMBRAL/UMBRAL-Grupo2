@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MissionManagement.Application.Features.Missions.Queries.ListMissions;
 
-public sealed class ListMissionsQueryHandler(IUnitOfWork unitOfWork, IRepository<Mission> missionRepository)
+public sealed class ListMissionsQueryHandler(IRepository<Mission> missionRepository)
     : IRequestHandler<ListMissionsQuery, IReadOnlyList<MissionSummaryResponse>>
 {
     public async Task<IReadOnlyList<MissionSummaryResponse>> Handle(

@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "Umbral.sln",
+    "projects": [
+      "src\\services\\scoring-monitoring\\ScoringMonitoring.Api\\ScoringMonitoring.Api.csproj",
+      "src\\services\\scoring-monitoring\\ScoringMonitoring.Application\\ScoringMonitoring.Application.csproj",
+      "src\\services\\scoring-monitoring\\ScoringMonitoring.Domain\\ScoringMonitoring.Domain.csproj",
+      "src\\services\\scoring-monitoring\\ScoringMonitoring.Infrastructure\\ScoringMonitoring.Infrastructure.csproj",
+      "src\\services\\scoring-monitoring\\tests\\ScoringMonitoring.UnitTests\\ScoringMonitoring.UnitTests.csproj",
+      "src\\services\\scoring-monitoring\\tests\\ScoringMonitoring.IntegrationTests\\ScoringMonitoring.IntegrationTests.csproj",
+      "src\\shared\\Umbral.ServiceDefaults\\Umbral.ServiceDefaults.csproj"
+    ]
+  }
+}

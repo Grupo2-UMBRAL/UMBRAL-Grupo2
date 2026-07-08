@@ -34,7 +34,7 @@ file static class QueryScaffold
 public sealed class GetLiveSessionOverviewQueryHandlerTests
 {
     private static GetLiveSessionOverviewQueryHandler Build(LiveSession session)
-        => new(QueryScaffold.UnitOfWork(), QueryScaffold.Repository(session), QueryScaffold.Clock());
+        => new(QueryScaffold.Repository(session), QueryScaffold.Clock());
 
     [Fact]
     public async Task Handle_Throws_WhenLiveSessionNotFound()
@@ -103,7 +103,7 @@ public sealed class GetLiveSessionOverviewQueryHandlerTests
 public sealed class GetSessionTeamDetailQueryHandlerTests
 {
     private static GetSessionTeamDetailQueryHandler Build(LiveSession session)
-        => new(QueryScaffold.UnitOfWork(), QueryScaffold.Repository(session), QueryScaffold.Clock());
+        => new(QueryScaffold.Repository(session), QueryScaffold.Clock());
 
     [Fact]
     public async Task Handle_Throws_WhenSessionTeamNotFound()
@@ -198,7 +198,6 @@ public sealed class GetSessionTeamSnapshotQueryHandlerTests
 {
     private static GetSessionTeamSnapshotQueryHandler Build(LiveSession session, string participantUserId = QueryScaffold.Participant)
         => new(
-            QueryScaffold.UnitOfWork(),
             QueryScaffold.Repository(session),
             QueryScaffold.Participants(participantUserId),
             QueryScaffold.Clock());

@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "Umbral.sln",
+    "projects": [
+      "src\\services\\user-management\\UserManagement.Api\\UserManagement.Api.csproj",
+      "src\\services\\user-management\\UserManagement.Application\\UserManagement.Application.csproj",
+      "src\\services\\user-management\\UserManagement.Domain\\UserManagement.Domain.csproj",
+      "src\\services\\user-management\\UserManagement.Infrastructure\\UserManagement.Infrastructure.csproj",
+      "src\\services\\user-management\\tests\\UserManagement.UnitTests\\UserManagement.UnitTests.csproj",
+      "src\\services\\user-management\\tests\\UserManagement.IntegrationTests\\UserManagement.IntegrationTests.csproj",
+      "src\\shared\\Umbral.ServiceDefaults\\Umbral.ServiceDefaults.csproj"
+    ]
+  }
+}

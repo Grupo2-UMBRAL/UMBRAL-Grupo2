@@ -77,7 +77,7 @@ public sealed class SmtpEmailNotificationService(
 
         if (!string.IsNullOrWhiteSpace(_options.Username))
         {
-            await client.AuthenticateAsync(_options.Username, _options.Password, cancellationToken);
+            await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
         }
 
         await client.SendAsync(message, cancellationToken);

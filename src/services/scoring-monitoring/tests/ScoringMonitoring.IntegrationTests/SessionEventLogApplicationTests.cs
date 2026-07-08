@@ -66,7 +66,7 @@ public sealed class SessionEventLogApplicationTests
             DateTimeOffset.Parse("2026-06-04T02:00:00Z"));
         dbContext.SessionEventLogs.AddRange(oldest, newest, otherSessionEvent);
         await dbContext.SaveChangesAsync();
-        var handler = new GetSessionEventLogHandler(dbContext, new Repository<SessionEventLog>(dbContext));
+        var handler = new GetSessionEventLogHandler(new Repository<SessionEventLog>(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(liveSessionId), CancellationToken.None);
 
@@ -80,7 +80,7 @@ public sealed class SessionEventLogApplicationTests
     public async Task GetSessionEventLogQuery_ReturnsEmptyListWhenSessionHasNoEvents()
     {
         await using var dbContext = CreateDbContext();
-        var handler = new GetSessionEventLogHandler(dbContext, new Repository<SessionEventLog>(dbContext));
+        var handler = new GetSessionEventLogHandler(new Repository<SessionEventLog>(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(Guid.NewGuid()), CancellationToken.None);
 

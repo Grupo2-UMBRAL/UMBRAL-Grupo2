@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "Umbral.sln",
+    "projects": [
+      "src\\services\\session-management\\SessionManagement.Api\\SessionManagement.Api.csproj",
+      "src\\services\\session-management\\SessionManagement.Application\\SessionManagement.Application.csproj",
+      "src\\services\\session-management\\SessionManagement.Domain\\SessionManagement.Domain.csproj",
+      "src\\services\\session-management\\SessionManagement.Infrastructure\\SessionManagement.Infrastructure.csproj",
+      "src\\services\\session-management\\tests\\SessionManagement.UnitTests\\SessionManagement.UnitTests.csproj",
+      "src\\services\\session-management\\tests\\SessionManagement.IntegrationTests\\SessionManagement.IntegrationTests.csproj",
+      "src\\shared\\Umbral.ServiceDefaults\\Umbral.ServiceDefaults.csproj"
+    ]
+  }
+}

@@ -36,8 +36,7 @@ public sealed class MissionPostgresPersistenceTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly PostgreSqlContainer container = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer container = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
     private bool dockerAvailable;

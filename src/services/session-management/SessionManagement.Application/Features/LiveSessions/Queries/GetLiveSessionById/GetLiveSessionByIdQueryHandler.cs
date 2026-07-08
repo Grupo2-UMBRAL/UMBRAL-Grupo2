@@ -6,7 +6,7 @@ using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
 
-public sealed class GetLiveSessionByIdQueryHandler(IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository)
+public sealed class GetLiveSessionByIdQueryHandler(IRepository<LiveSession> liveSessionRepository)
     : IRequestHandler<GetLiveSessionByIdQuery, LiveSessionResponse>
 {
     public async Task<LiveSessionResponse> Handle(
