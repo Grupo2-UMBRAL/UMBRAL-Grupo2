@@ -7,6 +7,10 @@ const enrollmentStorageKey = "umbral.mobile.enrollment";
 export type UmbralMobileSession = {
   accessToken: string;
   expiresAt: string;
+  // Kept so the session can be renewed while the player is still in a live game. Older stored
+  // sessions (pre-refresh support) may not carry these; treat them as non-renewable.
+  refreshToken?: string;
+  refreshExpiresAt?: string;
   roles: UmbralRole[];
   username: string;
   displayName: string;

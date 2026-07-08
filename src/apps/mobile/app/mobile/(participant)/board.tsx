@@ -1,6 +1,6 @@
 import { CameraView } from "expo-camera";
 import { Redirect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -15,6 +15,7 @@ import { LoadingScreen } from "../../../src/components/loading-screen";
 import { Mascot } from "../../../src/components/mascot";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { SessionLobby } from "../../../src/components/session-lobby";
+import { StartCountdown } from "../../../src/components/start-countdown";
 import { StageProgressBar } from "../../../src/components/stage-progress-bar";
 import { StaticHintMap } from "../../../src/components/static-hint-map";
 import { StatusChip } from "../../../src/components/status-chip";
@@ -361,9 +362,16 @@ export default function BoardPage() {
   const connectionMeta = resolveConnection(connectionState.kind);
   const totalStages = snapshot?.totalStages ?? 0;
   const memberCount = snapshot?.memberCount ?? 1;
+  // Only show live gameplay hints for the stage the team is currently on; snapshot.visibleHints
+  // accumulates hints from every stage, so without this filter the previous stage's hint lingers
+  // after advancing to the next game.
+  const currentMissionStageId = snapshot?.currentStage?.missionStageId;
   const visibleGameplayHints = useMemo(
-    () => snapshot?.visibleHints.filter((hint) => !hint.isSolution) ?? [],
-    [snapshot?.visibleHints]
+    () =>
+      snapshot?.visibleHints.filter(
+        (hint) => !hint.isSolution && hint.missionStageId === currentMissionStageId
+      ) ?? [],
+    [snapshot?.visibleHints, currentMissionStageId]
   );
   const resolutionHintsByStage = useMemo(
     () => groupHintsByStage(snapshot?.visibleHints ?? []),
@@ -390,6 +398,17 @@ export default function BoardPage() {
 
     void refreshScore(liveSessionId);
   }, [refreshScore, snapshot?.liveSessionId, snapshot?.sessionState, snapshot?.currentStage?.sessionStageOrder]);
+
+  // Play the green sweep + 3·2·1 countdown once, only on the genuine lobby -> playing transition
+  // (the moment the operator starts). Sessions already Active on load skip straight to the board.
+  const [showStartTransition, setShowStartTransition] = useState(false);
+  const wasLobbyRef = useRef(isLobby);
+  useEffect(() => {
+    if (wasLobbyRef.current && !isLobby && isPlaying) {
+      setShowStartTransition(true);
+    }
+    wasLobbyRef.current = isLobby;
+  }, [isLobby, isPlaying]);
 
   async function submitQrEvidence(qrHash: string) {
     if (!apiClient || !storedEnrollment) {
@@ -510,6 +529,7 @@ export default function BoardPage() {
   }
 
   return (
+    <>
     <ScreenShell
       eyebrow="Tablero"
       title={`Equipo ${snapshot.teamName}`}
@@ -790,6 +810,10 @@ export default function BoardPage() {
         </View>
       </Modal>
     </ScreenShell>
+    {showStartTransition ? (
+      <StartCountdown onDone={() => setShowStartTransition(false)} />
+    ) : null}
+    </>
   );
 }
 
