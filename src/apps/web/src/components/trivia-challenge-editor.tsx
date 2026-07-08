@@ -1,4 +1,4 @@
-import { type QuestionDraft } from "./mission-authoring-types";
+import { type QuestionDraft, difficultyOptions } from "./mission-authoring-types";
 import {
   createEmptyChoiceDraft,
   createEmptyQuestionDraft,
@@ -227,9 +227,8 @@ export function TriviaChallengeEditor({
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Dificultad (override)</label>
-                  <input
-                    className="form-input"
-                    list="difficulty-options"
+                  <select
+                    className="form-select"
                     onChange={(event) =>
                       setQuestionField(
                         question.clientId,
@@ -237,9 +236,15 @@ export function TriviaChallengeEditor({
                         event.target.value,
                       )
                     }
-                    placeholder="Heredar del reto"
                     value={question.difficultyOverride}
-                  />
+                  >
+                    <option value="">Heredar del reto</option>
+                    {difficultyOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                   <span className="form-hint">Vacío = usa la dificultad del reto.</span>
                 </div>
 

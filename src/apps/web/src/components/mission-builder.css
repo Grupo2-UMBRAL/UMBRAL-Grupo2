@@ -1,0 +1,217 @@
+/* ================================================================
+   MISSION BUILDER (Pantalla Completa)
+   ================================================================ */
+
+.mb-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.mb-header {
+  height: var(--header-h);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+  background: var(--bg);
+}
+
+.mb-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.mb-header-title strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.mb-header-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Container */
+.mb-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.mb-sidebar {
+  width: 320px;
+  background: var(--bg-deep);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.mb-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.mb-sidebar-footer {
+  padding: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+/* Canvas (Bento Grid) */
+.mb-canvas {
+  flex: 1;
+  background: var(--bg);
+  padding: var(--space-2xl);
+  overflow-y: auto;
+}
+
+.mb-bento {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.mb-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.mb-card-header {
+  margin-bottom: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.mb-card-header h3 {
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+.mb-card-header p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Tree Item */
+.mb-tree-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mb-tree-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-sm);
+  border: 1px solid transparent;
+  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mb-tree-row:hover {
+  background: var(--surface-hover);
+}
+
+.mb-tree-row.is-selected {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--accent-subtle);
+}
+
+.mb-tree-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.mb-tree-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mb-tree-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.mb-tree-row:hover .mb-tree-actions,
+.mb-tree-row.is-selected .mb-tree-actions {
+  opacity: 1;
+}
+
+.mb-tree-drag {
+  cursor: grab;
+  color: var(--text-muted);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mb-tree-drag:active {
+  cursor: grabbing;
+}
+
+.mb-tree-children {
+  padding-left: 20px;
+  margin-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+/* Glassmorphism overrides if needed */
+.mb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 10, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mb-modal-content {
+  background: rgba(28, 28, 32, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  width: 100%;
+}
