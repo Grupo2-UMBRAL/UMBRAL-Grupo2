@@ -43,6 +43,21 @@ public sealed class SmtpEmailNotificationService(
         await SendAsync(email, subject, htmlBody, cancellationToken);
     }
 
+    public async Task SendParticipantWelcomeAsync(
+        string email, string username, CancellationToken cancellationToken = default)
+    {
+        var subject = "Bienvenido a UMBRAL";
+
+        var htmlBody = BuildHtmlEmail(
+            greeting: $"Hola, {username}",
+            headline: "¡Tu cuenta ha sido creada exitosamente!",
+            bodyParagraph: "Te damos la bienvenida a la plataforma <strong style=\"color:#e8a84c;\">UMBRAL</strong>. Ya puedes iniciar sesión y comenzar a participar en las misiones de simulación disponibles para ti.",
+            credentials: Array.Empty<(string, string)>(),
+            footerNote: "Recuerda no compartir tu cuenta con nadie.");
+
+        await SendAsync(email, subject, htmlBody, cancellationToken);
+    }
+
     private async Task SendAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken)
     {
         var message = new MimeMessage();
@@ -85,13 +100,28 @@ public sealed class SmtpEmailNotificationService(
         // --text-secondary: #9d9a94 | --text-muted: #5c5a55
         // --border: rgba(255,255,255,0.06) | --border-strong: rgba(255,255,255,0.12)
 
-        var credentialRows = string.Join("\n", credentials.Select(c =>
+        var credentialsHtml = credentials.Length == 0 ? string.Empty : $$"""
+                            <!-- Credentials card -->
+                            <tr>
+                                <td style="padding:0 40px 24px 40px;background-color:#0f0f12;">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#1c1c20;border-radius:8px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;">
+                                        <!-- Card header -->
+                                        <tr>
+                                            <td colspan="2" style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                                                <span style="font-size:10px;font-weight:700;color:#c4841d;text-transform:uppercase;letter-spacing:2.5px;font-family:'IBM Plex Sans',system-ui,sans-serif;">&#128274; Credenciales</span>
+                                            </td>
+                                        </tr>
+        {{string.Join("\n", credentials.Select(c =>
             $"""
                             <tr>
                                 <td style="padding:10px 16px;font-weight:600;color:#9d9a94;text-transform:uppercase;font-size:11px;letter-spacing:1.5px;border-bottom:1px solid rgba(255,255,255,0.06);width:150px;font-family:'IBM Plex Sans',system-ui,sans-serif;">{c.Label}</td>
                                 <td style="padding:10px 16px;font-family:'IBM Plex Mono','Fira Code','Courier New',monospace;font-size:14px;color:#e8e6e1;border-bottom:1px solid rgba(255,255,255,0.06);letter-spacing:0.5px;">{c.Value}</td>
                             </tr>
-            """));
+            """))}}
+                                    </table>
+                                </td>
+                            </tr>
+        """;
 
         return $$"""
         <!DOCTYPE html>
@@ -147,20 +177,7 @@ public sealed class SmtpEmailNotificationService(
                                 </td>
                             </tr>
 
-                            <!-- Credentials card -->
-                            <tr>
-                                <td style="padding:0 40px 24px 40px;background-color:#0f0f12;">
-                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#1c1c20;border-radius:8px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;">
-                                        <!-- Card header -->
-                                        <tr>
-                                            <td colspan="2" style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                                                <span style="font-size:10px;font-weight:700;color:#c4841d;text-transform:uppercase;letter-spacing:2.5px;font-family:'IBM Plex Sans',system-ui,sans-serif;">&#128274; Credenciales</span>
-                                            </td>
-                                        </tr>
-        {{credentialRows}}
-                                    </table>
-                                </td>
-                            </tr>
+        {{credentialsHtml}}
 
                             <!-- Footer note -->
                             <tr>
