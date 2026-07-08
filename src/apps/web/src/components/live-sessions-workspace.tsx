@@ -2599,6 +2599,13 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       return;
     }
 
+    const liveSessionId = selectedLiveSession.id;
+    if (!liveSessionId) {
+      setErrorMessage("Error de estado: No se pudo determinar el ID de la sesión en vivo.");
+      console.error("LiveSession ID is undefined or missing in selectedLiveSession:", selectedLiveSession);
+      return;
+    }
+
     const trimmedTeamName = newTeamName.trim();
     if (trimmedTeamName.length < 3) {
       setErrorMessage("El nombre del equipo debe tener al menos 3 caracteres.");
@@ -2610,7 +2617,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     setFeedback(null);
 
     try {
-      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/session-teams`, {
+      const url = `${liveSessionsUrl}/${encodeURIComponent(liveSessionId)}/session-teams`;
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           ...createAuthorizedHeaders(accessToken),
@@ -2620,14 +2628,17 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       });
 
       if (!response.ok) {
-        throw new Error(await readFailureDetail(response));
+        const errorDetail = await readFailureDetail(response);
+        console.error("Error response from backend when creating team:", errorDetail);
+        throw new Error(errorDetail);
       }
 
       setNewTeamName("");
-      await loadLiveSessions(selectedLiveSession.id);
-      await loadLiveSessionOverview(selectedLiveSession.id);
+      await loadLiveSessions(liveSessionId);
+      await loadLiveSessionOverview(liveSessionId);
       setFeedback(`Equipo "${trimmedTeamName}" creado. Los jugadores ya pueden unirse con el código de la sesión.`);
     } catch (error) {
+      console.error("Caught error during handleCreateSessionTeam:", error);
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el equipo.");
     } finally {
       setIsCreatingTeam(false);
