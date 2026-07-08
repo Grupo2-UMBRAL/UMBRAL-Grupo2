@@ -7,6 +7,7 @@ import {
   LogLevel
 } from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
+import { QrCode, printQrCode } from "./qr-code";
 
 // Vocabulario del front: "etapa" = la unidad jugable (el "play" del backend),
 // "misión" = la plantilla, "sesión" = la LiveSession en curso. El endpoint de
@@ -611,6 +612,11 @@ function translateProgressState(progressState: string): string {
     default:
       return progressState;
   }
+}
+
+function isTreasureHuntGameType(gameType?: string): boolean {
+  if (!gameType) return false;
+  return gameType.replace(/\s+/g, "").toLowerCase() === "treasurehunt";
 }
 
 function translateGameType(gameType?: string): string {
@@ -1580,6 +1586,8 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [deactivatingStageId, setDeactivatingStageId] = useState<string | null>(null);
   const [lifecycleActionPending, setLifecycleActionPending] = useState<LiveSessionLifecycleAction | null>(null);
   const [enrollmentActionPending, setEnrollmentActionPending] = useState<EnrollmentAction | null>(null);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
@@ -2584,6 +2592,48 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
   }
 
+  async function handleCreateSessionTeam(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedLiveSession || isCreatingTeam) {
+      return;
+    }
+
+    const trimmedTeamName = newTeamName.trim();
+    if (trimmedTeamName.length < 3) {
+      setErrorMessage("El nombre del equipo debe tener al menos 3 caracteres.");
+      return;
+    }
+
+    setIsCreatingTeam(true);
+    setErrorMessage(null);
+    setFeedback(null);
+
+    try {
+      const response = await fetch(`${liveSessionsUrl}/${selectedLiveSession.id}/session-teams`, {
+        method: "POST",
+        headers: {
+          ...createAuthorizedHeaders(accessToken),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ teamName: trimmedTeamName })
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setNewTeamName("");
+      await loadLiveSessions(selectedLiveSession.id);
+      await loadLiveSessionOverview(selectedLiveSession.id);
+      setFeedback(`Equipo "${trimmedTeamName}" creado. Los jugadores ya pueden unirse con el código de la sesión.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el equipo.");
+    } finally {
+      setIsCreatingTeam(false);
+    }
+  }
+
   async function handleApplyPenalty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -3189,6 +3239,41 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                             {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
                           </button>
                         </div>
+
+                        {selectedLiveSession.state === "Scheduled" ? (
+                          <div className="stack-sm">
+                            <span className="eyebrow">Crear equipo (operador)</span>
+                            <p className="text-muted text-xs">
+                              Podés armar equipos vacíos vos mismo para que los jugadores se unan, o ayudar si tienen
+                              problemas. El equipo queda disponible con el código de la sesión.
+                            </p>
+                            <form className="row-sm row-wrap" onSubmit={(event) => void handleCreateSessionTeam(event)}>
+                              <input
+                                className="form-input"
+                                maxLength={80}
+                                onChange={(event) => setNewTeamName(event.target.value)}
+                                placeholder="Nombre del equipo"
+                                value={newTeamName}
+                              />
+                              <button
+                                className="btn btn-primary"
+                                disabled={isCreatingTeam || newTeamName.trim().length < 3}
+                                type="submit"
+                              >
+                                {isCreatingTeam ? "Creando..." : "Crear equipo"}
+                              </button>
+                            </form>
+                            {selectedLiveSessionOverviewTeams.length > 0 ? (
+                              <div className="row-sm row-wrap">
+                                {selectedLiveSessionOverviewTeams.map((team) => (
+                                  <span className="badge badge-blue" key={team.sessionTeamId}>
+                                    {team.teamName}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </section>
 
                       <div className="row-sm row-wrap">
@@ -3261,6 +3346,28 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
                                 más adelante.
                               </span>
                               <p>{missionStage.prompt}</p>
+                              {isTreasureHuntGameType(missionStage.gameType) && missionStage.expectedQrHash?.trim() ? (
+                                <div className="qr-code-block">
+                                  <QrCode value={missionStage.expectedQrHash.trim()} size={132} />
+                                  <div className="stack-sm">
+                                    <span className="text-xs text-muted">
+                                      QR de esta etapa. Imprímelo para colocarlo en el punto físico o escanéalo para probar.
+                                    </span>
+                                    <button
+                                      className="btn btn-ghost btn-sm"
+                                      onClick={() =>
+                                        printQrCode(missionStage.expectedQrHash!.trim(), {
+                                          title: `Etapa #${missionStage.sessionStageOrder} · ${missionStage.name}`,
+                                          clue: missionStage.prompt,
+                                        })
+                                      }
+                                      type="button"
+                                    >
+                                      Imprimir QR
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
                               <div className="row-sm">
                                 <button
                                   className="btn btn-danger btn-sm"

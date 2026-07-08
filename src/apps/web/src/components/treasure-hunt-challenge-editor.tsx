@@ -7,6 +7,7 @@ import {
   createEmptySearchDraft,
 } from "./mission-authoring-model";
 import { HintEditor } from "./hint-editor";
+import { QrCode, printQrCode } from "./qr-code";
 
 type TreasureHuntChallengeEditorProps = {
   searches: SearchDraft[];
@@ -151,6 +152,29 @@ export function TreasureHuntChallengeEditor({
                 value={search.expectedQrHash}
               />
             </div>
+
+            {search.expectedQrHash.trim() ? (
+              <div className="qr-code-block">
+                <QrCode value={search.expectedQrHash.trim()} size={140} />
+                <div className="stack-sm">
+                  <span className="text-xs text-muted">
+                    Vista previa del QR que escaneará el jugador. Imprímelo y colócalo en el punto físico.
+                  </span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() =>
+                      printQrCode(search.expectedQrHash.trim(), {
+                        title: `Búsqueda ${index + 1}`,
+                        clue: search.clue.trim(),
+                      })
+                    }
+                    type="button"
+                  >
+                    Imprimir QR
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="form-row">
               <div className="form-group">
