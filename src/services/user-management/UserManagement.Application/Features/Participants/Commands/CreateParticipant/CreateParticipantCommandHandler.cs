@@ -3,9 +3,14 @@ using MediatR;
 using Umbral.ServiceDefaults;
 using UserManagement.Domain.Entities;
 
+using Microsoft.Extensions.Logging;
+
 namespace UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 
-public sealed class CreateParticipantCommandHandler(IOperatorAdministrationPort port)
+public sealed class CreateParticipantCommandHandler(
+    IOperatorAdministrationPort port,
+    IEmailNotificationService emailService,
+    ILogger<CreateParticipantCommandHandler> logger)
     : IRequestHandler<CreateParticipantCommand, OperatorUser>
 {
     public async Task<OperatorUser> Handle(CreateParticipantCommand request, CancellationToken cancellationToken)
@@ -66,6 +71,18 @@ public sealed class CreateParticipantCommandHandler(IOperatorAdministrationPort 
             throw new UmbralTechnicalException(
                 "participant_user_recovery_failed",
                 "Keycloak created the User but did not return it afterwards.");
+        }
+
+        try
+        {
+            await emailService.SendParticipantWelcomeAsync(
+                normalizedEmail,
+                normalizedUsername,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to send welcome email to participant {Email}.", normalizedEmail);
         }
 
         return participantUser;

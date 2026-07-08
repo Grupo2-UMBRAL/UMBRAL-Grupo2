@@ -13,4 +13,9 @@ public interface IEmailNotificationService
         string username,
         string newPassword,
         CancellationToken cancellationToken = default);
+
+    Task SendParticipantWelcomeAsync(
+        string email,
+        string username,
+        CancellationToken cancellationToken = default);
 }
