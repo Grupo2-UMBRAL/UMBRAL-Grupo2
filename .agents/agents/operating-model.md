@@ -6,9 +6,9 @@ Modelo operativo comun para agentes que trabajen en este repo.
 
 Leer en este orden:
 
-1. [../product/ers.md](../product/ers.md)
+1. [../../docs/product/ers.md](../../docs/product/ers.md)
 2. [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
-3. [../architecture/repo-structure.md](../architecture/repo-structure.md)
+3. [../../docs/architecture/repo-structure.md](../../docs/architecture/repo-structure.md)
 4. `src/*/CONTEXT.md` segun el bounded context afectado
 5. `docs/architecture/adr/` cuando exista una decision relevante
 
@@ -24,21 +24,15 @@ Leer en este orden:
 
 - Tratar `main` como rama protegida.
 - Hacer desarrollo solo en ramas `feature/*`, `fix/*` o equivalentes por cambio aislado.
-- Cuando haya multiples agentes trabajando desde tickets, asignar un unico orquestador como autoridad de Linear y `git`.
-- Cada ticket activo debe vivir en su propia branch y su propio `git worktree`.
-- Incluir siempre el identificador de Linear en la branch: `<tipo>/<issue-id>-<slug>`.
+- Cada cambio aislado debe vivir en su propia branch (y su propio `git worktree` cuando haya trabajo en paralelo).
+- Nombrar la branch por tipo y slug del cambio: `<tipo>/<slug>`.
 - Mantener commits atomicos: un solo cambio coherente por commit.
-- Usar mensajes `Conventional Commits` con referencia de Linear en el encabezado cuando aplique: `feat(LIN-123): mensaje`, `fix(LIN-123): mensaje`.
-- Si el cambio va a abrir pull request, enlazar el commit con un magic word no cerrador en el footer: `Refs LIN-123`.
-- Si el cambio se integrara sin PR por una excepcion explicita, usar un magic word cerrador en el commit final: `Fixes LIN-123`.
+- Usar mensajes `Conventional Commits`: `feat(scope): mensaje`, `fix(scope): mensaje`.
 - Preferir `rebase` para mantener historial lineal y reducir ruido de merges intermedios.
-- Antes de integrar una branch de ticket, hacer `fetch` de la rama de integracion remota y `rebase` de la branch del ticket sobre esa referencia; evitar mezclar primero cambios en `develop` local salvo necesidad explicita.
+- Antes de integrar una branch, hacer `fetch` de la rama de integracion remota y `rebase` de la branch sobre esa referencia; evitar mezclar primero cambios en `develop` local salvo necesidad explicita.
 - Mantener pull requests pequenos. La referencia objetivo es un maximo de `300` lineas cambiadas de codigo productivo por PR. Si el cambio real necesita mas, dividirlo por slices verticales o justificar la excepcion.
 - Incluir en cada PR:
-  - issue ID de Linear en el titulo
-  - magic word + issue ID en el cuerpo para el ticket principal, por defecto `Fixes LIN-123`
-  - `Refs <issue-id>` para tickets secundarios cuando un PR toca mas de un issue
-  - descripcion tecnica
+  - titulo y descripcion tecnica claros
   - criterios de aceptacion
   - evidencia de pruebas ejecutadas
 
@@ -72,7 +66,7 @@ Leer en este orden:
 - Cuando haya que elegir o ejecutar validacion local, usar `.agents/skills/local-validation/` para preferir los scripts reproducibles del repo sobre comandos armados ad hoc.
 - Durante el loop de implementacion, correr la validacion mas angosta que pruebe el area tocada; reservar la validacion completa para un solo gate final antes de merge o cierre tecnico.
 - Para el desarrollo backend, operar con TDD estricto (Red-Green-Refactor) un test a la vez. No escribir codigo de produccion sin un test en rojo. Validar la calidad final con pruebas de mutacion.
-- Los agentes ejecutores no deben crear ramas, mezclar tickets en un mismo workspace ni mover estados criticos del tracker sin pasar por el orquestador.
+- Los agentes ejecutores no deben mezclar cambios no relacionados en un mismo workspace ni en una misma branch.
 - En reviews, priorizar findings sobre testabilidad, fronteras de IO, manejo de errores, coherencia con lenguaje ubicuo y tamano del cambio.
 - Si el trabajo entra en loops de `docker compose`, preferir `ps`, `config`, logs acotados por servicio y archivos en `.worktrees/_runtime/` sobre streams largos en chat; para eso usar `.agents/skills/docker-compose-context-hygiene/`.
 
@@ -81,4 +75,4 @@ Leer en este orden:
 - `src/` contiene el mapa de contextos del proyecto y su lenguaje.
 - `.agents/` contains agents, skills, and runtime utilities.
 - `.agents/agents/` contains agentes esperados para la construccion del proyecto.
-- El repo todavia no define la estructura final de implementacion del monorepo.
+- `src/services/` ya contiene los microservicios construidos (mission-management, session-management, scoring-monitoring, user-management); `src/apps/` contiene web y mobile.

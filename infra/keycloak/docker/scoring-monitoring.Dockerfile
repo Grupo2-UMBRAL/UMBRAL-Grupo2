@@ -11,12 +11,12 @@ COPY src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api
 COPY src/services/scoring-monitoring/ScoringMonitoring.Application/ScoringMonitoring.Application.csproj src/services/scoring-monitoring/ScoringMonitoring.Application/
 COPY src/services/scoring-monitoring/ScoringMonitoring.Domain/ScoringMonitoring.Domain.csproj src/services/scoring-monitoring/ScoringMonitoring.Domain/
 COPY src/services/scoring-monitoring/ScoringMonitoring.Infrastructure/ScoringMonitoring.Infrastructure.csproj src/services/scoring-monitoring/ScoringMonitoring.Infrastructure/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj
 
 # 2) Copy the rest of the source and publish without re-restoring.
 COPY . .
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/services/scoring-monitoring/ScoringMonitoring.Api/ScoringMonitoring.Api.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false
 

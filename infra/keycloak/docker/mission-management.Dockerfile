@@ -11,12 +11,12 @@ COPY src/services/mission-management/MissionManagement.Api/MissionManagement.Api
 COPY src/services/mission-management/MissionManagement.Application/MissionManagement.Application.csproj src/services/mission-management/MissionManagement.Application/
 COPY src/services/mission-management/MissionManagement.Domain/MissionManagement.Domain.csproj src/services/mission-management/MissionManagement.Domain/
 COPY src/services/mission-management/MissionManagement.Infrastructure/MissionManagement.Infrastructure.csproj src/services/mission-management/MissionManagement.Infrastructure/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj
 
 # 2) Copy the rest of the source and publish without re-restoring.
 COPY . .
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/services/mission-management/MissionManagement.Api/MissionManagement.Api.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false
 

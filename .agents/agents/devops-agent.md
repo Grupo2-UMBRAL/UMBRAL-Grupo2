@@ -7,8 +7,8 @@ Define y mantiene la infraestructura de desarrollo, ejecucion local y validacion
 ## Lee primero
 
 - [operating-model.md](operating-model.md)
-- [../product/ers.md](../product/ers.md)
-- [../architecture/repo-structure.md](../architecture/repo-structure.md)
+- [../../docs/product/ers.md](../../docs/product/ers.md)
+- [../../docs/architecture/repo-structure.md](../../docs/architecture/repo-structure.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
 - [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)
 

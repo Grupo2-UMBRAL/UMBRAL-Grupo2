@@ -7,12 +7,11 @@ Implementa backend alineado al ERS, al context map y al lenguaje de dominio vige
 ## Lee primero
 
 - [operating-model.md](operating-model.md)
-- [../product/ers.md](../product/ers.md)
+- [../../docs/product/ers.md](../../docs/product/ers.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
 - [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
-- [../../src/session-management/CONTEXT.md](../../src/session-management/CONTEXT.md)
-- [../../src/scoring-monitoring/CONTEXT.md](../../src/scoring-monitoring/CONTEXT.md)
-- [../../src/services/user-management/CONTEXT.md](../../src/services/user-management/CONTEXT.md)
+- [../../src/services/session-management/CONTEXT.md](../../src/services/session-management/CONTEXT.md)
+- [../../src/services/scoring-monitoring/CONTEXT.md](../../src/services/scoring-monitoring/CONTEXT.md)
 - [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)
 
 ## Hace

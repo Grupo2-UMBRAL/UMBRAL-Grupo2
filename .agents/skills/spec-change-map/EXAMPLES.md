@@ -5,7 +5,7 @@
 Change: `SignalR` replaces generic WebSockets as a required implementation.
 
 - Category: technology constraint
-- Edit first: `ERS UMBRAL .md`
+- Edit first: `ers-umbral.md`
 - Propagate to:
   - `docs/product/ers.md`
   - `docs/architecture/adr/` if the team wants the trade-off recorded
@@ -17,7 +17,7 @@ Change: `SignalR` replaces generic WebSockets as a required implementation.
 Change: `Session Team` is renamed.
 
 - Category: domain terminology
-- Edit first: `src/session-management/CONTEXT.md`
+- Edit first: `src/services/session-management/CONTEXT.md`
 - Propagate to:
   - `docs/product/glossary.md`
   - `docs/product/ers.md`
@@ -29,7 +29,7 @@ Change: `Session Team` is renamed.
 Change: a new use case is added.
 
 - Category: requirement or use case
-- Edit first: `ERS UMBRAL .md`
+- Edit first: `ers-umbral.md`
 - Propagate to:
   - `docs/product/ers.md`
   - `open-questions.md` if it introduces ambiguities

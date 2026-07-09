@@ -8,12 +8,12 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props ./
 COPY src/shared/Umbral.ServiceDefaults/Umbral.ServiceDefaults.csproj src/shared/Umbral.ServiceDefaults/
 COPY src/apps/edge-proxy/Umbral.EdgeProxy/Umbral.EdgeProxy.csproj src/apps/edge-proxy/Umbral.EdgeProxy/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/apps/edge-proxy/Umbral.EdgeProxy/Umbral.EdgeProxy.csproj
 
 # 2) Copy the rest of the source and publish without re-restoring.
 COPY . .
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/apps/edge-proxy/Umbral.EdgeProxy/Umbral.EdgeProxy.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false
 

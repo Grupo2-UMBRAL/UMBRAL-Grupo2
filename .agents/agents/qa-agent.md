@@ -7,8 +7,8 @@ Disena y mantiene pruebas que validen reglas de negocio, casos de uso y regresio
 ## Lee primero
 
 - [operating-model.md](operating-model.md)
-- [../product/ers.md](../product/ers.md)
-- [../product/open-questions.md](../product/open-questions.md)
+- [../../docs/product/ers.md](../../docs/product/ers.md)
+- [../../docs/product/open-questions.md](../../docs/product/open-questions.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)
 - `src/*/CONTEXT.md` del area afectada
 - [../skills/local-validation/SKILL.md](../skills/local-validation/SKILL.md)

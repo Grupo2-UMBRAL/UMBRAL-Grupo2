@@ -11,12 +11,12 @@ COPY src/services/user-management/UserManagement.Api/UserManagement.Api.csproj s
 COPY src/services/user-management/UserManagement.Application/UserManagement.Application.csproj src/services/user-management/UserManagement.Application/
 COPY src/services/user-management/UserManagement.Domain/UserManagement.Domain.csproj src/services/user-management/UserManagement.Domain/
 COPY src/services/user-management/UserManagement.Infrastructure/UserManagement.Infrastructure.csproj src/services/user-management/UserManagement.Infrastructure/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/services/user-management/UserManagement.Api/UserManagement.Api.csproj
 
 # 2) Copy the rest of the source and publish without re-restoring.
 COPY . .
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/services/user-management/UserManagement.Api/UserManagement.Api.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false
 

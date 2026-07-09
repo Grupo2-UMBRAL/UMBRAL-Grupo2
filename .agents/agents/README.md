@@ -12,8 +12,6 @@
 
 - [operating-model.md](operating-model.md)
 - [domain.md](domain.md)
-- [issue-tracker.md](issue-tracker.md)
-- [triage-labels.md](triage-labels.md)
 - [../../docs/product/ers.md](../../docs/product/ers.md)
 - [../../docs/architecture/repo-structure.md](../../docs/architecture/repo-structure.md)
 - [../../CONTEXT-MAP.md](../../CONTEXT-MAP.md)

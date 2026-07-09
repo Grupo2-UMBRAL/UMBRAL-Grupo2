@@ -1,6 +1,6 @@
 # ERS Normalizado
 
-Documento operativo derivado de [../../README/ERS UMBRAL .md](../../README/ERS%20UMBRAL%20.md) para consumo de agentes.
+Documento operativo derivado de [ers-umbral.md](ers-umbral.md) para consumo de agentes.
 
 ## Proposito
 

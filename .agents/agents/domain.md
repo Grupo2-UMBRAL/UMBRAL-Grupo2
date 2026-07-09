@@ -9,7 +9,6 @@ Este repo usa un unico conjunto compartido de documentos de dominio para varios 
 - [../../src/services/mission-management/CONTEXT.md](../../src/services/mission-management/CONTEXT.md)
 - [../../src/services/session-management/CONTEXT.md](../../src/services/session-management/CONTEXT.md)
 - [../../src/services/scoring-monitoring/CONTEXT.md](../../src/services/scoring-monitoring/CONTEXT.md)
-- [../../src/services/user-management/CONTEXT.md](../../src/services/user-management/CONTEXT.md)
 - `docs/architecture/adr/` cuando exista y sea relevante
 
 ## Uso esperado

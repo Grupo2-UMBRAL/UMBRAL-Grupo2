@@ -11,12 +11,12 @@ COPY src/services/session-management/SessionManagement.Api/SessionManagement.Api
 COPY src/services/session-management/SessionManagement.Application/SessionManagement.Application.csproj src/services/session-management/SessionManagement.Application/
 COPY src/services/session-management/SessionManagement.Domain/SessionManagement.Domain.csproj src/services/session-management/SessionManagement.Domain/
 COPY src/services/session-management/SessionManagement.Infrastructure/SessionManagement.Infrastructure.csproj src/services/session-management/SessionManagement.Infrastructure/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/services/session-management/SessionManagement.Api/SessionManagement.Api.csproj
 
 # 2) Copy the rest of the source and publish without re-restoring.
 COPY . .
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/services/session-management/SessionManagement.Api/SessionManagement.Api.csproj \
     -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
