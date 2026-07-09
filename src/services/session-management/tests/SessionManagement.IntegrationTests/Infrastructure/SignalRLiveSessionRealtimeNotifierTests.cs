@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Moq;
-using SessionManagement.Api.Realtime;
+using SessionManagement.Infrastructure.Realtime;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.SessionSnapshots;

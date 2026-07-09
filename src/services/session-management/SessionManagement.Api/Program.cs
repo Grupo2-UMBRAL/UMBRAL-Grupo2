@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using SessionManagement.Api.Realtime;
 using SessionManagement.Application;
-using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Infrastructure;
 using SessionManagement.Infrastructure.Persistence;
+using SessionManagement.Infrastructure.Realtime;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,9 +32,6 @@ builder.Services.AddUmbralApiDefaults(
     });
 builder.Services.AddSessionManagementApplication();
 builder.Services.AddSessionManagementInfrastructure(builder.Configuration);
-
-// SignalR is the API-layer transport for the Application's ISessionRealtimeNotifier contract.
-builder.Services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
 
 var app = builder.Build();
 

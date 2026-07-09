@@ -4,7 +4,9 @@ using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Abstractions;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Infrastructure.Persistence;
+using SessionManagement.Infrastructure.Realtime;
 using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Infrastructure;
@@ -26,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
+        services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionManagementLiveSessionCatalog, MissionManagementLiveSessionCatalog>(client =>

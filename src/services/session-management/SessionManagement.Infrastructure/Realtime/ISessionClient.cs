@@ -1,10 +1,10 @@
 using SessionManagement.Application.Abstractions.Realtime;
 
-namespace SessionManagement.Api.Realtime;
+namespace SessionManagement.Infrastructure.Realtime;
 
 /// <summary>
-/// Strongly-typed SignalR client contract for the session hub. Lives in the API/presentation
-/// layer because it is a transport-facing detail; the Application layer only knows the abstract
+/// Strongly-typed SignalR client contract for the session hub. Lives in Infrastructure alongside
+/// the hub and notifier that use it; the Application layer only knows the abstract
 /// <see cref="ISessionRealtimeNotifier"/> and the payload records it carries.
 /// </summary>
 public interface ISessionClient
