@@ -68,7 +68,7 @@ public sealed class ApplyPenaltyHandler(
         var recordedAtUtc = timeProvider.GetUtcNow();
         var operatorUserId = currentOperatorIdentity.GetRequiredOperatorUserId();
         var scoringResponse = await scoringAuditClient.ApplyPenaltyAsync(
-            new Scoring.ApplyPenaltyRequest(
+            new Abstractions.Scoring.ApplyPenaltyRequest(
                 request.LiveSessionId,
                 request.SessionTeamId,
                 request.CommandId,
