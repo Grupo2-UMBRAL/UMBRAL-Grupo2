@@ -7,7 +7,7 @@ using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Features.SessionSnapshots;
 using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Application.Hubs.Contracts;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
 

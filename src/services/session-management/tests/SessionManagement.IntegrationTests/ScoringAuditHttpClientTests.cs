@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Infrastructure;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;

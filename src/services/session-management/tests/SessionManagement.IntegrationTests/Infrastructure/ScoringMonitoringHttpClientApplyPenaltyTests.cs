@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.IntegrationTests.Infrastructure.Fixtures;
 using SessionManagement.Infrastructure;
 using Xunit;

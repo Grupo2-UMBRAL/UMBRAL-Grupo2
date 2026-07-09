@@ -1,8 +1,7 @@
 using SessionManagement.Application.Features.EvidenceSubmissions;
-using SessionManagement.Application.Realtime;
 using SessionManagement.Application.Features.LiveSessions;
 using SessionManagement.Application.Features.SessionLifecycle;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Infrastructure.Persistence;
@@ -27,7 +26,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IJoinCodeGenerator, CryptographicJoinCodeGenerator>();
         services.AddScoped<ICurrentOperatorIdentity, HttpContextCurrentOperatorIdentity>();
         services.AddScoped<ICurrentParticipantIdentity, HttpContextCurrentParticipantIdentity>();
-        services.AddScoped<ISessionRealtimeNotifier, SignalRLiveSessionRealtimeNotifier>();
         services.AddTransient<AuthHeaderForwardingHandler>();
         services
             .AddHttpClient<IMissionManagementLiveSessionCatalog, MissionManagementLiveSessionCatalog>(client =>

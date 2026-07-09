@@ -2,13 +2,12 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.Hints;
-using SessionManagement.Application.Realtime;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Realtime;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Features.SessionSnapshots;
 using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Application.Hubs.Contracts;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
 
@@ -398,10 +397,10 @@ public sealed class HintReleaseQaTests
             RecordStageCreditRequest request,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<Application.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
-            Application.Scoring.ApplyPenaltyRequest request,
+        public Task<Application.Abstractions.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
+            Application.Abstractions.Scoring.ApplyPenaltyRequest request,
             CancellationToken cancellationToken) =>
-            Task.FromResult(new Application.Scoring.ApplyPenaltyResponse(
+            Task.FromResult(new Application.Abstractions.Scoring.ApplyPenaltyResponse(
                 request.LiveSessionId,
                 request.SessionTeamId,
                 request.CommandId,

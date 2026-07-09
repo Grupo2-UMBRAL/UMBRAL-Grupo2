@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 
 namespace SessionManagement.Infrastructure;
 

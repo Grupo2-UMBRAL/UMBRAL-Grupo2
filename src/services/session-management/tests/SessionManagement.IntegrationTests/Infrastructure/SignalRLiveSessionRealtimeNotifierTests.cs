@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using Moq;
+using SessionManagement.Api.Realtime;
 using SessionManagement.Application.Features.SessionLifecycle;
-using SessionManagement.Application.Hubs;
-using SessionManagement.Application.Hubs.Contracts;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.SessionSnapshots;
-using SessionManagement.Infrastructure;
 using Xunit;
 
 namespace SessionManagement.IntegrationTests.Infrastructure;

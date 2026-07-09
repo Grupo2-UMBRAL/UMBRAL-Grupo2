@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.SignalR;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.SessionLifecycle;
-using SessionManagement.Application.Realtime;
-using SessionManagement.Application.Hubs;
-using SessionManagement.Application.Hubs.Contracts;
 
-namespace SessionManagement.Infrastructure;
+namespace SessionManagement.Api.Realtime;
 
+/// <summary>
+/// SignalR-backed implementation of <see cref="ISessionRealtimeNotifier"/>. Lives in the API layer
+/// alongside the hub it drives so the Application layer stays free of any web/transport framework.
+/// </summary>
 public sealed class SignalRLiveSessionRealtimeNotifier(IHubContext<SessionManagementHub, ISessionClient> hubContext)
     : ISessionRealtimeNotifier
 {

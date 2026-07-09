@@ -1,13 +1,12 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Features.EvidenceSubmissions;
-using SessionManagement.Application.Realtime;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Realtime;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Features.SessionSnapshots;
 using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Application.Hubs.Contracts;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
 

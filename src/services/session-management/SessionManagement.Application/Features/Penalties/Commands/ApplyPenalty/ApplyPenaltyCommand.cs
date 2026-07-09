@@ -1,5 +1,5 @@
 using MediatR;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 
 namespace SessionManagement.Application.Features.Penalties;
 

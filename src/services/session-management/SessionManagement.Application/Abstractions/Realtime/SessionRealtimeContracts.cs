@@ -1,18 +1,7 @@
 using System.Text.Json.Serialization;
 using SessionManagement.Application.Features.SessionSnapshots;
 
-namespace SessionManagement.Application.Hubs.Contracts;
-
-public interface ISessionClient
-{
-    Task ReceiveSessionStateChanged(SessionStateChangedPayload payload);
-
-    Task ReceiveTeamProgressChanged(TeamProgressChangedPayload payload);
-
-    Task ReceiveEvidenceSubmissionOutcomeChanged(EvidenceSubmissionOutcomeChangedPayload payload);
-
-    Task ReceiveHintUnlocked(HintUnlockedPayload payload);
-}
+namespace SessionManagement.Application.Abstractions.Realtime;
 
 public enum SnapshotRefreshPolicy
 {

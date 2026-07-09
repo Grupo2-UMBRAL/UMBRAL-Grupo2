@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using SessionManagement.Application.Hubs.Contracts;
 
-namespace SessionManagement.Application.Hubs;
+namespace SessionManagement.Api.Realtime;
 
 [Authorize]
 public sealed class SessionManagementHub : Hub<ISessionClient>;

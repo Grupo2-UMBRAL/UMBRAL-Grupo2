@@ -2,10 +2,9 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.LiveSessions;
-using SessionManagement.Application.Realtime;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Application.Hubs.Contracts;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
 

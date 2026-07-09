@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.EvidenceSubmissions;
 using SessionManagement.Application.Features.Penalties;
-using SessionManagement.Application.Scoring;
+using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Infrastructure.Persistence;
 using Xunit;
@@ -174,7 +174,7 @@ public sealed class PenaltyApplicationQaTests
 
     private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
     {
-        public List<Application.Scoring.ApplyPenaltyRequest> Requests { get; } = [];
+        public List<Application.Abstractions.Scoring.ApplyPenaltyRequest> Requests { get; } = [];
 
         public Task RecordStageCreditAsync(
             RecordStageCreditRequest request,
@@ -186,13 +186,13 @@ public sealed class PenaltyApplicationQaTests
             string description,
             CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task<Application.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
-            Application.Scoring.ApplyPenaltyRequest request,
+        public Task<Application.Abstractions.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
+            Application.Abstractions.Scoring.ApplyPenaltyRequest request,
             CancellationToken cancellationToken)
         {
             Requests.Add(request);
 
-            return Task.FromResult(new Application.Scoring.ApplyPenaltyResponse(
+            return Task.FromResult(new Application.Abstractions.Scoring.ApplyPenaltyResponse(
                 request.LiveSessionId,
                 request.SessionTeamId,
                 request.CommandId,

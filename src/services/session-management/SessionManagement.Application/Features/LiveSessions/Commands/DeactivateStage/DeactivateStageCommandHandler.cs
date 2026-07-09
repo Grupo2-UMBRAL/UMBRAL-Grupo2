@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
-using SessionManagement.Application.Realtime;
+using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Abstractions;
