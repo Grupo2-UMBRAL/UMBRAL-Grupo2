@@ -1,5 +1,5 @@
 using MediatR;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 
@@ -11,6 +11,6 @@ namespace UserManagement.Application.Features.Participants.Commands.CreatePartic
 public sealed record CreateParticipantCommand(
     string? Username,
     string? Email,
-    string? Password) : IRequest<OperatorUser>
+    string? Password) : IRequest<ParticipantDto>
 {
 }

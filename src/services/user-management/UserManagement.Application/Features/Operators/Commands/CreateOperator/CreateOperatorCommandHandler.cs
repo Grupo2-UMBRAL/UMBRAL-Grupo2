@@ -2,7 +2,8 @@ using UserManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
+using UserManagement.Application.Common.Mappings;
 
 namespace UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
@@ -10,9 +11,9 @@ public sealed class CreateOperatorCommandHandler(
     IOperatorAdministrationPort port,
     IEmailNotificationService emailService,
     ILogger<CreateOperatorCommandHandler> logger)
-    : IRequestHandler<CreateOperatorCommand, OperatorUser>
+    : IRequestHandler<CreateOperatorCommand, OperatorDto>
 {
-    public async Task<OperatorUser> Handle(CreateOperatorCommand request, CancellationToken cancellationToken)
+    public async Task<OperatorDto> Handle(CreateOperatorCommand request, CancellationToken cancellationToken)
     {
         // 1. Validation
         CreateOperatorCommandValidator.Validate(request);
@@ -84,7 +85,7 @@ public sealed class CreateOperatorCommandHandler(
                 operatorUser.Email);
         }
 
-        return operatorUser;
+        return operatorUser.ToDto();
     }
 }
 

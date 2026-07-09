@@ -51,7 +51,8 @@ public sealed class DeactivateOperatorCommandHandlerTests
 
         var result = await _handler.Handle(new DeactivateOperatorCommand("user-1"), CancellationToken.None);
 
-        Assert.Equal(inactive, result);
+        Assert.Equal(inactive.Id, result.Id);
+        Assert.False(result.IsActive);
         _portMock.Verify(
             p => p.SetUserEnabledAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Never);

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using MissionManagement.Application.Features.Missions;
+using MissionManagement.Application.Common.Dtos;
 using MissionManagement.Domain.Missions;
 using MissionManagement.UnitTests;
 using Xunit;

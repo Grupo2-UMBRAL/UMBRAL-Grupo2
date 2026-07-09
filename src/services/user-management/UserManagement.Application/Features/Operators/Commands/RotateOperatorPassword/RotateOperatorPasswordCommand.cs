@@ -1,10 +1,8 @@
 using MediatR;
-using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
 
-public sealed record RotateOperatorPasswordCommand(string UserId, string? Password) : IRequest<OperatorUser>
+public sealed record RotateOperatorPasswordCommand(string UserId, string? Password) : IRequest<OperatorDto>
 {
 }
-

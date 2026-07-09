@@ -1,8 +1,8 @@
 using System.Threading.RateLimiting;
 using Umbral.ServiceDefaults;
 using UserManagement.Api.Controllers;
+using UserManagement.Application;
 using UserManagement.Infrastructure;
-using UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddUmbralTelemetry();
@@ -11,7 +11,7 @@ builder.Services.AddUmbralTelemetry();
 builder.Services.AddControllers();
 builder.Services.AddUmbralApiDefaults(builder.Configuration);
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateOperatorCommandHandler).Assembly));
+builder.Services.AddUserManagementApplication();
 builder.Services.AddUserManagementInfrastructure(builder.Configuration);
 
 // Public participant self-registration is anonymous, so rate limit it per client IP to blunt abuse.

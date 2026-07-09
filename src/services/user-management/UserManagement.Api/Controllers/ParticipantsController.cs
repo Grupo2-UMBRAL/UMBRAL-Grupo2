@@ -25,8 +25,8 @@ public sealed class ParticipantsController(ISender sender) : ControllerBase
         var participant = await sender.Send(request, cancellationToken);
 
         return Created(
-            $"/api/participants/{Uri.EscapeDataString(participant.Id)}",
-            new { userId = participant.Id, username = participant.Username });
+            $"/api/participants/{Uri.EscapeDataString(participant.UserId)}",
+            new { userId = participant.UserId, username = participant.Username });
     }
 }
 

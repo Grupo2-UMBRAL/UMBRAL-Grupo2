@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using MediatR;
 using ScoringMonitoring.Infrastructure;
 using Umbral.ServiceDefaults;
 
@@ -28,7 +27,7 @@ builder.Services.AddUmbralApiDefaults(
         };
     });
 builder.Services.AddSignalR();
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<IScoringMonitoringDbContext>());
+builder.Services.AddScoringMonitoringApplication();
 builder.Services.AddScoringMonitoringInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IScoringMonitoringDbContext>(serviceProvider => serviceProvider.GetRequiredService<ScoringMonitoringDbContext>());
 builder.Services.AddScoped<IScoringMonitoringUpdatesPublisher, SignalRScoringMonitoringUpdatesPublisher>();

@@ -1,4 +1,5 @@
 using Umbral.ServiceDefaults;
+using UserManagement.Application.Common;
 
 namespace UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
@@ -10,7 +11,7 @@ public static class CreateOperatorCommandValidator
         NormalizeEmail(request.Email);
         NormalizeRequiredText(request.FirstName, "First name", 80, "operator_first_name");
         NormalizeRequiredText(request.LastName, "Last name", 80, "operator_last_name");
-        NormalizePassword(request.Password);
+        PasswordPolicy.Normalize(request.Password, "operator_password");
     }
 
     private static string NormalizeRequiredText(string? value, string fieldName, int maximumLength, string code)
@@ -64,21 +65,6 @@ public static class CreateOperatorCommandValidator
         }
 
         return email;
-    }
-
-    private static string NormalizePassword(string? value)
-    {
-        var password = NormalizeRequiredText(value, "Password", 128, "operator_password");
-
-        if (password.Length < 8)
-        {
-            throw new UmbralDomainException(
-                "operator_password_too_short",
-                "Password must contain at least 8 characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return password;
     }
 }
 

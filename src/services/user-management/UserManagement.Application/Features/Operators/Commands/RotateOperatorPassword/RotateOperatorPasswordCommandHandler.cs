@@ -2,7 +2,9 @@ using UserManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common;
+using UserManagement.Application.Common.Dtos;
+using UserManagement.Application.Common.Mappings;
 
 namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
 
@@ -10,19 +12,14 @@ public sealed class RotateOperatorPasswordCommandHandler(
     IOperatorAdministrationPort port,
     IEmailNotificationService emailService,
     ILogger<RotateOperatorPasswordCommandHandler> logger)
-    : IRequestHandler<RotateOperatorPasswordCommand, OperatorUser>
+    : IRequestHandler<RotateOperatorPasswordCommand, OperatorDto>
 {
-    public async Task<OperatorUser> Handle(RotateOperatorPasswordCommand request, CancellationToken cancellationToken)
+    public async Task<OperatorDto> Handle(RotateOperatorPasswordCommand request, CancellationToken cancellationToken)
     {
-        var normalizedUserId = request.UserId?.Trim();
+        RotateOperatorPasswordCommandValidator.Validate(request);
 
-        if (string.IsNullOrWhiteSpace(normalizedUserId))
-        {
-            throw new UmbralDomainException(
-                "operator_user_id_required",
-                "Operator user id is required.",
-                UmbralFailureCategory.Validation);
-        }
+        var normalizedUserId = request.UserId.Trim();
+        var normalizedPassword = PasswordPolicy.Normalize(request.Password, "operator_password");
 
         var operators = await port.ListOperatorsAsync(cancellationToken);
         var operatorUser = operators.FirstOrDefault(candidate => candidate.Id == normalizedUserId);
@@ -35,9 +32,8 @@ public sealed class RotateOperatorPasswordCommandHandler(
                 UmbralFailureCategory.NotFound);
         }
 
-        var normalizedPassword = NormalizePassword(request.Password);
-        
-        // This is where we satisfy the rule: "The correct flow must pass first through the User Microservice endpoint... then communicate internally with Keycloak"
+        // The correct flow passes first through the User microservice endpoint, which then talks to
+        // Keycloak internally through the infrastructure port.
         await port.RotateOperatorPasswordAsync(normalizedUserId, normalizedPassword, cancellationToken);
 
         // Notification — fire-and-forget semantics; failure does NOT revert the password change.
@@ -53,39 +49,6 @@ public sealed class RotateOperatorPasswordCommandHandler(
                 operatorUser.Email);
         }
 
-        return operatorUser;
-    }
-
-    private static string NormalizePassword(string? value)
-    {
-        var password = value?.Trim();
-
-        if (string.IsNullOrWhiteSpace(password))
-        {
-            throw new UmbralDomainException(
-                "operator_password_required",
-                "Password is required.",
-                UmbralFailureCategory.Validation);
-        }
-
-        if (password.Length > 128)
-        {
-            throw new UmbralDomainException(
-                "operator_password_too_long",
-                "Password must stay under 128 characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        if (password.Length < 8)
-        {
-            throw new UmbralDomainException(
-                "operator_password_too_short",
-                "Password must contain at least 8 characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return password;
+        return operatorUser.ToDto();
     }
 }
-
-

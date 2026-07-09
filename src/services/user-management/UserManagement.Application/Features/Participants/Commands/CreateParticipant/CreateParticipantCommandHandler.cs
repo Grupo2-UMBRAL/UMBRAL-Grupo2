@@ -1,7 +1,8 @@
 using UserManagement.Application.Abstractions;
 using MediatR;
 using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
+using UserManagement.Application.Common.Mappings;
 
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +12,9 @@ public sealed class CreateParticipantCommandHandler(
     IOperatorAdministrationPort port,
     IEmailNotificationService emailService,
     ILogger<CreateParticipantCommandHandler> logger)
-    : IRequestHandler<CreateParticipantCommand, OperatorUser>
+    : IRequestHandler<CreateParticipantCommand, ParticipantDto>
 {
-    public async Task<OperatorUser> Handle(CreateParticipantCommand request, CancellationToken cancellationToken)
+    public async Task<ParticipantDto> Handle(CreateParticipantCommand request, CancellationToken cancellationToken)
     {
         // 1. Validation
         CreateParticipantCommandValidator.Validate(request);
@@ -85,6 +86,6 @@ public sealed class CreateParticipantCommandHandler(
             logger.LogWarning(ex, "Failed to send welcome email to participant {Email}.", normalizedEmail);
         }
 
-        return participantUser;
+        return participantUser.ToParticipantDto();
     }
 }

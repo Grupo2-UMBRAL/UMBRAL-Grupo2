@@ -84,7 +84,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
         var result = await _handler.Handle(
             new RotateOperatorPasswordCommand("  user-1  ", "  NewSecurePass1  "), CancellationToken.None);
 
-        Assert.Equal(user, result);
+        Assert.Equal(user.Id, result.Id);
         _portMock.Verify(
             p => p.RotateOperatorPasswordAsync("user-1", "NewSecurePass1", It.IsAny<CancellationToken>()),
             Times.Once);

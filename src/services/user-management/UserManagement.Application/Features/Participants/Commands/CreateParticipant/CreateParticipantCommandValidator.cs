@@ -1,4 +1,5 @@
 using Umbral.ServiceDefaults;
+using UserManagement.Application.Common;
 
 namespace UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 
@@ -8,7 +9,7 @@ public static class CreateParticipantCommandValidator
     {
         NormalizeUsername(request.Username);
         NormalizeEmail(request.Email);
-        NormalizePassword(request.Password);
+        PasswordPolicy.Normalize(request.Password, "participant_password");
     }
 
     private static string NormalizeRequiredText(string? value, string fieldName, int maximumLength, string code)
@@ -70,20 +71,5 @@ public static class CreateParticipantCommandValidator
         }
 
         return email;
-    }
-
-    private static string NormalizePassword(string? value)
-    {
-        var password = NormalizeRequiredText(value, "Password", 128, "participant_password");
-
-        if (password.Length < 8)
-        {
-            throw new UmbralDomainException(
-                "participant_password_too_short",
-                "Password must contain at least 8 characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return password;
     }
 }

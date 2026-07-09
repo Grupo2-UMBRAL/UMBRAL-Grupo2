@@ -50,10 +50,11 @@ public class CreateParticipantCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().BeEquivalentTo(participantUser);
+        result.Should().NotBeNull();
+        result.UserId.Should().Be("player-123");
         _emailMock.Verify(e => e.SendParticipantWelcomeAsync(
-            "test@example.com",
-            "testuser",
+            "player1@example.com",
+            "player1",
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -90,7 +91,7 @@ public class CreateParticipantCommandHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(participantUser.Id);
+        result.UserId.Should().Be(participantUser.Id);
     }
 
     [Fact]

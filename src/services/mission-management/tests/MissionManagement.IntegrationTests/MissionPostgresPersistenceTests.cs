@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MissionManagement.Application.Features.Missions;
+using MissionManagement.Application.Common.Dtos;
 using MissionManagement.Domain.Missions;
 using MissionManagement.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;

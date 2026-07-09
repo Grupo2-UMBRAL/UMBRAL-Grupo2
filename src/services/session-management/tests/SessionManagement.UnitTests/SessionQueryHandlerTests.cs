@@ -19,8 +19,6 @@ file static class QueryScaffold
 
     public static IRepository<LiveSession> Repository(LiveSession session) => new FakeRepository<LiveSession>([session]);
 
-    public static IUnitOfWork UnitOfWork() => new Mock<IUnitOfWork>().Object;
-
     public static TimeProvider Clock() => new FixedTimeProvider(SampleLiveSessions.Now);
 
     public static ICurrentParticipantIdentity Participants(string participantUserId)

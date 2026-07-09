@@ -1,6 +1,5 @@
 using MediatR;
-using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
@@ -9,7 +8,7 @@ public sealed record CreateOperatorCommand(
     string? Email,
     string? FirstName,
     string? LastName,
-    string? Password) : IRequest<OperatorUser>
+    string? Password) : IRequest<OperatorDto>
 {
 }
 

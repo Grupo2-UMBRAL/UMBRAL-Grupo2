@@ -1,5 +1,4 @@
 using SessionManagement.Domain.LiveSessions;
-using Umbral.ServiceDefaults;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;

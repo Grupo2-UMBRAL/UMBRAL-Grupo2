@@ -1,7 +1,5 @@
 using MissionManagement.Domain.Missions;
-using MissionManagement.Application.Abstractions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
@@ -32,17 +30,8 @@ public sealed class UpdateMissionCommandHandler(
             request.Description,
             request.MaximumDurationMinutes);
 
-        var nameAlreadyExists = await missionRepository
-            .AnyAsync(
-                existingMission => existingMission.Id != request.MissionId && existingMission.Name == mission.Name,
-                cancellationToken);
-        if (nameAlreadyExists)
-        {
-            throw new UmbralDomainException(
-                "mission_name_duplicate",
-                $"Mission '{mission.Name}' already exists.",
-                UmbralFailureCategory.Conflict);
-        }
+        await MissionNameUniquenessValidator.EnsureAvailableAsync(
+            missionRepository, mission.Name, excludeMissionId: request.MissionId, cancellationToken);
 
         if (request.Items is null)
         {

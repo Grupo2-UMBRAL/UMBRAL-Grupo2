@@ -1,10 +1,8 @@
 using MediatR;
-using Umbral.ServiceDefaults;
-using UserManagement.Domain.Entities;
+using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Queries.ListOperators;
 
-public sealed record ListOperatorsQuery : IRequest<IReadOnlyList<OperatorUser>>
+public sealed record ListOperatorsQuery : IRequest<IReadOnlyList<OperatorDto>>
 {
 }
-

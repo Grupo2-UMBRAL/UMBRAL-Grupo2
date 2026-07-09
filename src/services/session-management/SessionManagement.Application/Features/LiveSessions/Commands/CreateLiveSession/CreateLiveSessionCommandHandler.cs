@@ -1,6 +1,5 @@
 using MediatR;
 using Umbral.ServiceDefaults;
-using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
