@@ -1,0 +1,280 @@
+/* ================================================================
+   LIVE SESSION DASHBOARD (Bento Grid 100vh)
+   ================================================================ */
+
+.ls-dashboard-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Header */
+.ls-dashboard-header {
+  height: 80px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-xl);
+  background-color: var(--bg);
+}
+
+.ls-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.ls-sync-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.ls-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.ls-clock {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.ls-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Main Grid */
+.ls-dashboard-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 30% 45% 1fr;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  overflow: hidden; /* No scroll at root level */
+  height: calc(100vh - 80px);
+}
+
+.ls-column {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ls-column-header {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-raised);
+}
+
+.ls-column-header h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ls-column-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Scrollbar styles for columns */
+.ls-column-content::-webkit-scrollbar {
+  width: 8px;
+}
+.ls-column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ls-column-content::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+.ls-column-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Team List Items */
+.ls-team-item {
+  background-color: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ls-team-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ls-team-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ls-team-stage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.ls-team-score {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+/* Segmented Controls */
+.ls-segmented-controls {
+  display: flex;
+  background-color: var(--bg-deep);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+  border: 1px solid var(--border);
+}
+
+.ls-segment-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.ls-segment-btn:hover {
+  color: var(--text);
+  background-color: var(--surface-hover);
+}
+
+.ls-segment-btn.active {
+  background-color: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-strong);
+}
+
+/* Custom inputs inside forms */
+.ls-input {
+  width: 100%;
+  background-color: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: var(--text-base);
+  transition: border-color var(--duration-fast);
+}
+
+.ls-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Audit Log Timeline */
+.ls-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  position: relative;
+  padding-left: var(--space-md);
+}
+
+.ls-timeline::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 6px;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--border-strong);
+}
+
+.ls-timeline-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ls-timeline-dot {
+  position: absolute;
+  left: calc(var(--space-md) * -1);
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--surface);
+}
+
+.ls-timeline-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.ls-timeline-content {
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+/* Action Buttons specific styling */
+.btn-red-outline {
+  border: 1px solid var(--red);
+  color: var(--red);
+  background: transparent;
+}
+.btn-red-outline:hover {
+  background: var(--red-subtle);
+}
+
+.btn-white-outline {
+  border: 1px solid var(--text);
+  color: var(--text);
+  background: transparent;
+}
+.btn-white-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-orange-fill {
+  background: var(--accent);
+  color: var(--bg-deep);
+  border: none;
+}
+.btn-orange-fill:hover {
+  background: var(--accent-hover);
+}

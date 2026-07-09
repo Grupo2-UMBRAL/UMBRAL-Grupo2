@@ -8,6 +8,7 @@ import {
 } from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
 import { QrCode, printQrCode } from "./qr-code";
+import "./live-session-dashboard.css";
 
 // Vocabulario del front: "etapa" = la unidad jugable (el "play" del backend),
 // "misión" = la plantilla, "sesión" = la LiveSession en curso. El endpoint de
@@ -1588,6 +1589,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [enrollmentActionPending, setEnrollmentActionPending] = useState<EnrollmentAction | null>(null);
   const [newTeamName, setNewTeamName] = useState("");
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+  const [activeDashboardTab, setActiveDashboardTab] = useState<"Resumen" | "Evidencias" | "Pistas" | "Penalizaciones">("Resumen");
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
@@ -1627,7 +1629,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   );
 
   const selectedLiveSession =
-    liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? liveSessions[0] ?? null;
+    liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? null;
   const isSelectedLiveSessionActive =
     selectedLiveSession !== null && ["Active", "Paused"].includes(selectedLiveSession.state);
   const isSelectedLiveSessionStageDeactivationAllowed =
@@ -1789,7 +1791,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
         const nextLiveSessionId =
           preferredLiveSessionId && payload.some((liveSession) => liveSession.id === preferredLiveSessionId)
             ? preferredLiveSessionId
-            : payload[0]?.id ?? null;
+            : null;
 
         setSelectedLiveSessionId(nextLiveSessionId);
       } catch (error) {
@@ -2813,6 +2815,522 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     }
   }
 
+  // --- DASHBOARD DE SESIÓN (PANTALLA COMPLETA) ---
+  if (selectedLiveSessionId && selectedLiveSession) {
+    return (
+      <div className="ls-dashboard-root">
+        <header className="ls-dashboard-header">
+          <div className="ls-header-left">
+            <h2>{selectedLiveSession.name}</h2>
+            <div className="ls-sync-status">
+              <span className={getConnectionDotClass(sessionRealtimeConnection)}></span>
+              Sincronización: {sessionRealtimeConnection.label}
+            </div>
+          </div>
+          <div className="ls-header-center">
+             <div className="ls-clock">
+               {selectedLiveSession.state === "Scheduled" ? (
+                 selectedLiveSession.scheduledStartAtUtc ? formatTimestamp(selectedLiveSession.scheduledStartAtUtc) : "Sin programar"
+               ) : (
+                 formatRemainingSeconds(selectedLiveSessionOverview?.remainingSeconds)
+               )}
+             </div>
+          </div>
+          <div className="ls-header-right">
+            <button className="btn btn-ghost" onClick={() => setSelectedLiveSessionId(null)}>
+              Volver al menú
+            </button>
+            {lifecycleActions.map((candidate) => {
+              let btnClass = "btn-primary";
+              if (candidate.action === "cancel") btnClass = "btn-red-outline";
+              if (candidate.action === "pause") btnClass = "btn-white-outline";
+              if (candidate.action === "finalize") btnClass = "btn-orange-fill";
+
+              return (
+                <button
+                  key={candidate.action}
+                  className={`btn ${btnClass}`}
+                  disabled={candidate.disabled || lifecycleActionPending !== null}
+                  onClick={() => void handleLifecycleAction(candidate.action)}
+                >
+                  {candidate.label}
+                </button>
+              );
+            })}
+          </div>
+        </header>
+
+        <div className="ls-dashboard-main">
+          {/* Columna Izquierda: Progreso de Equipos */}
+          <div className="ls-column">
+            <div className="ls-column-header">
+              <h3>Progreso de Equipos</h3>
+            </div>
+            <div className="ls-column-content">
+              {selectedLiveSession.state === "Scheduled" ? (
+                 selectedLiveSessionOverviewTeams.length > 0 ? (
+                   selectedLiveSessionOverviewTeams.map(team => (
+                     <div key={team.sessionTeamId} className="ls-team-item">
+                       <div className="ls-team-item-info">
+                         <span className="ls-team-name">{team.teamName}</span>
+                         <span className="ls-team-stage">{team.participantCount} participante(s)</span>
+                       </div>
+                     </div>
+                   ))
+                 ) : (
+                   <div className="empty-state">
+                     <strong>Esperando equipos...</strong>
+                     <p>La sesión está programada. Los equipos que se unan aparecerán aquí.</p>
+                   </div>
+                 )
+              ) : selectedLiveSessionOverviewTeams.length > 0 ? (
+                 selectedLiveSessionOverviewTeams.map(team => {
+                   const rankingItem = selectedRankingItems.find(r => r.sessionTeamId === team.sessionTeamId);
+                   const isSelected = selectedSessionTeamId === team.sessionTeamId;
+                   return (
+                     <div
+                       key={team.sessionTeamId}
+                       className="ls-team-item clickable"
+                       style={{ borderColor: isSelected ? "var(--accent)" : "var(--border)" }}
+                       onClick={() => handleSelectSessionTeam(team.sessionTeamId)}
+                     >
+                       <div className="ls-team-item-info">
+                         <span className="ls-team-name">{team.teamName}</span>
+                         <span className="ls-team-stage">{team.currentStage?.name ?? "Sin etapa actual"} • {team.participantCount} participante(s)</span>
+                       </div>
+                       <div className="ls-team-score">
+                         {rankingItem ? rankingItem.visibleScore : 0}
+                       </div>
+                     </div>
+                   );
+                 })
+              ) : (
+                 <div className="empty-state">
+                   <strong>Bienvenido al Comando</strong>
+                   <p>Esperando interacciones y progreso de los equipos...</p>
+                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Columna Central: Centro de Mando */}
+          <div className="ls-column">
+            <div className="ls-column-header">
+               <div className="ls-segmented-controls">
+                 {(["Resumen", "Evidencias", "Pistas", "Penalizaciones"] as const).map(tab => (
+                   <button
+                     key={tab}
+                     className={`ls-segment-btn ${activeDashboardTab === tab ? "active" : ""}`}
+                     onClick={() => setActiveDashboardTab(tab)}
+                   >
+                     {tab}
+                   </button>
+                 ))}
+               </div>
+            </div>
+            <div className="ls-column-content">
+               {activeDashboardTab === "Resumen" && (
+                  <div className="stack">
+                    <div className="stack-sm">
+                      <span className="eyebrow">Estado general</span>
+                      <h4>Resumen de la Sesión</h4>
+                    </div>
+                    <div className="row-wrap" style={{ gap: "var(--space-md)" }}>
+                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                        <span className="text-muted text-sm">Misión</span>
+                        <div><strong>{selectedLiveSession.missionName}</strong></div>
+                      </div>
+                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                        <span className="text-muted text-sm">Equipos inscritos</span>
+                        <div><strong>{selectedLiveSession.registeredSessionTeamCount}</strong></div>
+                      </div>
+                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                        <span className="text-muted text-sm">Estado</span>
+                        <div><strong><span className={getSessionStateBadgeClass(selectedLiveSession.state)}>{translateSessionState(selectedLiveSession.state)}</span></strong></div>
+                      </div>
+                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                        <span className="text-muted text-sm">Código</span>
+                        <div><strong><span className="mono" style={{ letterSpacing: "1px" }}>{selectedLiveSession.joinCode || "No generado"}</span></strong></div>
+                      </div>
+                    </div>
+                    
+                    <div className="stack-sm" style={{ marginTop: "var(--space-md)" }}>
+                      <span className="eyebrow">Flujo de etapas</span>
+                      <h4>Etapas de la Sesión</h4>
+                    </div>
+                    <div className="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Orden</th>
+                            <th>Nombre</th>
+                            <th>Tipo de Juego</th>
+                            <th>Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedLiveSession.sessionStageFlow.map(stage => {
+                            const status = getSessionStageOperationalStatus(stage, selectedLiveSessionOverviewTeams);
+                            return (
+                              <tr key={stage.missionStageId}>
+                                <td className="mono text-sm">{stage.sessionStageOrder}</td>
+                                <td><strong>{stage.name}</strong></td>
+                                <td><span className="badge badge-blue">{translateGameType(stage.gameType)}</span></td>
+                                <td>
+                                  {status === "Completed" ? (
+                                    <span className="badge badge-green">Completado</span>
+                                  ) : (
+                                    <span className="badge badge-amber">Pendiente</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Acciones de inscripción solo si está programada */}
+                    {selectedLiveSession.state === "Scheduled" ? (
+                      <div className="stack" style={{ marginTop: "var(--space-xl)" }}>
+                        <div className="stack-sm">
+                          <span className="eyebrow">Preparación de inscripción</span>
+                          <h4>Código y Ventana</h4>
+                          <p className="text-muted text-xs">
+                            1) Generá el código de unión. 2) Abrí la inscripción para que los participantes registren equipos con ese código. 3) Con al menos un equipo registrado, iniciá la sesión desde la barra superior.
+                          </p>
+                        </div>
+                        <div className="row-sm row-wrap">
+                          <button
+                            className="btn btn-primary"
+                            disabled={Boolean(selectedLiveSession.joinCode) || enrollmentActionPending !== null}
+                            onClick={() => void handleEnrollmentAction("generate-join-code")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "generate-join-code"
+                              ? "Generando..."
+                              : selectedLiveSession.joinCode
+                                ? "Código generado"
+                                : "Generar código de unión"}
+                          </button>
+                          <button
+                            className="btn btn-success"
+                            disabled={
+                              !selectedLiveSession.joinCode ||
+                              Boolean(selectedLiveSession.enrollmentWindowOpenedAtUtc) ||
+                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                              enrollmentActionPending !== null
+                            }
+                            onClick={() => void handleEnrollmentAction("open-window")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "open-window" ? "Abriendo..." : "Abrir inscripción"}
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            disabled={
+                              !selectedLiveSession.enrollmentWindowOpenedAtUtc ||
+                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                              enrollmentActionPending !== null
+                            }
+                            onClick={() => void handleEnrollmentAction("close-window")}
+                            type="button"
+                          >
+                            {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
+                          </button>
+                        </div>
+                        
+                        {selectedLiveSession.joinCode && (
+                          <div className="detail-panel" style={{ marginTop: "var(--space-sm)" }}>
+                             <div className="detail-row">
+                               <span className="detail-label">Código de unión</span>
+                               <span className="detail-value mono">{selectedLiveSession.joinCode}</span>
+                             </div>
+                             <div className="detail-row">
+                               <span className="detail-label">Ventana de inscripción</span>
+                               <span className="detail-value">
+                                 {selectedLiveSession.enrollmentWindowOpenedAtUtc
+                                   ? selectedLiveSession.enrollmentWindowClosedAtUtc
+                                     ? `Cerrado el ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
+                                     : `Abierto desde ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
+                                   : "No abierto"}
+                               </span>
+                             </div>
+                          </div>
+                        )}
+
+                        <hr style={{ borderColor: "var(--border)", margin: "var(--space-md) 0" }} />
+
+                        <div className="stack-sm">
+                          <span className="eyebrow">Crear equipo (operador)</span>
+                          <p className="text-muted text-xs">
+                            Podés armar equipos vacíos vos mismo para que los jugadores se unan, o ayudar si tienen problemas.
+                          </p>
+                          <form className="row-sm row-wrap" onSubmit={(event) => void handleCreateSessionTeam(event)}>
+                            <input
+                              className="form-input"
+                              maxLength={80}
+                              onChange={(event) => setNewTeamName(event.target.value)}
+                              placeholder="Nombre del equipo"
+                              value={newTeamName}
+                            />
+                            <button
+                              className="btn btn-primary"
+                              disabled={isCreatingTeam || newTeamName.trim().length < 3}
+                              type="submit"
+                            >
+                              {isCreatingTeam ? "Creando..." : "Crear equipo"}
+                            </button>
+                          </form>
+                          {selectedLiveSessionOverviewTeams.length > 0 ? (
+                            <div className="row-sm row-wrap" style={{ marginTop: "var(--space-sm)" }}>
+                              {selectedLiveSessionOverviewTeams.map((team) => (
+                                <span className="badge badge-blue" key={team.sessionTeamId}>
+                                  {team.teamName}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+               )}
+
+               {activeDashboardTab === "Evidencias" && (
+                 <div className="stack">
+                   <div className="stack-sm">
+                     <span className="eyebrow">Validación</span>
+                     <h4>Evidencias Recientes</h4>
+                   </div>
+                   {!selectedSessionTeamDetail ? (
+                     <div className="empty-state">
+                       <strong>Selecciona un equipo de la izquierda</strong>
+                       <p>Debes seleccionar un equipo para revisar sus evidencias.</p>
+                     </div>
+                   ) : (
+                     <div className="stack-sm">
+                       {selectedSessionTeamDetail.evidenceSubmissions.length > 0 ? (
+                         selectedSessionTeamDetail.evidenceSubmissions.map(submission => (
+                           <div className="card card-compact" key={submission.id}>
+                             <div className="row-between">
+                               <div className="stack-sm">
+                                 <strong>{submission.stageName}</strong>
+                                 <span className="text-muted text-xs">Enviado: {formatShortTimestamp(submission.submittedAtUtc)}</span>
+                               </div>
+                               <span className={submission.validationOutcome === 'Rejected' ? "badge badge-red" : submission.validationOutcome === 'Accepted' ? "badge badge-green" : "badge badge-amber"}>{translateValidationOutcome(submission.validationOutcome)}</span>
+                             </div>
+                             {submission.submittedText && (
+                               <p className="text-muted text-sm" style={{ marginTop: "var(--space-sm)" }}><strong>Respuesta:</strong> {submission.submittedText}</p>
+                             )}
+                             {submission.validationOutcome === "Rejected" && (
+                               <div className="form-actions" style={{ marginTop: "var(--space-sm)" }}>
+                                 <button
+                                   className="btn btn-primary btn-sm"
+                                   disabled={overridePendingSubmissionId === submission.id}
+                                   onClick={() => void handleOverrideSubmission(submission.id, "Aceptado manualmente por el operador.")}
+                                   type="button"
+                                 >
+                                   {overridePendingSubmissionId === submission.id ? "Aceptando..." : "Aceptar (Forzar)"}
+                                 </button>
+                               </div>
+                             )}
+                           </div>
+                         ))
+                       ) : (
+                         <div className="empty-state">
+                           <p>Sin envíos de evidencias</p>
+                         </div>
+                       )}
+                     </div>
+                   )}
+                 </div>
+               )}
+
+               {activeDashboardTab === "Pistas" && (
+                 <div className="stack">
+                   <div className="stack-sm">
+                     <span className="eyebrow">Liberación</span>
+                     <h4>Pistas de Etapas Activas</h4>
+                   </div>
+                   <div className="stage-flow">
+                     {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
+                       const eligibleTeams = selectedLiveSessionOverviewTeams.filter(team => team.currentStage?.missionStageId === missionStage.missionStageId);
+                       if (eligibleTeams.length === 0) return null;
+
+                       return (
+                         <div className="card card-compact" key={missionStage.missionStageId} style={{ marginBottom: "var(--space-sm)" }}>
+                           <div className="stack-sm" style={{ marginBottom: "var(--space-sm)" }}>
+                             <strong>{missionStage.name}</strong>
+                             <span className="text-muted text-xs">{eligibleTeams.length} equipos elegibles</span>
+                           </div>
+                           {(missionStage.hints || []).map(hint => (
+                             <div className="stack-sm" key={hint.id} style={{ marginBottom: "var(--space-sm)", borderTop: "1px solid var(--border)", paddingTop: "var(--space-sm)" }}>
+                               <span>{hint.content}</span>
+                               <div className="row-sm row-wrap" style={{ marginTop: "var(--space-xs)" }}>
+                                 <button
+                                   className="btn btn-ghost btn-sm"
+                                   disabled={isSubmittingHint}
+                                   onClick={() => void handleReleaseHint(hint.id, null)}
+                                   type="button"
+                                 >
+                                   Liberar a todos
+                                 </button>
+                                 {eligibleTeams.map((team) => {
+                                   const alreadyReleased = getReleasedHintsForTeam(team).some(r => r.hintId === hint.id);
+                                   return (
+                                     <button
+                                       key={`${hint.id}-${team.sessionTeamId}`}
+                                       className="btn btn-ghost btn-sm"
+                                       disabled={isSubmittingHint || alreadyReleased}
+                                       onClick={() => void handleReleaseHint(hint.id, team.sessionTeamId)}
+                                       type="button"
+                                     >
+                                       {team.teamName}
+                                     </button>
+                                   );
+                                 })}
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       );
+                     })}
+                     {selectedLiveSessionOverviewTeams.length > 0 && selectedLiveSession.sessionStageFlow.every(missionStage => 
+                       selectedLiveSessionOverviewTeams.filter(team => team.currentStage?.missionStageId === missionStage.missionStageId).length === 0
+                     ) && (
+                       <div className="empty-state">
+                         <p>No hay pistas disponibles para las etapas actuales de los equipos.</p>
+                       </div>
+                     )}
+                   </div>
+
+                   <hr style={{ borderColor: "var(--border)", margin: "var(--space-md) 0" }} />
+                   
+                   <form className="stack" onSubmit={handleCreateOperationalHint}>
+                     <div className="stack-sm">
+                       <span className="eyebrow">Pista Operativa</span>
+                       <h4>Crear nueva pista en vivo</h4>
+                     </div>
+                     <div className="form-group">
+                       <label className="form-label">Etapa</label>
+                       <select
+                         className="ls-input"
+                         onChange={(e) => setOperationalHintDraft(curr => ({ ...curr, missionStageId: e.target.value }))}
+                         value={operationalHintStageId}
+                       >
+                         {selectedLiveSession.sessionStageFlow.map(stage => (
+                           <option key={stage.missionStageId} value={stage.missionStageId}>{stage.name}</option>
+                         ))}
+                       </select>
+                     </div>
+                     <div className="form-group">
+                       <label className="form-label">Contenido</label>
+                       <textarea
+                         className="ls-input"
+                         maxLength={500}
+                         onChange={(e) => setOperationalHintDraft(curr => ({ ...curr, content: e.target.value }))}
+                         required
+                         value={operationalHintDraft.content}
+                         rows={2}
+                       />
+                     </div>
+                     <div className="form-actions">
+                       <button className="btn btn-primary" disabled={isSubmittingHint} type="submit">
+                         {isSubmittingHint ? "Guardando..." : "Guardar pista"}
+                       </button>
+                     </div>
+                   </form>
+                 </div>
+               )}
+
+               {activeDashboardTab === "Penalizaciones" && (
+                 <div className="stack">
+                   <div className="stack-sm">
+                     <span className="eyebrow">Corrección</span>
+                     <h4>Aplicar Penalización</h4>
+                   </div>
+                   {selectedLiveSessionOverviewTeams.length > 0 ? (
+                     <form className="stack" onSubmit={handleApplyPenalty}>
+                       <div className="form-group">
+                         <label className="form-label">Equipo</label>
+                         <select
+                           className="ls-input"
+                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, sessionTeamId: e.target.value }))}
+                           value={effectivePenaltySessionTeamId}
+                         >
+                           {selectedLiveSessionOverviewTeams.map(team => (
+                             <option key={team.sessionTeamId} value={team.sessionTeamId}>{team.teamName}</option>
+                           ))}
+                         </select>
+                       </div>
+                       <div className="form-group">
+                         <label className="form-label">Severidad</label>
+                         <select
+                           className="ls-input"
+                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, severity: e.target.value as PenaltySeverity }))}
+                           value={penaltyDraft.severity}
+                         >
+                           <option value="Minor">Menor</option>
+                           <option value="Major">Mayor</option>
+                           <option value="Critical">Crítica</option>
+                         </select>
+                       </div>
+                       <div className="form-group">
+                         <label className="form-label">Razón</label>
+                         <textarea
+                           className="ls-input"
+                           maxLength={200}
+                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, reason: e.target.value }))}
+                           required
+                           value={penaltyDraft.reason}
+                           rows={2}
+                         />
+                       </div>
+                       <div className="form-actions">
+                         <button className="btn btn-primary" disabled={isSubmittingPenalty} type="submit">
+                           {isSubmittingPenalty ? "Aplicando..." : "Aplicar Penalización"}
+                         </button>
+                       </div>
+                     </form>
+                   ) : (
+                     <div className="empty-state">
+                       <p>No hay equipos a los cuales penalizar.</p>
+                     </div>
+                   )}
+                 </div>
+               )}
+            </div>
+          </div>
+
+          {/* Columna Derecha: Bitácora de Auditoría */}
+          <div className="ls-column">
+            <div className="ls-column-header">
+               <h3>Bitácora de Auditoría</h3>
+            </div>
+            <div className="ls-column-content">
+               <div className="ls-timeline">
+                 {selectedEventLogItems.length > 0 ? (
+                   selectedEventLogItems.map(log => (
+                     <div key={log.id} className="ls-timeline-item">
+                       <div className="ls-timeline-dot"></div>
+                       <span className="ls-timeline-time">{formatShortTimestamp(log.timestamp)}</span>
+                       <span className="ls-timeline-content">{log.description}</span>
+                     </div>
+                   ))
+                 ) : (
+                   <div className="empty-state">
+                     <p>Sin eventos recientes</p>
+                   </div>
+                 )}
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="workspace-section">
       <div className="workspace-section-header">
@@ -3089,680 +3607,40 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
             </div>
           ) : null}
 
-          <div className="split-layout">
-            <section className="stack-sm">
-              {liveSessions.map((liveSession) => (
-                <button
-                  className={liveSession.id === selectedLiveSession?.id ? "card card-compact clickable is-selected" : "card card-compact clickable"}
-                  key={liveSession.id}
-                  onClick={() => setSelectedLiveSessionId(liveSession.id)}
-                  type="button"
-                >
-                  <div className="row-between">
-                    <strong>{liveSession.name}</strong>
-                    <span className={getSessionStateBadgeClass(liveSession.state)}>{translateSessionState(liveSession.state)}</span>
-                  </div>
-                  <p className="text-muted">{liveSession.missionName}</p>
-                  <div className="detail-panel">
-                    <div className="detail-row">
-                      <span className="detail-label">Programada</span>
-                      <span className="detail-value">{formatTimestamp(liveSession.scheduledStartAtUtc)}</span>
-                    </div>
-                    <div className="detail-row">
-                      <span className="detail-label">Equipos</span>
-                      <span className="detail-value">{liveSession.registeredSessionTeamCount}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </section>
-
-            <section className="card">
-              <div className="card-header">
-                <div className="stack-sm">
-                  <span className="eyebrow">Detalle de la captura</span>
-                  <h3>{selectedLiveSession?.name ?? "LiveSession programada"}</h3>
+          <div className="stack">
+            {[...liveSessions].sort((a, b) => {
+              const isAActive = a.state === "Active" || a.state === "Paused";
+              const isBActive = b.state === "Active" || b.state === "Paused";
+              if (isAActive && !isBActive) return -1;
+              if (!isAActive && isBActive) return 1;
+              return 0;
+            }).map((liveSession) => (
+              <button
+                className={liveSession.id === selectedLiveSession?.id ? "card card-compact clickable is-selected" : "card card-compact clickable"}
+                key={liveSession.id}
+                onClick={() => setSelectedLiveSessionId(liveSession.id)}
+                type="button"
+              >
+                <div className="row-between">
+                  <strong>{liveSession.name}</strong>
+                  <span className={getSessionStateBadgeClass(liveSession.state)}>{translateSessionState(liveSession.state)}</span>
                 </div>
-                {selectedLiveSession ? <span className={getSessionStateBadgeClass(selectedLiveSession.state)}>{translateSessionState(selectedLiveSession.state)}</span> : null}
-              </div>
-
-              {selectedLiveSession ? (
-                <>
-                  {selectedLiveSession.state !== "Scheduled" ? (
-                    <LiveSessionOverviewDashboard
-                      connectionState={sessionRealtimeConnection}
-                      eventLogError={eventLogError}
-                      eventLogItems={selectedEventLogItems}
-                      isLoadingEventLog={isLoadingEventLog}
-                      isLoadingOverview={isLoadingLiveSessionOverview}
-                      isLoadingRanking={isLoadingRanking}
-                      isLoadingSessionTeamDetail={isLoadingSessionTeamDetail}
-                      lifecycleActionPending={lifecycleActionPending}
-                      lifecycleActions={lifecycleActions}
-                      liveSession={selectedLiveSession}
-                      inactivityThresholdMinutes={inactivityThresholdMinutes}
-                      onLifecycleAction={(action) => {
-                        void handleLifecycleAction(action);
-                      }}
-                      onInactivityThresholdChange={handleInactivityThresholdChange}
-                      onOverrideSubmission={(submissionId, reason) => {
-                        void handleOverrideSubmission(submissionId, reason);
-                      }}
-                      onRefreshEventLog={() => {
-                        void loadLiveSessionEventLog(selectedLiveSession.id);
-                      }}
-                      onRefreshOverview={refreshSelectedOverview}
-                      onRefreshRanking={() => {
-                        void loadLiveSessionRanking(selectedLiveSession.id);
-                      }}
-                      onRefreshSessionTeamDetail={refreshSelectedSessionTeamDetail}
-                      onSelectSessionTeam={handleSelectSessionTeam}
-                      overridePendingSubmissionId={overridePendingSubmissionId}
-                      overview={isSelectedLiveSessionOverviewCurrent ? selectedLiveSessionOverview : null}
-                      rankingError={rankingError}
-                      rankingItems={selectedRankingItems}
-                      scoringConnectionState={scoringRealtimeConnection}
-                      selectedSessionTeamId={selectedSessionTeamId}
-                      sessionTeamDetail={selectedSessionTeamDetail}
-                      sessionTeamDetailError={sessionTeamDetailError}
-                    />
-                  ) : null}
-
-                  {selectedLiveSession.state === "Scheduled" ? (
-                    <>
-                      <div className="detail-panel">
-                        <div className="detail-row">
-                          <span className="detail-label">Misión</span>
-                          <span className="detail-value">{selectedLiveSession.missionName}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Inicio programado</span>
-                          <span className="detail-value">{formatTimestamp(selectedLiveSession.scheduledStartAtUtc)}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Creado el</span>
-                          <span className="detail-value">{formatTimestamp(selectedLiveSession.createdAtUtc)}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Código de unión</span>
-                          <span className="detail-value mono">{selectedLiveSession.joinCode ?? "No generado aún"}</span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Ventana de inscripción</span>
-                          <span className="detail-value">
-                            {selectedLiveSession.enrollmentWindowOpenedAtUtc
-                              ? selectedLiveSession.enrollmentWindowClosedAtUtc
-                                ? `Cerrado el ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
-                                : `Abierto desde ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
-                              : "No abierto"}
-                          </span>
-                        </div>
-                        <div className="detail-row">
-                          <span className="detail-label">Equipos registrados</span>
-                          <span className="detail-value">{selectedLiveSession.registeredSessionTeamCount}</span>
-                        </div>
-                      </div>
-
-                      <section className="card-section">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Preparación de inscripción</span>
-                          <p className="text-muted text-xs">
-                            1) Generá el código de unión. 2) Abrí la inscripción para que los participantes registren
-                            equipos con ese código. 3) Con al menos un equipo registrado, iniciá la sesión.
-                          </p>
-                        </div>
-                        <div className="row-sm row-wrap">
-                          <button
-                            className="btn btn-primary"
-                            disabled={Boolean(selectedLiveSession.joinCode) || enrollmentActionPending !== null}
-                            onClick={() => void handleEnrollmentAction("generate-join-code")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "generate-join-code"
-                              ? "Generando..."
-                              : selectedLiveSession.joinCode
-                                ? "Código generado"
-                                : "Generar código de unión"}
-                          </button>
-                          <button
-                            className="btn btn-success"
-                            disabled={
-                              !selectedLiveSession.joinCode ||
-                              Boolean(selectedLiveSession.enrollmentWindowOpenedAtUtc) ||
-                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
-                              enrollmentActionPending !== null
-                            }
-                            onClick={() => void handleEnrollmentAction("open-window")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "open-window" ? "Abriendo..." : "Abrir inscripción"}
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            disabled={
-                              !selectedLiveSession.enrollmentWindowOpenedAtUtc ||
-                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
-                              enrollmentActionPending !== null
-                            }
-                            onClick={() => void handleEnrollmentAction("close-window")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
-                          </button>
-                        </div>
-
-                        {selectedLiveSession.state === "Scheduled" ? (
-                          <div className="stack-sm">
-                            <span className="eyebrow">Crear equipo (operador)</span>
-                            <p className="text-muted text-xs">
-                              Podés armar equipos vacíos vos mismo para que los jugadores se unan, o ayudar si tienen
-                              problemas. El equipo queda disponible con el código de la sesión.
-                            </p>
-                            <form className="row-sm row-wrap" onSubmit={(event) => void handleCreateSessionTeam(event)}>
-                              <input
-                                className="form-input"
-                                maxLength={80}
-                                onChange={(event) => setNewTeamName(event.target.value)}
-                                placeholder="Nombre del equipo"
-                                value={newTeamName}
-                              />
-                              <button
-                                className="btn btn-primary"
-                                disabled={isCreatingTeam || newTeamName.trim().length < 3}
-                                type="submit"
-                              >
-                                {isCreatingTeam ? "Creando..." : "Crear equipo"}
-                              </button>
-                            </form>
-                            {selectedLiveSessionOverviewTeams.length > 0 ? (
-                              <div className="row-sm row-wrap">
-                                {selectedLiveSessionOverviewTeams.map((team) => (
-                                  <span className="badge badge-blue" key={team.sessionTeamId}>
-                                    {team.teamName}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </section>
-
-                      <div className="row-sm row-wrap">
-                        {lifecycleActions.map((action) => {
-                          let btnClass = "btn btn-ghost";
-                          if (action.action === "start") btnClass = "btn btn-success";
-                          if (action.action === "resume") btnClass = "btn btn-success";
-                          if (action.action === "finalize") btnClass = "btn btn-primary";
-                          if (action.action === "cancel") btnClass = "btn btn-danger";
-
-                          return (
-                            <button
-                              className={btnClass}
-                              disabled={action.disabled || lifecycleActionPending !== null}
-                              key={action.action}
-                              onClick={() => {
-                                void handleLifecycleAction(action.action);
-                              }}
-                              style={action.action === "cancel" ? { marginLeft: "auto" } : undefined}
-                              type="button"
-                            >
-                              {lifecycleActionPending === action.action ? "Actualizando..." : action.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {selectedLiveSession.state === "Scheduled" && selectedLiveSession.registeredSessionTeamCount === 0 ? (
-                        <p className="info-banner">
-                          El inicio permanece bloqueado hasta que el registro de sesión registre al menos un equipo de sesión.
-                        </p>
-                      ) : null}
-
-                      <div className="stage-flow">
-                        {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
-                          const stageStatus = getSessionStageOperationalStatus(
-                            missionStage,
-                            selectedLiveSessionOverviewTeams
-                          );
-                          const isStageCompleted = stageStatus === "Completed";
-                          const teamsAtOrBeyondStage = countTeamsAtOrBeyondSessionStage(
-                            missionStage,
-                            selectedLiveSessionOverviewTeams
-                          );
-                          const disableDeactivation =
-                            !isSelectedLiveSessionStageDeactivationAllowed ||
-                            !isSelectedLiveSessionOverviewCurrent ||
-                            isLoadingLiveSessionOverview ||
-                            isStageCompleted ||
-                            hasSingleSelectedLiveSessionStage ||
-                            pendingLiveSessionStageCount <= 1 ||
-                            deactivatingStageId !== null;
-
-                          return (
-                            <div className={isStageCompleted ? "stage-item is-deactivated" : "stage-item"} key={missionStage.missionStageId}>
-                              <div className="stage-item-info">
-                                <strong className="stage-name">
-                                  <span className="stage-number">#{missionStage.sessionStageOrder}</span> {missionStage.name}
-                                </strong>
-                                <div className="row-sm">
-                                  <span className="badge badge-blue">{translateGameType(missionStage.gameType)}</span>
-                                  <span className={isStageCompleted ? "badge badge-accent" : "badge badge-amber"}>
-                                    {isStageCompleted ? "Completada" : "Pendiente"}
-                                  </span>
-                                </div>
-                              </div>
-                              <span className="stage-meta">
-                                Orden de origen {missionStage.sourceOrder}. {missionStage.resolvedTimeBudgetMinutes} min.{" "}
-                                {(missionStage.hints || []).length} pistas en la captura. {teamsAtOrBeyondStage} equipos en esta etapa o
-                                más adelante.
-                              </span>
-                              <p>{missionStage.prompt}</p>
-                              {isTreasureHuntGameType(missionStage.gameType) && missionStage.expectedQrHash?.trim() ? (
-                                <div className="qr-code-block">
-                                  <QrCode value={missionStage.expectedQrHash.trim()} size={132} />
-                                  <div className="stack-sm">
-                                    <span className="text-xs text-muted">
-                                      QR de esta etapa. Imprímelo para colocarlo en el punto físico o escanéalo para probar.
-                                    </span>
-                                    <button
-                                      className="btn btn-ghost btn-sm"
-                                      onClick={() =>
-                                        printQrCode(missionStage.expectedQrHash!.trim(), {
-                                          title: `Etapa #${missionStage.sessionStageOrder} · ${missionStage.name}`,
-                                          clue: missionStage.prompt,
-                                        })
-                                      }
-                                      type="button"
-                                    >
-                                      Imprimir QR
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : null}
-                              <div className="row-sm">
-                                <button
-                                  className="btn btn-danger btn-sm"
-                                  disabled={disableDeactivation}
-                                  onClick={() => void handleDeactivateStage(missionStage.missionStageId)}
-                                  type="button"
-                                >
-                                  {deactivatingStageId === missionStage.missionStageId ? "Desactivando..." : "Desactivar Etapa"}
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : null}
-
-                  {isSelectedLiveSessionActive ? (
-                    <section className="card-section">
-                      <div className="card-header">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Scoring y Auditoría</span>
-                          <h3>Ranking de Equipos</h3>
-                        </div>
-                        {isLoadingRanking ? <span className="badge badge-amber">Sincronizando</span> : null}
-                      </div>
-
-                      {selectedRankingItems.length > 0 ? (
-                        <div className="table-wrap">
-                          <table className="ranking-table">
-                            <thead>
-                              <tr>
-                                <th>Puesto</th>
-                                <th>Equipo</th>
-                                <th>Puntaje</th>
-                                <th>Tiempo de resolución</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedRankingItems.map((entry, index) => {
-                                const previousEntry = selectedRankingItems[index - 1];
-                                const isSharedRank = previousEntry?.rank === entry.rank;
-
-                                return (
-                                  <tr key={entry.sessionTeamId}>
-                                    <td>
-                                      <span className="rank-number">#{entry.rank}</span>
-                                    </td>
-                                    <td>
-                                      <strong>{findRankingTeamName(entry.sessionTeamId, selectedLiveSessionOverviewTeams)}</strong>
-                                      {isSharedRank ? <p className="text-muted text-xs">Empate conservado</p> : null}
-                                    </td>
-                                    <td>{entry.visibleScore} pts</td>
-                                    <td className="mono">{formatResolutionTime(entry.resolutionTime)}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="empty-state">
-                          <strong>Sin entradas de puntuación todavía.</strong>
-                          <p>El Ranking aparecerá cuando Scoring y Auditoría registre crédito de etapa.</p>
-                        </div>
-                      )}
-                    </section>
-                  ) : null}
-
-                  {isSelectedLiveSessionActive ? (
-                    <section className="card-section">
-                      <div className="card-header">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Aplicación de Penalizaciones</span>
-                          <h3>Penalizar Equipo de la Sesión</h3>
-                        </div>
-                        <span className="badge badge-amber">Sincronización de Ranking</span>
-                      </div>
-
-                      <form className="stack" onSubmit={handleApplyPenalty}>
-                        <div className="form-group">
-                          <label className="form-label">Equipo de la sesión</label>
-                          <select
-                            className="form-select"
-                            onChange={(event) =>
-                              setPenaltyDraft((current) => ({
-                                ...current,
-                                sessionTeamId: event.target.value
-                              }))
-                            }
-                            required
-                            value={effectivePenaltySessionTeamId}
-                          >
-                            <option value="" disabled>
-                              Seleccionar equipo de la sesión
-                            </option>
-                            {selectedLiveSessionOverviewTeams.map((team) => (
-                              <option key={team.sessionTeamId} value={team.sessionTeamId}>
-                                {team.teamName}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Severidad</label>
-                          <select
-                            className="form-select"
-                            onChange={(event) =>
-                              setPenaltyDraft((current) => ({
-                                ...current,
-                                severity: event.target.value as PenaltySeverity
-                              }))
-                            }
-                            value={penaltyDraft.severity}
-                          >
-                            <option value="Minor">Menor (-50)</option>
-                            <option value="Major">Mayor (-100)</option>
-                            <option value="Critical">Crítica (-200)</option>
-                          </select>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Motivo obligatorio</label>
-                          <textarea
-                            className="form-textarea"
-                            maxLength={500}
-                            onChange={(event) =>
-                              setPenaltyDraft((current) => ({
-                                ...current,
-                                reason: event.target.value
-                              }))
-                            }
-                            required
-                            value={penaltyDraft.reason}
-                          />
-                        </div>
-
-                        <p className="form-hint">
-                          ID del comando de penalización: <code>{penaltyDraft.commandId}</code>
-                        </p>
-
-                        <div className="form-actions">
-                          <button
-                            className="btn btn-danger"
-                            disabled={isSubmittingPenalty || !isSelectedLiveSessionOverviewCurrent}
-                            type="submit"
-                          >
-                            {isSubmittingPenalty ? "Aplicando..." : "Aplicar penalización"}
-                          </button>
-                        </div>
-                      </form>
-                    </section>
-                  ) : null}
-
-                  {isSelectedLiveSessionActive ? (
-                    <section className="card-section">
-                      <div className="card-header">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Operación en vivo</span>
-                          <h3>Gestión de Pistas (Hints)</h3>
-                        </div>
-                        {isLoadingLiveSessionOverview ? <span className="badge badge-green">Sincronizando</span> : null}
-                      </div>
-
-                      <section className="card-section">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Equipos</span>
-                          <h4>Pistas liberadas</h4>
-                        </div>
-
-                        {(selectedLiveSessionOverview?.sessionTeams || []).length ? (
-                          <div className="stack-sm">
-                            {(selectedLiveSessionOverview?.sessionTeams || []).map((team) => {
-                              const releasedHints = getReleasedHintsForTeam(team);
-
-                              return (
-                                <div className="card card-compact" key={team.sessionTeamId}>
-                                  <div className="row-between">
-                                    <div className="stack-sm">
-                                      <strong>{team.teamName}</strong>
-                                      <span className="text-muted text-xs">
-                                        {team.currentStage?.name ?? "Sin etapa actual"} Â· {team.progressState}
-                                      </span>
-                                    </div>
-                                    <span className="badge badge-green">{releasedHints.length} pistas</span>
-                                  </div>
-
-                                  {releasedHints.length === 0 ? (
-                                    <p className="text-muted text-xs">Sin pistas liberadas para este equipo.</p>
-                                  ) : (
-                                    <div className="detail-panel">
-                                      {releasedHints.map((hint) => (
-                                        <div className="detail-row" key={`${team.sessionTeamId}-${hint.hintId}`}>
-                                          <span className="detail-label">{hint.unlockReason}</span>
-                                          <span className="detail-value">
-                                            {hint.content} Â· {formatTimestamp(hint.unlockedAtUtc)}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="empty-state">
-                            <strong>No hay equipos cargados.</strong>
-                            <p>Refresca la vista general de la LiveSession para ver estados de pistas por equipo.</p>
-                          </div>
-                        )}
-                      </section>
-
-                      <section className="card-section">
-                        <div className="stack-sm">
-                          <span className="eyebrow">Liberación</span>
-                          <h4>Pistas disponibles por etapa actual</h4>
-                        </div>
-
-                        <div className="stage-flow">
-                          {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
-                            const eligibleTeams =
-                              selectedLiveSessionOverview?.sessionTeams.filter(
-                                (team) => team.currentStage?.missionStageId === missionStage.missionStageId
-                              ) ?? [];
-
-                            return (
-                              <div className="stage-item" key={`hint-release-${missionStage.missionStageId}`}>
-                                <div className="stage-item-info">
-                                  <div className="stack-sm">
-                                    <strong className="stage-name">{missionStage.name}</strong>
-                                    <span className="stage-meta">
-                                      {eligibleTeams.length} equipos elegibles Â· {(missionStage.hints || []).length} pistas
-                                    </span>
-                                  </div>
-                                  <span className="badge badge-blue">{translateGameType(missionStage.gameType)}</span>
-                                </div>
-
-                                {(missionStage.hints || []).length === 0 ? (
-                                  <p className="text-muted text-xs">Esta etapa aún no tiene pistas disponibles.</p>
-                                ) : (
-                                  <div className="stack-sm">
-                                    {(missionStage.hints || []).map((hint) => (
-                                      <div className="card card-compact" key={hint.id}>
-                                        <div className="stack-sm">
-                                          <strong>{hint.content}</strong>
-                                          <span className="text-muted text-xs">
-                                            {hint.latitude !== null && hint.longitude !== null
-                                              ? `${hint.latitude}, ${hint.longitude}`
-                                              : "Sin coordenadas"}
-                                          </span>
-                                        </div>
-
-                                        <div className="row-sm row-wrap">
-                                          <button
-                                            className="btn btn-ghost btn-sm"
-                                            disabled={isSubmittingHint || eligibleTeams.length === 0}
-                                            onClick={() => void handleReleaseHint(hint.id, null)}
-                                            type="button"
-                                          >
-                                            Liberar a todos los elegibles
-                                          </button>
-
-                                          {eligibleTeams.map((team) => {
-                                            const alreadyReleased = getReleasedHintsForTeam(team).some(
-                                              (releasedHint) => releasedHint.hintId === hint.id
-                                            );
-
-                                            return (
-                                              <button
-                                                className="btn btn-ghost btn-sm"
-                                                disabled={isSubmittingHint || alreadyReleased}
-                                                key={`${hint.id}-${team.sessionTeamId}`}
-                                                onClick={() => void handleReleaseHint(hint.id, team.sessionTeamId)}
-                                                type="button"
-                                              >
-                                                Liberar a Equipo {team.teamName}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </section>
-
-                      <form className="stack" onSubmit={handleCreateOperationalHint}>
-                        <div className="stack-sm">
-                          <span className="eyebrow">Pista en vivo</span>
-                          <h4>Añadir Pista Operativa</h4>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Etapa de sesión</label>
-                          <select
-                            className="form-select"
-                            onChange={(event) =>
-                              setOperationalHintDraft((current) => ({
-                                ...current,
-                                missionStageId: event.target.value
-                              }))
-                            }
-                            value={operationalHintStageId}
-                          >
-                            {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => (
-                              <option key={missionStage.missionStageId} value={missionStage.missionStageId}>
-                                #{missionStage.sessionStageOrder} {missionStage.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Texto de la pista</label>
-                          <textarea
-                            className="form-textarea"
-                            maxLength={500}
-                            onChange={(event) =>
-                              setOperationalHintDraft((current) => ({
-                                ...current,
-                                content: event.target.value
-                              }))
-                            }
-                            required
-                            value={operationalHintDraft.content}
-                          />
-                        </div>
-
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label className="form-label">Latitud</label>
-                            <input
-                              className="form-input"
-                              inputMode="decimal"
-                              onChange={(event) =>
-                                setOperationalHintDraft((current) => ({
-                                  ...current,
-                                  latitude: event.target.value
-                                }))
-                              }
-                              value={operationalHintDraft.latitude}
-                            />
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label">Longitud</label>
-                            <input
-                              className="form-input"
-                              inputMode="decimal"
-                              onChange={(event) =>
-                                setOperationalHintDraft((current) => ({
-                                  ...current,
-                                  longitude: event.target.value
-                                }))
-                              }
-                              value={operationalHintDraft.longitude}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="form-actions">
-                          <button className="btn btn-primary" disabled={isSubmittingHint} type="submit">
-                            {isSubmittingHint ? "Guardando..." : "Guardar pista operativa"}
-                          </button>
-                        </div>
-                      </form>
-                    </section>
-                  ) : null}
-                </>
-              ) : (
-                <div className="empty-state">
-                  <strong>Seleccione una LiveSession programada.</strong>
-                  <p>El detalle de la captura muestra el flujo de etapas de la sesión copiado de la misión de origen.</p>
+                <p className="text-muted">{liveSession.missionName}</p>
+                <div className="detail-panel">
+                  <div className="detail-row">
+                    <span className="detail-label">Programada</span>
+                    <span className="detail-value">{formatTimestamp(liveSession.scheduledStartAtUtc)}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Equipos</span>
+                    <span className="detail-value">{liveSession.registeredSessionTeamCount}</span>
+                  </div>
                 </div>
-              )}
-            </section>
+              </button>
+            ))}
           </div>
         </section>
+
       </div>
     </div>
   );
