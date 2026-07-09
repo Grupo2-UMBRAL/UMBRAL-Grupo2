@@ -11,8 +11,6 @@ public sealed class DeactivateOperatorCommandHandler(IOperatorAdministrationPort
 {
     public async Task<OperatorDto> Handle(DeactivateOperatorCommand request, CancellationToken cancellationToken)
     {
-        DeactivateOperatorCommandValidator.Validate(request);
-
         var normalizedUserId = request.UserId.Trim();
 
         var operators = await port.ListOperatorsAsync(cancellationToken);

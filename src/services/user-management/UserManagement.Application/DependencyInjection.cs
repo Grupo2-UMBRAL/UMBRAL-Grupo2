@@ -1,4 +1,5 @@
 using System.Reflection;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Umbral.ServiceDefaults;
 
@@ -17,8 +18,13 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(applicationAssembly);
+            // Logging is the outer behavior so it also records validation failures; validation runs
+            // next so handlers only ever receive structurally valid commands.
             configuration.AddOpenBehavior(typeof(UmbralLoggingBehavior<,>));
+            configuration.AddOpenBehavior(typeof(UmbralValidationBehavior<,>));
         });
+
+        services.AddValidatorsFromAssembly(applicationAssembly);
 
         return services;
     }

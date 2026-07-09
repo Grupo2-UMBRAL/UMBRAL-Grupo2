@@ -1,25 +1,41 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common;
 
 namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
 
 /// <summary>
-/// Static, throw-on-failure validator for <see cref="RotateOperatorPasswordCommand"/>. Enforces a
-/// non-blank user id and delegates the password rules to the shared <see cref="PasswordPolicy"/> so
-/// they stay identical to create-operator (codes <c>operator_password_*</c>).
+/// FluentValidation validator for <see cref="RotateOperatorPasswordCommand"/>: a non-blank user id
+/// and the shared <see cref="PasswordPolicy"/> rules (codes <c>operator_password_*</c>, identical to
+/// create-operator). Fail-fast, surfaced by <c>UmbralValidationBehavior</c>.
 /// </summary>
-public static class RotateOperatorPasswordCommandValidator
+public sealed class RotateOperatorPasswordCommandValidator : AbstractValidator<RotateOperatorPasswordCommand>
 {
-    public static void Validate(RotateOperatorPasswordCommand request)
+    public RotateOperatorPasswordCommandValidator()
     {
-        if (string.IsNullOrWhiteSpace(request.UserId))
-        {
-            throw new UmbralDomainException(
-                "operator_user_id_required",
-                "Operator user id is required.",
-                UmbralFailureCategory.Validation);
-        }
+        ClassLevelCascadeMode = CascadeMode.Stop;
+        RuleLevelCascadeMode = CascadeMode.Stop;
 
-        PasswordPolicy.Normalize(request.Password, "operator_password");
+        RuleFor(x => x.UserId)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("operator_user_id_required").WithMessage("Operator user id is required.");
+
+        RuleFor(x => x.Password).Custom(ValidatePassword);
+    }
+
+    private static void ValidatePassword(string? value, ValidationContext<RotateOperatorPasswordCommand> context)
+    {
+        try
+        {
+            PasswordPolicy.Normalize(value, "operator_password");
+        }
+        catch (UmbralServiceException exception)
+        {
+            context.AddFailure(new ValidationFailure(context.PropertyPath, exception.Message)
+            {
+                ErrorCode = exception.Code
+            });
+        }
     }
 }

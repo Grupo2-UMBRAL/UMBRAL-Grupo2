@@ -1,70 +1,72 @@
+using System.Text.RegularExpressions;
+using FluentValidation;
+using FluentValidation.Results;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common;
 
 namespace UserManagement.Application.Features.Operators.Commands.CreateOperator;
 
-public static class CreateOperatorCommandValidator
+/// <summary>
+/// FluentValidation validator for <see cref="CreateOperatorCommand"/>. Fail-fast (CascadeMode.Stop)
+/// so the first failing rule, in declared order, is the one surfaced by
+/// <c>UmbralValidationBehavior</c> — preserving the exact <c>operator_*</c> codes and HTTP contract
+/// of the previous manual validator. Password rules delegate to the shared <see cref="PasswordPolicy"/>.
+/// </summary>
+public sealed class CreateOperatorCommandValidator : AbstractValidator<CreateOperatorCommand>
 {
-    public static void Validate(CreateOperatorCommand request)
+    private const string UsernamePattern = "^[A-Za-z0-9._-]+$";
+    private const string EmailPattern = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
+
+    public CreateOperatorCommandValidator()
     {
-        NormalizeUsername(request.Username);
-        NormalizeEmail(request.Email);
-        NormalizeRequiredText(request.FirstName, "First name", 80, "operator_first_name");
-        NormalizeRequiredText(request.LastName, "Last name", 80, "operator_last_name");
-        PasswordPolicy.Normalize(request.Password, "operator_password");
+        ClassLevelCascadeMode = CascadeMode.Stop;
+        RuleLevelCascadeMode = CascadeMode.Stop;
+
+        RuleFor(x => x.Username)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("operator_username_required").WithMessage("Username is required.")
+            .Must(v => v!.Trim().Length <= 40)
+                .WithErrorCode("operator_username_too_long").WithMessage("Username must stay under 40 characters.")
+            .Must(v => Regex.IsMatch(v!.Trim(), UsernamePattern))
+                .WithErrorCode("operator_username_invalid")
+                .WithMessage("Username only admits letters, digits, dot, underscore, or dash.");
+
+        RuleFor(x => x.Email)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("operator_email_required").WithMessage("Email is required.")
+            .Must(v => v!.Trim().Length <= 120)
+                .WithErrorCode("operator_email_too_long").WithMessage("Email must stay under 120 characters.")
+            .Must(v => Regex.IsMatch(v!.Trim(), EmailPattern))
+                .WithErrorCode("operator_email_invalid").WithMessage("Email format is invalid.");
+
+        RuleFor(x => x.FirstName)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("operator_first_name_required").WithMessage("First name is required.")
+            .Must(v => v!.Trim().Length <= 80)
+                .WithErrorCode("operator_first_name_too_long").WithMessage("First name must stay under 80 characters.");
+
+        RuleFor(x => x.LastName)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("operator_last_name_required").WithMessage("Last name is required.")
+            .Must(v => v!.Trim().Length <= 80)
+                .WithErrorCode("operator_last_name_too_long").WithMessage("Last name must stay under 80 characters.");
+
+        RuleFor(x => x.Password).Custom(ValidatePassword);
     }
 
-    private static string NormalizeRequiredText(string? value, string fieldName, int maximumLength, string code)
+    /// <summary>Runs the shared password policy and translates its categorized failure into a rule error.</summary>
+    private static void ValidatePassword(string? value, ValidationContext<CreateOperatorCommand> context)
     {
-        var normalized = value?.Trim();
-
-        if (string.IsNullOrWhiteSpace(normalized))
+        try
         {
-            throw new UmbralDomainException(
-                $"{code}_required",
-                $"{fieldName} is required.",
-                UmbralFailureCategory.Validation);
+            PasswordPolicy.Normalize(value, "operator_password");
         }
-
-        if (normalized.Length > maximumLength)
+        catch (UmbralServiceException exception)
         {
-            throw new UmbralDomainException(
-                $"{code}_too_long",
-                $"{fieldName} must stay under {maximumLength} characters.",
-                UmbralFailureCategory.Validation);
+            context.AddFailure(new ValidationFailure(context.PropertyPath, exception.Message)
+            {
+                ErrorCode = exception.Code
+            });
         }
-
-        return normalized;
-    }
-
-    private static string NormalizeUsername(string? value)
-    {
-        var username = NormalizeRequiredText(value, "Username", 40, "operator_username");
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(username, "^[A-Za-z0-9._-]+$"))
-        {
-            throw new UmbralDomainException(
-                "operator_username_invalid",
-                "Username only admits letters, digits, dot, underscore, or dash.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return username;
-    }
-
-    private static string NormalizeEmail(string? value)
-    {
-        var email = NormalizeRequiredText(value, "Email", 120, "operator_email").ToLowerInvariant();
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$"))
-        {
-            throw new UmbralDomainException(
-                "operator_email_invalid",
-                "Email format is invalid.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return email;
     }
 }
-

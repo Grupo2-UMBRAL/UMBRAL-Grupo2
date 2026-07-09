@@ -108,14 +108,7 @@ public class CreateParticipantCommandHandlerTests
         Assert.Equal("participant_email_duplicate", ex.Code);
     }
 
-    [Fact]
-    public async Task Handle_ShortPassword_ThrowsValidationException()
-    {
-        // Arrange
-        var command = new CreateParticipantCommand("player1", "player1@example.com", "short");
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<UmbralDomainException>(() => _handler.Handle(command, CancellationToken.None));
-        Assert.Equal("participant_password_too_short", ex.Code);
-    }
+    // Input validation (password rules, username/email format) now lives in the FluentValidation
+    // pipeline and is covered by CreateParticipantCommandValidatorTests; the handler no longer
+    // re-validates, so those cases are asserted at the validator level.
 }

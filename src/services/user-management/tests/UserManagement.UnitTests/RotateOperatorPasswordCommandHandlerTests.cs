@@ -24,15 +24,9 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<OperatorUser> { user });
 
-    [Fact]
-    public async Task Handle_BlankUserId_ThrowsValidation_BeforeTouchingPort()
-    {
-        var ex = await Assert.ThrowsAsync<UmbralDomainException>(
-            () => _handler.Handle(new RotateOperatorPasswordCommand("   ", "ValidPass123"), CancellationToken.None));
-
-        Assert.Equal("operator_user_id_required", ex.Code);
-        _portMock.Verify(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
+    // Input validation (blank user id, password rules) now lives in the FluentValidation pipeline
+    // and is covered by RotateOperatorPasswordCommandValidatorTests. Handler tests below focus on
+    // orchestration: user lookup, port rotation, and email side-effects.
 
     [Fact]
     public async Task Handle_UnknownUser_ThrowsNotFound()

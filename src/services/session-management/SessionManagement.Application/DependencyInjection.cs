@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SessionManagement.Application.Abstractions;
 using Umbral.ServiceDefaults;
@@ -16,7 +17,10 @@ public static class DependencyInjection
         {
             configuration.RegisterServicesFromAssemblyContaining<ISessionManagementDbContext>();
             configuration.AddOpenBehavior(typeof(UmbralLoggingBehavior<,>));
+            configuration.AddOpenBehavior(typeof(UmbralValidationBehavior<,>));
         });
+
+        services.AddValidatorsFromAssemblyContaining<ISessionManagementDbContext>();
 
         return services;
     }

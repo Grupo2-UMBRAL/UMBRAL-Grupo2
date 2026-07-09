@@ -16,8 +16,6 @@ public sealed class RotateOperatorPasswordCommandHandler(
 {
     public async Task<OperatorDto> Handle(RotateOperatorPasswordCommand request, CancellationToken cancellationToken)
     {
-        RotateOperatorPasswordCommandValidator.Validate(request);
-
         var normalizedUserId = request.UserId.Trim();
         var normalizedPassword = PasswordPolicy.Normalize(request.Password, "operator_password");
 

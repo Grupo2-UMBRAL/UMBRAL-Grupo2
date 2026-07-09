@@ -1,75 +1,60 @@
+using System.Text.RegularExpressions;
+using FluentValidation;
+using FluentValidation.Results;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common;
 
 namespace UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 
-public static class CreateParticipantCommandValidator
+/// <summary>
+/// FluentValidation validator for <see cref="CreateParticipantCommand"/>. Fail-fast (CascadeMode.Stop)
+/// so the first failing rule in declared order is surfaced by <c>UmbralValidationBehavior</c>,
+/// preserving the exact <c>participant_*</c> codes. Password rules delegate to <see cref="PasswordPolicy"/>.
+/// </summary>
+public sealed class CreateParticipantCommandValidator : AbstractValidator<CreateParticipantCommand>
 {
-    public static void Validate(CreateParticipantCommand request)
+    private const string UsernamePattern = "^[A-Za-z0-9._-]+$";
+    private const string EmailPattern = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
+
+    public CreateParticipantCommandValidator()
     {
-        NormalizeUsername(request.Username);
-        NormalizeEmail(request.Email);
-        PasswordPolicy.Normalize(request.Password, "participant_password");
+        ClassLevelCascadeMode = CascadeMode.Stop;
+        RuleLevelCascadeMode = CascadeMode.Stop;
+
+        RuleFor(x => x.Username)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("participant_username_required").WithMessage("Username is required.")
+            .Must(v => v!.Trim().Length <= 40)
+                .WithErrorCode("participant_username_too_long").WithMessage("Username must stay under 40 characters.")
+            .Must(v => v!.Trim().Length >= 3)
+                .WithErrorCode("participant_username_too_short").WithMessage("Username must contain at least 3 characters.")
+            .Must(v => Regex.IsMatch(v!.Trim(), UsernamePattern))
+                .WithErrorCode("participant_username_invalid")
+                .WithMessage("Username only admits letters, digits, dot, underscore, or dash.");
+
+        RuleFor(x => x.Email)
+            .Must(v => !string.IsNullOrWhiteSpace(v))
+                .WithErrorCode("participant_email_required").WithMessage("Email is required.")
+            .Must(v => v!.Trim().Length <= 120)
+                .WithErrorCode("participant_email_too_long").WithMessage("Email must stay under 120 characters.")
+            .Must(v => Regex.IsMatch(v!.Trim(), EmailPattern))
+                .WithErrorCode("participant_email_invalid").WithMessage("Email format is invalid.");
+
+        RuleFor(x => x.Password).Custom(ValidatePassword);
     }
 
-    private static string NormalizeRequiredText(string? value, string fieldName, int maximumLength, string code)
+    private static void ValidatePassword(string? value, ValidationContext<CreateParticipantCommand> context)
     {
-        var normalized = value?.Trim();
-
-        if (string.IsNullOrWhiteSpace(normalized))
+        try
         {
-            throw new UmbralDomainException(
-                $"{code}_required",
-                $"{fieldName} is required.",
-                UmbralFailureCategory.Validation);
+            PasswordPolicy.Normalize(value, "participant_password");
         }
-
-        if (normalized.Length > maximumLength)
+        catch (UmbralServiceException exception)
         {
-            throw new UmbralDomainException(
-                $"{code}_too_long",
-                $"{fieldName} must stay under {maximumLength} characters.",
-                UmbralFailureCategory.Validation);
+            context.AddFailure(new ValidationFailure(context.PropertyPath, exception.Message)
+            {
+                ErrorCode = exception.Code
+            });
         }
-
-        return normalized;
-    }
-
-    private static string NormalizeUsername(string? value)
-    {
-        var username = NormalizeRequiredText(value, "Username", 40, "participant_username");
-
-        if (username.Length < 3)
-        {
-            throw new UmbralDomainException(
-                "participant_username_too_short",
-                "Username must contain at least 3 characters.",
-                UmbralFailureCategory.Validation);
-        }
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(username, "^[A-Za-z0-9._-]+$"))
-        {
-            throw new UmbralDomainException(
-                "participant_username_invalid",
-                "Username only admits letters, digits, dot, underscore, or dash.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return username;
-    }
-
-    private static string NormalizeEmail(string? value)
-    {
-        var email = NormalizeRequiredText(value, "Email", 120, "participant_email").ToLowerInvariant();
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^\s@]+@[^\s@]+\.[^\s@]+$"))
-        {
-            throw new UmbralDomainException(
-                "participant_email_invalid",
-                "Email format is invalid.",
-                UmbralFailureCategory.Validation);
-        }
-
-        return email;
     }
 }

@@ -16,9 +16,6 @@ public sealed class CreateParticipantCommandHandler(
 {
     public async Task<ParticipantDto> Handle(CreateParticipantCommand request, CancellationToken cancellationToken)
     {
-        // 1. Validation
-        CreateParticipantCommandValidator.Validate(request);
-
         var normalizedEmail = request.Email!.Trim().ToLowerInvariant();
         var normalizedUsername = request.Username!.Trim();
 

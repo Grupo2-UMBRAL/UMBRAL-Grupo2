@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ScoringMonitoring.Application;
@@ -14,7 +15,10 @@ public static class DependencyInjection
         {
             configuration.RegisterServicesFromAssemblyContaining<IScoringMonitoringDbContext>();
             configuration.AddOpenBehavior(typeof(UmbralLoggingBehavior<,>));
+            configuration.AddOpenBehavior(typeof(UmbralValidationBehavior<,>));
         });
+
+        services.AddValidatorsFromAssemblyContaining<IScoringMonitoringDbContext>();
 
         return services;
     }

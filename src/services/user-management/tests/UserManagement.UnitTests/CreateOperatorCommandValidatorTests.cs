@@ -1,4 +1,3 @@
-using Umbral.ServiceDefaults;
 using UserManagement.Application.Features.Operators.Commands.CreateOperator;
 using Xunit;
 
@@ -6,14 +5,24 @@ namespace UserManagement.UnitTests;
 
 public sealed class CreateOperatorCommandValidatorTests
 {
+    private static readonly CreateOperatorCommandValidator Validator = new();
+
     private static CreateOperatorCommand Valid() =>
         new("jdoe", "jdoe@example.com", "John", "Doe", "SecurePass123!");
+
+    // CascadeMode.Stop -> a failing command yields exactly one error: the first rule that failed,
+    // in declared order. That single ErrorCode is what UmbralValidationBehavior surfaces to the client.
+    private static string FirstErrorCode(CreateOperatorCommand command)
+    {
+        var result = Validator.Validate(command);
+        Assert.False(result.IsValid);
+        return result.Errors[0].ErrorCode;
+    }
 
     [Fact]
     public void Validate_AcceptsWellFormedCommand()
     {
-        // No exception == valid.
-        CreateOperatorCommandValidator.Validate(Valid());
+        Assert.True(Validator.Validate(Valid()).IsValid);
     }
 
     [Theory]
@@ -22,12 +31,7 @@ public sealed class CreateOperatorCommandValidatorTests
     [InlineData("", "operator_username_required")]
     public void Validate_RejectsInvalidUsername(string username, string expectedCode)
     {
-        var command = Valid() with { Username = username };
-
-        var ex = Assert.Throws<UmbralDomainException>(() => CreateOperatorCommandValidator.Validate(command));
-
-        Assert.Equal(expectedCode, ex.Code);
-        Assert.Equal(UmbralFailureCategory.Validation, ex.Category);
+        Assert.Equal(expectedCode, FirstErrorCode(Valid() with { Username = username }));
     }
 
     [Theory]
@@ -36,30 +40,18 @@ public sealed class CreateOperatorCommandValidatorTests
     [InlineData("@example.com")]
     public void Validate_RejectsMalformedEmail(string email)
     {
-        var command = Valid() with { Email = email };
-
-        var ex = Assert.Throws<UmbralDomainException>(() => CreateOperatorCommandValidator.Validate(command));
-
-        Assert.Equal("operator_email_invalid", ex.Code);
+        Assert.Equal("operator_email_invalid", FirstErrorCode(Valid() with { Email = email }));
     }
 
     [Fact]
     public void Validate_RejectsShortPassword()
     {
-        var command = Valid() with { Password = "short" };
-
-        var ex = Assert.Throws<UmbralDomainException>(() => CreateOperatorCommandValidator.Validate(command));
-
-        Assert.Equal("operator_password_too_short", ex.Code);
+        Assert.Equal("operator_password_too_short", FirstErrorCode(Valid() with { Password = "short" }));
     }
 
     [Fact]
     public void Validate_RejectsBlankFirstName()
     {
-        var command = Valid() with { FirstName = "   " };
-
-        var ex = Assert.Throws<UmbralDomainException>(() => CreateOperatorCommandValidator.Validate(command));
-
-        Assert.Equal("operator_first_name_required", ex.Code);
+        Assert.Equal("operator_first_name_required", FirstErrorCode(Valid() with { FirstName = "   " }));
     }
 }

@@ -15,9 +15,6 @@ public sealed class CreateOperatorCommandHandler(
 {
     public async Task<OperatorDto> Handle(CreateOperatorCommand request, CancellationToken cancellationToken)
     {
-        // 1. Validation
-        CreateOperatorCommandValidator.Validate(request);
-        
         var normalizedEmail = request.Email!.Trim().ToLowerInvariant();
         var normalizedUsername = request.Username!.Trim();
 

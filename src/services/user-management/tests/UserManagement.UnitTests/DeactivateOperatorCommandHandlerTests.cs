@@ -17,17 +17,8 @@ public sealed class DeactivateOperatorCommandHandlerTests
         _handler = new DeactivateOperatorCommandHandler(_portMock.Object);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Handle_BlankUserId_ThrowsValidation(string userId)
-    {
-        var ex = await Assert.ThrowsAsync<UmbralDomainException>(
-            () => _handler.Handle(new DeactivateOperatorCommand(userId), CancellationToken.None));
-
-        Assert.Equal("operator_user_id_required", ex.Code);
-        Assert.Equal(UmbralFailureCategory.Validation, ex.Category);
-    }
+    // Blank-user-id validation now runs in the FluentValidation pipeline (see
+    // DeactivateOperatorCommandValidatorTests); the handler focuses on lookup and deactivation.
 
     [Fact]
     public async Task Handle_UnknownUser_ThrowsNotFound()
