@@ -28,6 +28,7 @@ type MissionBuilderSidebarProps = {
   onItemsChange: (items: MissionItemDraft[]) => void;
   selectedItemId: string;
   onSelect: (id: string) => void;
+  onReuseItem?: (kind: "section" | "challenge") => void;
 };
 
 export function MissionBuilderSidebar({
@@ -35,6 +36,7 @@ export function MissionBuilderSidebar({
   onItemsChange,
   selectedItemId,
   onSelect,
+  onReuseItem,
 }: MissionBuilderSidebarProps) {
   function addRootSection() {
     onItemsChange([...items, createEmptySectionDraft()]);
@@ -71,14 +73,14 @@ export function MissionBuilderSidebar({
       <div className="mb-sidebar-footer flex flex-col" style={{ gap: "0.5rem" }}>
         <button
           className="btn btn-ghost btn-block btn-sm"
-          onClick={addRootSection}
+          onClick={() => onReuseItem ? onReuseItem("section") : addRootSection()}
           type="button"
         >
           + Agregar Sección
         </button>
         <button
           className="btn btn-ghost btn-block btn-sm"
-          onClick={addRootChallenge}
+          onClick={() => onReuseItem ? onReuseItem("challenge") : addRootChallenge()}
           type="button"
         >
           + Agregar Reto

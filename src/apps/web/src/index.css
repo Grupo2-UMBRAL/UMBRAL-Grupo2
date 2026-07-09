@@ -1815,3 +1815,260 @@ tr.clickable {
    28. FONT IMPORTS
    ---------------------------------------------------------------- */
 /* Imported via @fontsource in main.tsx */
+
+/* ----------------------------------------------------------------
+   REUSE MODAL (missions admin)
+   ---------------------------------------------------------------- */
+.reuse-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s var(--ease-out);
+}
+
+.reuse-modal {
+  width: min(560px, 94vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.3s var(--ease-out);
+}
+
+.reuse-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.reuse-modal-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.reuse-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reuse-modal-subtitle {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.reuse-modal-close {
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reuse-modal-close:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.reuse-modal-body {
+  padding: var(--space-lg);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.reuse-create-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reuse-create-row:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+
+.reuse-create-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.reuse-create-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.reuse-create-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.reuse-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: var(--space-sm) 0;
+}
+
+.reuse-divider::before,
+.reuse-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.reuse-divider span {
+  padding: 0 var(--space-md);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.reuse-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.reuse-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 12px var(--space-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reuse-item-row:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+.reuse-item-glyph {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.reuse-item-glyph-section {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.reuse-item-glyph-trivia {
+  background: rgba(96, 165, 250, 0.16);
+  color: var(--blue-text);
+}
+
+.reuse-item-glyph-treasure {
+  background: rgba(196, 132, 29, 0.16);
+  color: var(--accent-text);
+}
+
+.reuse-item-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reuse-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reuse-item-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reuse-item-origin {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.reuse-item-meta {
+  color: var(--text-muted);
+}
+
+.reuse-item-add {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s;
+}
+
+.reuse-item-row:hover .reuse-item-add {
+  opacity: 1;
+  transform: translateX(0);
+}
+

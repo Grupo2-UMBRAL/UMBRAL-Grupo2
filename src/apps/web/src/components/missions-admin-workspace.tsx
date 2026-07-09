@@ -22,8 +22,11 @@ import {
   serializeMissionDraft,
   summarizeItems,
   toMissionDraft,
+  cloneChallengeAsDraft,
+  cloneSectionAsDraft,
 } from "./mission-authoring-model";
 import { MissionBuilderFull } from "./mission-builder-full";
+import { ReuseItemModal } from "./reuse-item-modal";
 
 type MissionsAdminWorkspaceProps = {
   accessToken: string;
@@ -122,6 +125,56 @@ export function MissionsAdminWorkspace({
   const itemStats = useMemo(() => summarizeItems(draft.items), [draft.items]);
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [reuseModalKind, setReuseModalKind] = useState<"section" | "challenge" | null>(null);
+
+  const addRootSection = useCallback(() => {
+    setDraft((current) => ({
+      ...current,
+      items: [...current.items, createEmptySectionDraft()],
+    }));
+  }, []);
+
+  const addRootChallenge = useCallback(() => {
+    setDraft((current) => ({
+      ...current,
+      items: [...current.items, createEmptyChallengeDraft()],
+    }));
+  }, []);
+
+  const createEmptyFromReuseModal = useCallback(() => {
+    if (reuseModalKind === "section") {
+      addRootSection();
+    } else if (reuseModalKind === "challenge") {
+      addRootChallenge();
+    }
+    setReuseModalKind(null);
+  }, [addRootChallenge, addRootSection, reuseModalKind]);
+
+  const addReusedItem = useCallback((source: MissionItemDraft) => {
+    const cloned =
+      source.kind === "Section"
+        ? cloneSectionAsDraft(source as SectionDraft)
+        : cloneChallengeAsDraft(source as ChallengeDraft);
+    setDraft((current) => ({ ...current, items: [...current.items, cloned] }));
+    setReuseModalKind(null);
+  }, []);
+
+  // Bare fetch of one mission's detail (no state side effects) so the reuse
+  // modal can read other missions' content without touching the editor.
+  const fetchMissionDetailById = useCallback(
+    async (missionId: string): Promise<MissionDetail> => {
+      const response = await fetch(`${missionsUrl}/${missionId}`, {
+        headers: createAuthorizedHeaders(accessToken),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      return (await response.json()) as MissionDetail;
+    },
+    [accessToken, missionsUrl],
+  );
 
   const loadMissions = useCallback(
     async (preferredMissionId?: string | null) => {
@@ -357,19 +410,34 @@ export function MissionsAdminWorkspace({
     }
 
     return (
-      <MissionBuilderFull
-        draft={draft}
-        onUpdateField={updateDraftField}
-        onItemsChange={setItems}
-        onSubmit={handleSubmit}
-        onCancel={handleCloseEditor}
-        isSubmitting={isSubmitting}
-        isEditMode={editorMode === "edit"}
-        validationIssue={errorMessage}
-        feedback={feedback}
-        onToggleActivation={handleActivationToggle}
-        missionIsActive={selectedMission?.isActive}
-      />
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <MissionBuilderFull
+          draft={draft}
+          onUpdateField={updateDraftField}
+          onItemsChange={setItems}
+          onSubmit={handleSubmit}
+          onCancel={handleCloseEditor}
+          isSubmitting={isSubmitting}
+          isEditMode={editorMode === "edit"}
+          validationIssue={errorMessage}
+          feedback={feedback}
+          onToggleActivation={handleActivationToggle}
+          missionIsActive={selectedMission?.isActive}
+          onReuseItem={setReuseModalKind}
+        />
+
+        {reuseModalKind ? (
+          <ReuseItemModal
+            currentMissionId={editorMode === "edit" ? selectedMissionId : null}
+            fetchMissionDetail={fetchMissionDetailById}
+            kind={reuseModalKind}
+            missions={missions}
+            onAddReused={addReusedItem}
+            onClose={() => setReuseModalKind(null)}
+            onCreateEmpty={createEmptyFromReuseModal}
+          />
+        ) : null}
+      </div>
     );
   }
 

@@ -143,6 +143,77 @@ export function createEmptyMissionDraft(): MissionDraft {
   };
 }
 
+// --- clone (reuse across missions) -----------------------------------------
+// Regenerate every clientId and DROP server ids so serializeMissionDraft treats
+// the whole subtree as new records — the origin item is never aliased or moved.
+
+function cloneChoiceAsDraft(choice: ChoiceDraft): ChoiceDraft {
+  return {
+    clientId: createClientId(),
+    // id intentionally omitted
+    text: choice.text,
+    isCorrect: choice.isCorrect,
+  };
+}
+
+function cloneQuestionAsDraft(question: QuestionDraft): QuestionDraft {
+  return {
+    clientId: createClientId(),
+    text: question.text,
+    difficultyOverride: question.difficultyOverride,
+    timeLimitMinutesOverride: question.timeLimitMinutesOverride,
+    choices: question.choices.map(cloneChoiceAsDraft),
+  };
+}
+
+function cloneHintAsDraft(hint: HintDraft): HintDraft {
+  return {
+    clientId: createClientId(),
+    content: hint.content,
+    isSolution: hint.isSolution,
+    latitude: hint.latitude,
+    longitude: hint.longitude,
+  };
+}
+
+function cloneSearchAsDraft(search: SearchDraft): SearchDraft {
+  return {
+    clientId: createClientId(),
+    clue: search.clue,
+    expectedQrHash: search.expectedQrHash,
+    difficultyOverride: search.difficultyOverride,
+    timeLimitMinutesOverride: search.timeLimitMinutesOverride,
+    hints: search.hints.map(cloneHintAsDraft),
+  };
+}
+
+export function cloneChallengeAsDraft(challenge: ChallengeDraft): ChallengeDraft {
+  return {
+    clientId: createClientId(),
+    kind: "Challenge",
+    title: challenge.title,
+    gameType: challenge.gameType,
+    difficulty: challenge.difficulty,
+    timeLimitMinutes: challenge.timeLimitMinutes,
+    isActive: challenge.isActive,
+    questions: challenge.questions.map(cloneQuestionAsDraft),
+    searches: challenge.searches.map(cloneSearchAsDraft),
+  };
+}
+
+export function cloneSectionAsDraft(section: SectionDraft): SectionDraft {
+  return {
+    clientId: createClientId(),
+    kind: "Section",
+    title: section.title,
+    children: section.children.map((child) =>
+      child.kind === "Section"
+        ? cloneSectionAsDraft(child)
+        : cloneChallengeAsDraft(child),
+    ),
+  };
+}
+
 // --- response -> draft -----------------------------------------------------
 
 function toChoiceDraft(choice: ChoiceResponse): ChoiceDraft {

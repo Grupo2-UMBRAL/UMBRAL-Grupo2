@@ -19,6 +19,7 @@ type MissionBuilderFullProps = {
   feedback: string | null;
   onToggleActivation?: (action: "activate" | "deactivate") => void;
   missionIsActive?: boolean;
+  onReuseItem?: (kind: "section" | "challenge") => void;
 };
 
 export function MissionBuilderFull({
@@ -33,6 +34,7 @@ export function MissionBuilderFull({
   feedback,
   onToggleActivation,
   missionIsActive,
+  onReuseItem,
 }: MissionBuilderFullProps) {
   // State to track which item is currently selected in the sidebar
   const [selectedItemId, setSelectedItemId] = useState<string | "mission_config">("mission_config");
@@ -100,6 +102,7 @@ export function MissionBuilderFull({
           onItemsChange={onItemsChange}
           selectedItemId={selectedItemId}
           onSelect={setSelectedItemId}
+          onReuseItem={onReuseItem}
         />
         <MissionBuilderCanvas
           draft={draft}
