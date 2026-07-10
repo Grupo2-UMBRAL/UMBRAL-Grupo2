@@ -3,7 +3,7 @@ services:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:8.0
     container_name: umbral-aspire-dashboard
     ports:
-      - "18888:18888" # Dashboard UI
+      - "19888:18888" # Dashboard UI
       - "4317:4317" # OTLP gRPC
       - "4318:4317" # OTLP HTTP
     environment:

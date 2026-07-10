@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
 
         
         services.AddScoped(typeof(SessionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
+        services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
         services.AddScoped<SessionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.SessionManagementDbContext>());
 
         // Scoped so it shares the DbContext's scope with the outbox's scoped IPublishEndpoint.

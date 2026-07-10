@@ -22,7 +22,7 @@ Write-Host "============================================="
 Write-Host "          DEV STACK STARTED                  "
 Write-Host "============================================="
 Write-Host "Web:     http://localhost:3000"
-Write-Host "Mobile:  http://localhost:19006"
+Write-Host "Mobile:  http://localhost:19600"
 if ($ip) {
     Write-Host "Mobile QR Code (Expo) IP: $ip"
 }
