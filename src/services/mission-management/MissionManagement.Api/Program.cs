@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddUmbralTelemetry();
 
 builder.Services.AddUmbralApiDefaults(builder.Configuration);
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<IMissionManagementDbContext>());
+builder.Services.AddMissionManagementApplication();
 builder.Services.AddMissionManagementInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IMissionManagementDbContext>(serviceProvider => serviceProvider.GetRequiredService<MissionManagementDbContext>());
 
