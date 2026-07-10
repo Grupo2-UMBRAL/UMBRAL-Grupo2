@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\..\..\shared\Umbral.ServiceDefaults\Umbral.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\shared\Umbral.Kernel\Umbral.Kernel.csproj" />
   </ItemGroup>
 </Project>
