@@ -58,11 +58,6 @@ public sealed class SubmitEvidenceCommandHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await LogEvidenceSubmissionEventsAsync(
-            evidenceSubmission,
-            "AutomaticTreasureHunt",
-            cancellationToken);
-
         if (evidenceSubmission.Outcome == ValidationOutcome.Accepted)
         {
             await scoringAuditClient.RecordStageCreditAsync(
@@ -158,24 +153,6 @@ public sealed class SubmitEvidenceCommandHandler(
                 "LiveSession finalized after Evidence Submission.",
                 occurredAtUtc),
             cancellationToken);
-
-    private async Task LogEvidenceSubmissionEventsAsync(
-        EvidenceSubmission evidenceSubmission,
-        string source,
-        CancellationToken cancellationToken)
-    {
-        await scoringAuditClient.LogSessionEventAsync(
-            evidenceSubmission.LiveSessionId,
-            "EvidenceSubmitted",
-            $"Session Team '{evidenceSubmission.SessionTeamId}' submitted evidence for Mission Stage '{evidenceSubmission.MissionStageId}'. Game Type: {evidenceSubmission.GameType}.",
-            cancellationToken);
-
-        await scoringAuditClient.LogSessionEventAsync(
-            evidenceSubmission.LiveSessionId,
-            "ValidationOutcome",
-            $"Evidence submission '{evidenceSubmission.Id}' for Session Team '{evidenceSubmission.SessionTeamId}' on Mission Stage '{evidenceSubmission.MissionStageId}' was validated as {evidenceSubmission.Outcome}. Source: {source}.",
-            cancellationToken);
-    }
 
     private static RealtimeEventMetadata CreateMetadata(
         LiveSession liveSession,

@@ -20,7 +20,11 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.AddUmbralPostgresDbContext<SessionManagementDbContext>(configuration, SessionManagementPersistence.SchemaName);
+        services.AddUmbralPostgresDbContext<SessionManagementDbContext>(
+            configuration,
+            SessionManagementPersistence.SchemaName,
+            (serviceProvider, options) =>
+                options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventsDispatchInterceptor>()));
         services.AddScoped<ISessionManagementDbContext>(provider => provider.GetRequiredService<SessionManagementDbContext>());
         
         services.AddHttpContextAccessor();
@@ -48,6 +52,16 @@ public static class ServiceCollectionExtensions
         
         services.AddScoped(typeof(SessionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
         services.AddScoped<SessionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.SessionManagementDbContext>());
+
+        services.AddSingleton(_ =>
+        {
+            var rabbitOptions = new Messaging.RabbitMqOptions();
+            configuration.GetSection("RabbitMQ").Bind(rabbitOptions);
+            return rabbitOptions;
+        });
+        services.AddSingleton<Messaging.RabbitMqConnection>();
+        services.AddSingleton<Messaging.RabbitMqAuditEventPublisher>();
+        services.AddSingleton<Persistence.DomainEventsDispatchInterceptor>();
         return services;
     }
 }

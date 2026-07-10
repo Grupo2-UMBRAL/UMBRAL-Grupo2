@@ -116,13 +116,11 @@ public sealed class HintReleaseQaTests
         var liveSession = CreateRunningLiveSessionWithTeams();
         await SeedLiveSessionAsync(dbContext, liveSession);
         var realtimeNotifier = new RecordingSessionRealtimeNotifier();
-        var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ReleaseHintHandler(
             dbContext,
             new Repository<LiveSession>(dbContext),
             new FixedTimeProvider(NowUtc),
-            realtimeNotifier,
-            scoringAuditClient);
+            realtimeNotifier);
 
         var visibleHints = await handler.Handle(
             new ReleaseHintCommand(LiveSessionId, SessionTeamId: null, HintOneId),
@@ -145,22 +143,23 @@ public sealed class HintReleaseQaTests
                 Assert.Equal(SnapshotRefreshPolicy.ApplyIncremental, second.Metadata.RefreshPolicy);
             });
         Assert.Collection(
-            scoringAuditClient.SessionEvents.OrderBy(sessionEvent => sessionEvent.SessionTeamId).ToArray(),
+            liveSession.DomainEvents
+                .OfType<HintReleasedDomainEvent>()
+                .OrderBy(domainEvent => domainEvent.SessionTeamId)
+                .ToArray(),
             first =>
             {
                 Assert.Equal(LiveSessionId, first.LiveSessionId);
-                Assert.Equal("HintReleased", first.EventType);
                 Assert.Equal(AlphaTeamId, first.SessionTeamId);
-                Assert.Contains(HintOneId.ToString(), first.Description, StringComparison.Ordinal);
-                Assert.Contains(StageOneId.ToString(), first.Description, StringComparison.Ordinal);
+                Assert.Equal(StageOneId, first.MissionStageId);
+                Assert.Equal(HintOneId, first.HintId);
             },
             second =>
             {
                 Assert.Equal(LiveSessionId, second.LiveSessionId);
-                Assert.Equal("HintReleased", second.EventType);
                 Assert.Equal(BetaTeamId, second.SessionTeamId);
-                Assert.Contains(HintOneId.ToString(), second.Description, StringComparison.Ordinal);
-                Assert.Contains(StageOneId.ToString(), second.Description, StringComparison.Ordinal);
+                Assert.Equal(StageOneId, second.MissionStageId);
+                Assert.Equal(HintOneId, second.HintId);
             });
     }
 
@@ -388,61 +387,4 @@ public sealed class HintReleaseQaTests
             return Task.CompletedTask;
         }
     }
-
-    private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
-    {
-        public List<RecordedSessionEvent> SessionEvents { get; } = [];
-
-        public Task RecordStageCreditAsync(
-            RecordStageCreditRequest request,
-            CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task<Application.Abstractions.Scoring.ApplyPenaltyResponse> ApplyPenaltyAsync(
-            Application.Abstractions.Scoring.ApplyPenaltyRequest request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new Application.Abstractions.Scoring.ApplyPenaltyResponse(
-                request.LiveSessionId,
-                request.SessionTeamId,
-                request.CommandId,
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                true,
-                0,
-                new RankingPayload(request.LiveSessionId, request.RecordedAt, [])));
-
-        public Task LogSessionEventAsync(
-            Guid liveSessionId,
-            string eventType,
-            string description,
-            CancellationToken cancellationToken)
-        {
-            SessionEvents.Add(new RecordedSessionEvent(
-                liveSessionId,
-                eventType,
-                description,
-                ExtractSessionTeamId(description)));
-
-            return Task.CompletedTask;
-        }
-
-        private static Guid ExtractSessionTeamId(string description)
-        {
-            const string marker = "Session Team '";
-            var start = description.IndexOf(marker, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                return Guid.Empty;
-            }
-
-            start += marker.Length;
-            var end = description.IndexOf('\'', start);
-            return Guid.Parse(description[start..end]);
-        }
-    }
-
-    private sealed record RecordedSessionEvent(
-        Guid LiveSessionId,
-        string EventType,
-        string Description,
-        Guid SessionTeamId);
 }

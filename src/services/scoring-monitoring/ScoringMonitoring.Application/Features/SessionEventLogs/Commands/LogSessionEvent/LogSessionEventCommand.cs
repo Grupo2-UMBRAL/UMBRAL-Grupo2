@@ -3,5 +3,6 @@ namespace ScoringMonitoring.Application.Features.SessionEventLogs.Commands.LogSe
 public sealed record LogSessionEventCommand(
     Guid LiveSessionId,
     string EventType,
-    string Description) : IRequest<SessionEventLogPayload>;
+    string Description,
+    Guid? EventId = null) : IRequest<SessionEventLogPayload>;
 

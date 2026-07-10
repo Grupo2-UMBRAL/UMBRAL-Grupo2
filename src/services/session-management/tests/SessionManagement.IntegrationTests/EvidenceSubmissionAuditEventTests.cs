@@ -1,17 +1,15 @@
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
-using SessionManagement.Application.Features.EvidenceSubmissions;
-using SessionManagement.Application.Abstractions.Realtime;
-using SessionManagement.Application.Abstractions.Scoring;
-using SessionManagement.Application.Features.SessionEnrollment;
-using SessionManagement.Application.Features.SessionLifecycle;
-using SessionManagement.Application.Features.SessionSnapshots;
 using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Infrastructure.Persistence;
 using Xunit;
 
 namespace SessionManagement.IntegrationTests;
 
+/// <summary>
+/// Audit is emitted as domain events raised by the <see cref="LiveSession"/> aggregate and
+/// dispatched to RabbitMQ by a post-commit interceptor. These tests assert on the raised
+/// domain events (a stronger contract than mocking a publisher), covering the submitted and
+/// immediate-validation facts for both accepted and rejected evidence.
+/// </summary>
 public sealed class EvidenceSubmissionAuditEventTests
 {
     private static readonly DateTimeOffset NowUtc = new(2026, 6, 4, 5, 0, 0, TimeSpan.Zero);
@@ -21,59 +19,61 @@ public sealed class EvidenceSubmissionAuditEventTests
     private static readonly Guid TeamId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
-    public async Task SubmitEvidenceCommand_LogsSubmittedEvidenceAndImmediateValidationOutcome()
+    public void SubmitEvidence_RaisesSubmittedAndValidatedDomainEvents_WhenRejected()
     {
-        await using var dbContext = CreateDbContext();
-        await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
-        var scoringAuditClient = new RecordingScoringMonitoringClient();
-        var handler = new SubmitEvidenceCommandHandler(
-            dbContext,
-            new Repository<LiveSession>(dbContext),
-            new FixedTimeProvider(NowUtc),
-            new StaticParticipantIdentity("participant-alpha"),
-            new NoopSessionRealtimeNotifier(),
-            scoringAuditClient);
+        var liveSession = CreateActiveLiveSession();
 
-        var response = await handler.Handle(
-            new SubmitEvidenceCommand(TeamId, "wrong-qr"),
-            CancellationToken.None);
+        var submission = liveSession.SubmitEvidence(TeamId, "wrong-qr", NowUtc);
 
-        Assert.Equal("Rejected", response.ValidationOutcome);
+        Assert.Equal(ValidationOutcome.Rejected, submission.Outcome);
         Assert.Collection(
-            scoringAuditClient.SessionEvents,
-            submitted =>
+            liveSession.DomainEvents,
+            domainEvent =>
             {
+                var submitted = Assert.IsType<EvidenceSubmittedDomainEvent>(domainEvent);
                 Assert.Equal(LiveSessionId, submitted.LiveSessionId);
-                Assert.Equal("EvidenceSubmitted", submitted.EventType);
-                Assert.Equal(
-                    $"Session Team '{TeamId}' submitted evidence for Mission Stage '{StageId}'. Game Type: TreasureHunt.",
-                    submitted.Description);
+                Assert.Equal(submission.Id, submitted.EvidenceSubmissionId);
+                Assert.Equal(TeamId, submitted.SessionTeamId);
+                Assert.Equal(StageId, submitted.MissionStageId);
+                Assert.Equal("TreasureHunt", submitted.GameType);
+                Assert.NotEqual(Guid.Empty, submitted.EventId);
+                Assert.Equal(NowUtc, submitted.OccurredOnUtc);
             },
-            outcome =>
+            domainEvent =>
             {
-                Assert.Equal(LiveSessionId, outcome.LiveSessionId);
-                Assert.Equal("ValidationOutcome", outcome.EventType);
-                Assert.Equal(
-                    $"Evidence submission '{response.EvidenceSubmissionId}' for Session Team '{TeamId}' on Mission Stage '{StageId}' was validated as Rejected. Source: AutomaticTreasureHunt.",
-                    outcome.Description);
+                var validated = Assert.IsType<EvidenceValidatedDomainEvent>(domainEvent);
+                Assert.Equal(LiveSessionId, validated.LiveSessionId);
+                Assert.Equal(submission.Id, validated.EvidenceSubmissionId);
+                Assert.Equal(TeamId, validated.SessionTeamId);
+                Assert.Equal(StageId, validated.MissionStageId);
+                Assert.Equal("Rejected", validated.Outcome);
+                Assert.Equal("AutomaticTreasureHunt", validated.Source);
             });
-        Assert.Empty(scoringAuditClient.StageCreditRequests);
     }
 
-    private static SessionManagementDbContext CreateDbContext()
+    [Fact]
+    public void SubmitEvidence_RaisesValidatedEventWithAcceptedOutcome_WhenHashMatches()
     {
-        var options = new DbContextOptionsBuilder<SessionManagementDbContext>()
-            .UseInMemoryDatabase($"evidence-submission-audit-events-{Guid.NewGuid():N}")
-            .Options;
+        var liveSession = CreateActiveLiveSession();
 
-        return new SessionManagementDbContext(options);
+        var submission = liveSession.SubmitEvidence(TeamId, "expected-qr", NowUtc);
+
+        Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
+        var validated = Assert.IsType<EvidenceValidatedDomainEvent>(
+            Assert.Single(liveSession.DomainEvents, domainEvent => domainEvent is EvidenceValidatedDomainEvent));
+        Assert.Equal("Accepted", validated.Outcome);
+        Assert.Equal("AutomaticTreasureHunt", validated.Source);
     }
 
-    private static async Task SeedLiveSessionAsync(SessionManagementDbContext dbContext, LiveSession liveSession)
+    [Fact]
+    public void EachRaisedDomainEvent_HasItsOwnEventId()
     {
-        await dbContext.Database.EnsureCreatedAsync();
-        dbContext.LiveSessions.Add(liveSession);
-        await dbContext.SaveChangesAsync();
+        var liveSession = CreateActiveLiveSession();
+
+        liveSession.SubmitEvidence(TeamId, "wrong-qr", NowUtc);
+
+        var eventIds = liveSession.DomainEvents.Select(domainEvent => domainEvent.EventId).ToArray();
+        Assert.Equal(eventIds.Length, eventIds.Distinct().Count());
     }
 
     private static LiveSession CreateActiveLiveSession()
@@ -113,73 +113,5 @@ public sealed class EvidenceSubmissionAuditEventTests
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
         backingField.SetValue(liveSession, state);
-    }
-
-    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => utcNow;
-    }
-
-    private sealed class StaticParticipantIdentity(string participantUserId) : ICurrentParticipantIdentity
-    {
-        public ParticipantUserId GetRequiredParticipantUserId() => ParticipantUserId.Parse(participantUserId);
-    }
-
-    private sealed class RecordingScoringMonitoringClient : IScoringMonitoringClient
-    {
-        public List<RecordStageCreditRequest> StageCreditRequests { get; } = [];
-
-        public List<RecordedSessionEvent> SessionEvents { get; } = [];
-
-        public Task RecordStageCreditAsync(
-            RecordStageCreditRequest request,
-            CancellationToken cancellationToken)
-        {
-            StageCreditRequests.Add(request);
-            return Task.CompletedTask;
-        }
-
-        public Task<ApplyPenaltyResponse> ApplyPenaltyAsync(
-            ApplyPenaltyRequest request,
-            CancellationToken cancellationToken)
-            => Task.FromResult(new ApplyPenaltyResponse(
-                request.LiveSessionId,
-                request.SessionTeamId,
-                request.CommandId,
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                true,
-                0,
-                new RankingPayload(request.LiveSessionId, request.RecordedAt, [])));
-
-        public Task LogSessionEventAsync(
-            Guid liveSessionId,
-            string eventType,
-            string description,
-            CancellationToken cancellationToken)
-        {
-            SessionEvents.Add(new RecordedSessionEvent(liveSessionId, eventType, description));
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed record RecordedSessionEvent(
-        Guid LiveSessionId,
-        string EventType,
-        string Description);
-
-    private sealed class NoopSessionRealtimeNotifier : ISessionRealtimeNotifier
-    {
-        public Task NotifySessionStateChangedAsync(LiveSessionStateChangedEvent stateChangedEvent, CancellationToken cancellationToken)
-            => Task.CompletedTask;
-
-        public Task NotifyTeamProgressChangedAsync(TeamProgressChangedPayload payload, CancellationToken cancellationToken)
-            => Task.CompletedTask;
-
-        public Task NotifyEvidenceSubmissionOutcomeChangedAsync(EvidenceSubmissionOutcomeChangedPayload payload, CancellationToken cancellationToken)
-            => Task.CompletedTask;
-
-        public Task NotifyHintUnlockedAsync(HintUnlockedPayload payload, CancellationToken cancellationToken)
-            => Task.CompletedTask;
     }
 }
