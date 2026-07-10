@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
 import type { WebShellRole } from "@/lib/roles";
 import { Link } from "react-router-dom";
@@ -18,6 +18,17 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const { user, roles, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") {
+      return "dark";
+    }
+    return window.localStorage.getItem("umbral-theme") === "light" ? "light" : "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem("umbral-theme", theme);
+  }, [theme]);
 
   const initials = user
     ? (user.displayName || user.username)
@@ -106,9 +117,27 @@ export function DashboardLayout({
             </button>
             <h2>{title}</h2>
           </div>
-          {headerActions && (
-            <div className="content-header-actions">{headerActions}</div>
-          )}
+          <div className="content-header-actions">
+            {headerActions}
+            <button
+              className="btn btn-ghost btn-sm theme-toggle"
+              onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+              type="button"
+              aria-label="Cambiar tema"
+              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              {theme === "dark" ? (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+          </div>
         </header>
         <div className="content-body page-enter">{children}</div>
       </div>
