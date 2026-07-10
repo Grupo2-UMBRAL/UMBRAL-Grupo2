@@ -29,6 +29,7 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
         {
             liveSession.ToTable("live_sessions");
             liveSession.HasKey(entity => entity.Id);
+            liveSession.Ignore(entity => entity.DomainEvents);
 
             liveSession.Property(entity => entity.Id)
                 .ValueGeneratedNever();

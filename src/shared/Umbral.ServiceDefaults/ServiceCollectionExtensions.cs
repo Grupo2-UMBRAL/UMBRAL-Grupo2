@@ -61,7 +61,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddUmbralPostgresDbContext<TContext>(
         this IServiceCollection services,
         IConfiguration configuration,
-        string schemaName)
+        string schemaName,
+        Action<IServiceProvider, DbContextOptionsBuilder>? configureOptions = null)
         where TContext : DbContext
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -69,14 +70,17 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(schemaName);
 
         var connectionString = ServiceConfiguration.GetRequiredPostgresConnectionString(configuration);
-        services.AddDbContext<TContext>(options =>
+        services.AddDbContext<TContext>((serviceProvider, options) =>
+        {
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions =>
                 {
                     npgsqlOptions.MigrationsAssembly(typeof(TContext).Assembly.FullName);
                     npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", schemaName);
-                }));
+                });
+            configureOptions?.Invoke(serviceProvider, options);
+        });
 
         return services;
     }

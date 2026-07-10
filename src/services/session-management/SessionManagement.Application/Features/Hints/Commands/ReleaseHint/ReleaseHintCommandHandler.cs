@@ -13,8 +13,7 @@ namespace SessionManagement.Application.Features.Hints;
 public sealed class ReleaseHintHandler(
     IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
     TimeProvider timeProvider,
-    ISessionRealtimeNotifier realtimeNotifier,
-    IScoringMonitoringClient scoringAuditClient)
+    ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<ReleaseHintCommand, IReadOnlyList<VisibleHintSnapshot>>
 {
     public async Task<IReadOnlyList<VisibleHintSnapshot>> Handle(
@@ -42,11 +41,6 @@ public sealed class ReleaseHintHandler(
             : ReleaseForEligibleTeams(liveSession, request.HintId, releasedAtUtc);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        foreach (var releasedHint in releasedHints)
-        {
-            await LogHintReleasedAsync(releasedHint, cancellationToken);
-        }
 
         var visibleHints = releasedHints
             .Select(releasedHint => MapVisibleHint(liveSession, releasedHint))
@@ -133,15 +127,6 @@ public sealed class ReleaseHintHandler(
                     "Hint unlocked for Session Team."),
                 sessionTeamId,
                 visibleHint),
-            cancellationToken);
-
-    private async Task LogHintReleasedAsync(
-        ReleasedHint releasedHint,
-        CancellationToken cancellationToken)
-        => await scoringAuditClient.LogSessionEventAsync(
-            releasedHint.LiveSessionId,
-            "HintReleased",
-            $"Hint '{releasedHint.HintId}' released to Session Team '{releasedHint.SessionTeamId}' for Mission Stage '{releasedHint.MissionStageId}'. Reason: {releasedHint.UnlockReason}.",
             cancellationToken);
 
     private static VisibleHintSnapshot MapVisibleHint(LiveSession liveSession, ReleasedHint releasedHint)

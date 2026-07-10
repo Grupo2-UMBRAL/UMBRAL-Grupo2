@@ -1,11 +1,12 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SessionManagement.Domain.Abstractions;
 using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Domain.LiveSessions;
 
-public sealed class LiveSession
+public sealed class LiveSession : AggregateRoot
 {
     private static readonly JsonSerializerOptions SessionStageFlowSerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -429,6 +430,7 @@ public sealed class LiveSession
 
         EvidenceSubmissions.Add(evidenceSubmission);
         SequenceNumber++;
+        RaiseEvidenceSubmittedEvents(evidenceSubmission, "AutomaticTreasureHunt", submittedAtUtc);
 
         if (!accepted)
         {
@@ -465,6 +467,7 @@ public sealed class LiveSession
 
         EvidenceSubmissions.Add(evidenceSubmission);
         SequenceNumber++;
+        RaiseEvidenceSubmittedEvents(evidenceSubmission, "AutomaticTrivia", submittedAtUtc);
 
         if (accepted)
         {
@@ -504,6 +507,14 @@ public sealed class LiveSession
         evidenceSubmission.ApplyOverride(newOutcome, isAccepted ? null : "operator_override_rejected");
         ValidationOverrideLogs.Add(validationOverrideLog);
         SequenceNumber++;
+        RaiseDomainEvent(new ValidationOutcomeOverriddenDomainEvent(
+            Id,
+            evidenceSubmission.Id,
+            evidenceSubmission.SessionTeamId,
+            evidenceSubmission.MissionStageId,
+            evidenceSubmission.Outcome.ToString(),
+            reason,
+            overriddenAtUtc));
 
         if (previousOutcome != ValidationOutcome.Accepted && newOutcome == ValidationOutcome.Accepted)
         {
@@ -560,6 +571,13 @@ public sealed class LiveSession
             unlockReason);
         ReleasedHints.Add(releasedHint);
         SequenceNumber++;
+        RaiseDomainEvent(new HintReleasedDomainEvent(
+            Id,
+            releasedHint.SessionTeamId,
+            releasedHint.MissionStageId,
+            releasedHint.HintId,
+            releasedHint.UnlockReason,
+            releasedAtUtc));
 
         return releasedHint;
     }
@@ -838,6 +856,28 @@ public sealed class LiveSession
         }
 
         AcceptCurrentStage(progress, orderedStages, acceptedAtUtc);
+    }
+
+    private void RaiseEvidenceSubmittedEvents(
+        EvidenceSubmission evidenceSubmission,
+        string source,
+        DateTimeOffset submittedAtUtc)
+    {
+        RaiseDomainEvent(new EvidenceSubmittedDomainEvent(
+            Id,
+            evidenceSubmission.Id,
+            evidenceSubmission.SessionTeamId,
+            evidenceSubmission.MissionStageId,
+            evidenceSubmission.GameType,
+            submittedAtUtc));
+        RaiseDomainEvent(new EvidenceValidatedDomainEvent(
+            Id,
+            evidenceSubmission.Id,
+            evidenceSubmission.SessionTeamId,
+            evidenceSubmission.MissionStageId,
+            evidenceSubmission.Outcome.ToString(),
+            source,
+            submittedAtUtc));
     }
 
     private void EnsureEvidenceSubmissionAllowed()

@@ -309,7 +309,7 @@ public sealed class ReleaseHintHandlerTests
     public async Task Handle_Throws_WhenLiveSessionNotFound()
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
-        var handler = Build(session, out _, out _, out _);
+        var handler = Build(session, out _, out _);
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             handler.Handle(new ReleaseHintCommand(Guid.NewGuid(), HandlerScaffold.Team, SampleLiveSessions.HintId(1)), default));
@@ -320,7 +320,7 @@ public sealed class ReleaseHintHandlerTests
     public async Task Handle_ReleasesHintForSingleTeam()
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
-        var handler = Build(session, out var unitOfWork, out var notifier, out var scoring);
+        var handler = Build(session, out var unitOfWork, out var notifier);
 
         var visibleHints = await handler.Handle(
             new ReleaseHintCommand(session.Id, HandlerScaffold.Team, SampleLiveSessions.HintId(1)), default);
@@ -328,7 +328,11 @@ public sealed class ReleaseHintHandlerTests
         Assert.Single(visibleHints);
         Assert.Equal(SampleLiveSessions.HintId(1), visibleHints[0].HintId);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        scoring.Verify(s => s.LogSessionEventAsync(session.Id, "HintReleased", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        var hintReleased = Assert.IsType<HintReleasedDomainEvent>(
+            Assert.Single(session.DomainEvents, domainEvent => domainEvent is HintReleasedDomainEvent));
+        Assert.Equal(session.Id, hintReleased.LiveSessionId);
+        Assert.Equal(HandlerScaffold.Team, hintReleased.SessionTeamId);
+        Assert.Equal(SampleLiveSessions.HintId(1), hintReleased.HintId);
         notifier.Verify(n => n.NotifyHintUnlockedAsync(It.IsAny<HintUnlockedPayload>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -336,7 +340,7 @@ public sealed class ReleaseHintHandlerTests
     public async Task Handle_ReleasesHintForEligibleTeams_WhenNoTeamSpecified()
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
-        var handler = Build(session, out _, out var notifier, out _);
+        var handler = Build(session, out _, out var notifier);
 
         var visibleHints = await handler.Handle(
             new ReleaseHintCommand(session.Id, null, SampleLiveSessions.HintId(1)), default);
@@ -349,7 +353,7 @@ public sealed class ReleaseHintHandlerTests
     public async Task Handle_Throws_WhenHintNotInFlowForEligibleRelease()
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
-        var handler = Build(session, out _, out _, out _);
+        var handler = Build(session, out _, out _);
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             handler.Handle(new ReleaseHintCommand(session.Id, null, Guid.NewGuid()), default));
@@ -361,7 +365,7 @@ public sealed class ReleaseHintHandlerTests
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
         session.ReleaseHint(HandlerScaffold.Team, SampleLiveSessions.HintId(1), SampleLiveSessions.Now);
-        var handler = Build(session, out _, out _, out _);
+        var handler = Build(session, out _, out _);
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             handler.Handle(new ReleaseHintCommand(session.Id, null, SampleLiveSessions.HintId(1)), default));
@@ -371,17 +375,14 @@ public sealed class ReleaseHintHandlerTests
     private static ReleaseHintHandler Build(
         LiveSession session,
         out Mock<IUnitOfWork> unitOfWork,
-        out Mock<ISessionRealtimeNotifier> notifier,
-        out Mock<IScoringMonitoringClient> scoring)
+        out Mock<ISessionRealtimeNotifier> notifier)
     {
         unitOfWork = HandlerScaffold.UnitOfWork();
         notifier = new Mock<ISessionRealtimeNotifier>();
-        scoring = new Mock<IScoringMonitoringClient>();
         return new ReleaseHintHandler(
             unitOfWork.Object,
             new FakeRepository<LiveSession>([session]),
             HandlerScaffold.Clock(),
-            notifier.Object,
-            scoring.Object);
+            notifier.Object);
     }
 }

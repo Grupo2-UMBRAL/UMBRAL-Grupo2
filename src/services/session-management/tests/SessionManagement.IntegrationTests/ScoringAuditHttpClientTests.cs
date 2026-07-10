@@ -43,38 +43,6 @@ public sealed class ScoringMonitoringHttpClientTests
         Assert.False(root.TryGetProperty("MissionStageId", out _));
     }
 
-    [Fact]
-    public async Task LogSessionEventAsync_PostsMinimumSafePayloadToSessionEventLogEndpoint()
-    {
-        var liveSessionId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        var handler = new CapturingHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.Created));
-        var httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("https://scoring-monitoring.test")
-        };
-        var scoringAuditClient = new ScoringMonitoringHttpClient(httpClient);
-
-        await scoringAuditClient.LogSessionEventAsync(
-            liveSessionId,
-            "EvidenceSubmitted",
-            "Session Team '33333333-3333-3333-3333-333333333333' submitted evidence for Mission Stage '11111111-1111-1111-1111-111111111111'. Game Type: Trivia.",
-            CancellationToken.None);
-
-        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
-        Assert.Equal($"/api/scoring-monitoring/sessions/{liveSessionId}/event-log", handler.RequestPath);
-        using var document = JsonDocument.Parse(handler.RequestContent);
-        var root = document.RootElement;
-        Assert.Equal(2, root.EnumerateObject().Count());
-        Assert.Equal("EvidenceSubmitted", GetStringProperty(root, "EventType"));
-        Assert.StartsWith("Session Team", GetStringProperty(root, "Description"), StringComparison.Ordinal);
-        Assert.False(root.TryGetProperty("liveSessionId", out _));
-        Assert.False(root.TryGetProperty("LiveSessionId", out _));
-        Assert.False(root.TryGetProperty("submittedHash", out _));
-        Assert.False(root.TryGetProperty("SubmittedHash", out _));
-        Assert.False(root.TryGetProperty("submittedText", out _));
-        Assert.False(root.TryGetProperty("SubmittedText", out _));
-    }
-
     private static string GetStringProperty(JsonElement element, string propertyName)
     {
         if (element.TryGetProperty(propertyName, out var pascalCaseValue))

@@ -41,6 +41,31 @@ public sealed class SessionEventLogApplicationTests
     }
 
     [Fact]
+    public async Task LogSessionEventCommand_RedeliveredEventId_DoesNotDuplicateEventLog()
+    {
+        await using var dbContext = CreateDbContext();
+        var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
+        var handler = new LogSessionEventHandler(
+            dbContext,
+            new Repository<SessionEventLog>(dbContext),
+            TimeProvider.System,
+            updatesPublisher);
+        var command = new LogSessionEventCommand(
+            Guid.NewGuid(),
+            "EvidenceSubmitted",
+            "Session Team submitted evidence.",
+            EventId: Guid.NewGuid());
+
+        var firstPayload = await handler.Handle(command, CancellationToken.None);
+        var replayedPayload = await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(command.EventId, firstPayload.Id);
+        Assert.Equal(firstPayload.Id, replayedPayload.Id);
+        Assert.Equal(1, await dbContext.SessionEventLogs.CountAsync());
+        Assert.Single(updatesPublisher.EventLogPayloads);
+    }
+
+    [Fact]
     public async Task GetSessionEventLogQuery_ReturnsLiveSessionEventsOrderedByTimestampDescending()
     {
         await using var dbContext = CreateDbContext();
