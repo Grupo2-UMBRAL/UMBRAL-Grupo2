@@ -2,24 +2,36 @@ import { type FormEvent, useState } from "react";
 import {
   type MissionDraft,
   type MissionItemDraft,
+  type MissionSummary,
 } from "./mission-authoring-types";
-import { MissionBuilderSidebar } from "./mission-builder-sidebar";
+import { MissionListColumn } from "./mission-list-column";
 import { MissionBuilderCanvas } from "./mission-builder-canvas";
 import "./mission-builder.css";
 
 type MissionBuilderFullProps = {
+  // Editor
   draft: MissionDraft;
-  onUpdateField: (field: "name" | "description" | "maximumDurationMinutes", value: string) => void;
+  onUpdateField: (
+    field: "name" | "description" | "maximumDurationMinutes",
+    value: string,
+  ) => void;
   onItemsChange: (items: MissionItemDraft[]) => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  onCancel: () => void;
+  onClose: () => void;
   isSubmitting: boolean;
   isEditMode: boolean;
   validationIssue: string | null;
   feedback: string | null;
   onToggleActivation?: (action: "activate" | "deactivate") => void;
   missionIsActive?: boolean;
-  onReuseItem?: (kind: "section" | "challenge") => void;
+  onReuseItem: (kind: "section" | "challenge") => void;
+  // Missions list
+  missions: MissionSummary[];
+  selectedMissionId: string | null;
+  isLoadingList: boolean;
+  onSelectMission: (id: string) => void;
+  onCreateMission: () => void;
+  stageCounts?: Record<string, number>;
 };
 
 export function MissionBuilderFull({
@@ -27,7 +39,7 @@ export function MissionBuilderFull({
   onUpdateField,
   onItemsChange,
   onSubmit,
-  onCancel,
+  onClose,
   isSubmitting,
   isEditMode,
   validationIssue,
@@ -35,30 +47,44 @@ export function MissionBuilderFull({
   onToggleActivation,
   missionIsActive,
   onReuseItem,
+  missions,
+  selectedMissionId,
+  isLoadingList,
+  onSelectMission,
+  onCreateMission,
+  stageCounts,
 }: MissionBuilderFullProps) {
-  // State to track which item is currently selected in the sidebar
-  const [selectedItemId, setSelectedItemId] = useState<string | "mission_config">("mission_config");
+  const [listCollapsed, setListCollapsed] = useState(false);
 
   return (
     <div className="mb-root">
-      {/* Top Header */}
       <header className="mb-header">
         <div className="mb-header-title">
-          <span className="text-muted">Misiones</span>
-          <span className="text-muted">/</span>
-          <strong>{draft.name || "Nueva Misión"}</strong>
+          {listCollapsed ? (
+            <button
+              className="mb-icon-btn"
+              onClick={() => setListCollapsed(false)}
+              type="button"
+              title="Mostrar lista de misiones"
+              aria-label="Mostrar lista de misiones"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 6 15 12 9 18" />
+              </svg>
+            </button>
+          ) : null}
+          <h1>Diseño de misiones</h1>
         </div>
         <div className="mb-header-actions">
           <button
             className="btn btn-ghost btn-sm"
-            onClick={onCancel}
+            onClick={onClose}
             type="button"
             disabled={isSubmitting}
           >
-            Volver al Catálogo
+            Volver
           </button>
-          
-          {isEditMode && onToggleActivation && (
+          {isEditMode && onToggleActivation ? (
             missionIsActive ? (
               <button
                 className="btn btn-danger btn-sm"
@@ -66,7 +92,7 @@ export function MissionBuilderFull({
                 disabled={isSubmitting}
                 type="button"
               >
-                Desactivar
+                Desactivar misión
               </button>
             ) : (
               <button
@@ -75,10 +101,10 @@ export function MissionBuilderFull({
                 disabled={isSubmitting}
                 type="button"
               >
-                Activar
+                Activar misión
               </button>
             )
-          )}
+          ) : null}
 
           <button
             className="btn btn-primary btn-sm"
@@ -86,32 +112,33 @@ export function MissionBuilderFull({
             form="mission-builder-form"
             type="submit"
           >
-            {isEditMode ? "Guardar Cambios" : "Crear Misión"}
+            {isEditMode ? "Guardar cambios" : "Crear misión"}
           </button>
         </div>
       </header>
 
-      {/* Main Form Container */}
-      <form
-        id="mission-builder-form"
-        className="mb-container"
-        onSubmit={onSubmit}
-      >
-        <MissionBuilderSidebar
-          items={draft.items}
-          onItemsChange={onItemsChange}
-          selectedItemId={selectedItemId}
-          onSelect={setSelectedItemId}
-          onReuseItem={onReuseItem}
+      <form id="mission-builder-form" className="mb-body" onSubmit={onSubmit}>
+        <MissionListColumn
+          missions={missions}
+          selectedMissionId={selectedMissionId}
+          isLoading={isLoadingList}
+          collapsed={listCollapsed}
+          onToggleCollapse={() => setListCollapsed((c) => !c)}
+          onSelect={onSelectMission}
+          onCreate={onCreateMission}
+          stageCounts={stageCounts}
         />
         <MissionBuilderCanvas
           draft={draft}
           onUpdateField={onUpdateField}
           items={draft.items}
           onItemsChange={onItemsChange}
-          selectedItemId={selectedItemId}
           validationIssue={validationIssue}
           feedback={feedback}
+          isEditMode={isEditMode}
+          missionIsActive={missionIsActive}
+          onAddSection={() => onReuseItem("section")}
+          onAddChallenge={() => onReuseItem("challenge")}
         />
       </form>
     </div>
