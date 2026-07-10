@@ -3,7 +3,6 @@ import { useAuth } from "@/context/auth-context";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { LiveSessionsWorkspace } from "@/components/live-sessions-workspace";
-import { ServiceStatusBoard } from "@/components/service-status-board";
 
 export default function OperatorPage() {
   const { isAuthenticated, token, roles, loading } = useAuth();
@@ -29,7 +28,6 @@ export default function OperatorPage() {
 
   return (
     <DashboardLayout role="Operator" title="Espacio del Operador">
-      <ServiceStatusBoard accessToken={token} role="Operator" />
       <LiveSessionsWorkspace accessToken={token} />
     </DashboardLayout>
   );

@@ -857,6 +857,14 @@ function countTeamsAtOrBeyondSessionStage(sessionStage: LiveSessionStage, sessio
   ).length;
 }
 
+// Ranking-position badge tint for the synchronized flow-board team cards.
+function getFlowRankClass(rank: number | undefined) {
+  if (rank === 1) return "flow-rank is-first";
+  if (rank === 2) return "flow-rank is-second";
+  if (rank === 3) return "flow-rank is-third";
+  return "flow-rank";
+}
+
 function sortSessionEventLogItems(items: SessionEventLogItem[]) {
   return [...items].sort((left, right) => {
     const leftTime = new Date(left.timestamp).getTime();
@@ -1589,7 +1597,6 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [enrollmentActionPending, setEnrollmentActionPending] = useState<EnrollmentAction | null>(null);
   const [newTeamName, setNewTeamName] = useState("");
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
-  const [activeDashboardTab, setActiveDashboardTab] = useState<"Resumen" | "Evidencias" | "Pistas" | "Penalizaciones">("Resumen");
   const [sessionRealtimeConnection, setSessionRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
@@ -2817,516 +2824,625 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
   // --- DASHBOARD DE SESIÓN (PANTALLA COMPLETA) ---
   if (selectedLiveSessionId && selectedLiveSession) {
-    return (
-      <div className="ls-dashboard-root">
-        <header className="ls-dashboard-header">
-          <div className="ls-header-left">
-            <h2>{selectedLiveSession.name}</h2>
-            <div className="ls-sync-status">
-              <span className={getConnectionDotClass(sessionRealtimeConnection)}></span>
-              Sincronización: {sessionRealtimeConnection.label}
-            </div>
-          </div>
-          <div className="ls-header-center">
-             <div className="ls-clock">
-               {selectedLiveSession.state === "Scheduled" ? (
-                 selectedLiveSession.scheduledStartAtUtc ? formatTimestamp(selectedLiveSession.scheduledStartAtUtc) : "Sin programar"
-               ) : (
-                 formatRemainingSeconds(selectedLiveSessionOverview?.remainingSeconds)
-               )}
-             </div>
-          </div>
-          <div className="ls-header-right">
-            <button className="btn btn-ghost" onClick={() => setSelectedLiveSessionId(null)}>
-              Volver al menú
-            </button>
-            {lifecycleActions.map((candidate) => {
-              let btnClass = "btn-primary";
-              if (candidate.action === "cancel") btnClass = "btn-red-outline";
-              if (candidate.action === "pause") btnClass = "btn-white-outline";
-              if (candidate.action === "finalize") btnClass = "btn-orange-fill";
+    // Synchronized flow board: the whole group is on one stage. The current group
+    // stage is the first that no team has completed yet; teams either finished it
+    // (waiting) or are still on it. Skipping deactivates that stage to force advance.
+    const flowStages = [...selectedLiveSession.sessionStageFlow].sort(
+      (a, b) => a.sessionStageOrder - b.sessionStageOrder
+    );
+    const flowTeams = selectedLiveSessionOverviewTeams;
+    const currentFlowStage =
+      flowStages.find(
+        (stage) => getSessionStageOperationalStatus(stage, flowTeams) !== "Completed"
+      ) ?? flowStages[flowStages.length - 1] ?? null;
+    const currentFlowOrder = currentFlowStage?.sessionStageOrder ?? 0;
+    const nextFlowStage = currentFlowStage
+      ? flowStages.find((stage) => stage.sessionStageOrder > currentFlowStage.sessionStageOrder) ?? null
+      : null;
+    const teamsFinishedCurrentStage = flowTeams.filter(
+      (team) =>
+        team.progressState === "Completed" ||
+        (team.currentStage !== null && team.currentStage.sessionStageOrder > currentFlowOrder)
+    ).length;
+    const isSessionPaused = selectedLiveSession.state === "Paused";
+    const flowPauseAction =
+      lifecycleActions.find((candidate) => candidate.action === "pause" || candidate.action === "resume") ?? null;
 
-              return (
-                <button
-                  key={candidate.action}
-                  className={`btn ${btnClass}`}
-                  disabled={candidate.disabled || lifecycleActionPending !== null}
-                  onClick={() => void handleLifecycleAction(candidate.action)}
-                >
-                  {candidate.label}
-                </button>
-              );
-            })}
+    const teamsInPlay = flowTeams.filter((team) => team.progressState !== "Completed").length;
+    const teamsAtGoal = flowTeams.filter((team) => team.progressState === "Completed").length;
+    // Per-team inactivity is only exposed on the team-detail response, not the overview
+    // list, so the sidebar tile can't compute it yet. See docs/web-refactor-followups.md.
+    const inactiveCount = 0;
+    const rankedSidebarTeams = [...flowTeams]
+      .map((team) => ({
+        team,
+        ranking: selectedRankingItems.find((item) => item.sessionTeamId === team.sessionTeamId) ?? null
+      }))
+      .sort((a, b) => (a.ranking?.rank ?? 999) - (b.ranking?.rank ?? 999));
+    const drawerTeam = flowTeams.find((team) => team.sessionTeamId === selectedSessionTeamId) ?? null;
+    const drawerDetail =
+      selectedSessionTeamDetail && selectedSessionTeamDetail.sessionTeamId === selectedSessionTeamId
+        ? selectedSessionTeamDetail
+        : null;
+    const drawerRanking = drawerTeam
+      ? selectedRankingItems.find((item) => item.sessionTeamId === drawerTeam.sessionTeamId) ?? null
+      : null;
+    const drawerCurrentStage = drawerDetail?.currentStage ?? drawerTeam?.currentStage ?? null;
+    const drawerStageHints = drawerCurrentStage
+      ? flowStages.find((stage) => stage.missionStageId === drawerCurrentStage.missionStageId)?.hints ?? []
+      : [];
+
+    return (
+      <div className="ops-root">
+        <header className="ops-header">
+          <div className="ops-title">
+            <div className="ops-title-row">
+              <h2>{selectedLiveSession.name}</h2>
+              <span className={getSessionStateBadgeClass(selectedLiveSession.state)}>
+                {translateSessionState(selectedLiveSession.state)}
+              </span>
+            </div>
+            <span className="ops-title-sub">{selectedLiveSession.missionName}</span>
+          </div>
+
+          <div className="ops-mode-toggle">
+            <button className="ops-mode-btn is-active" type="button">
+              <span className="ops-mode-dot" />En Vivo
+            </button>
+            <button className="ops-mode-btn" onClick={() => setSelectedLiveSessionId(null)} type="button">
+              Planificar
+            </button>
+          </div>
+
+          <div className="ops-header-right">
+            <span className="ops-conn">
+              <span className={getConnectionDotClass(sessionRealtimeConnection)} />
+              <span className="mono ops-conn-label">{sessionRealtimeConnection.label}</span>
+            </span>
+            <div className="ops-timer">
+              <span className="ops-timer-value mono">
+                {selectedLiveSession.state === "Scheduled"
+                  ? selectedLiveSession.scheduledStartAtUtc
+                    ? formatTimestamp(selectedLiveSession.scheduledStartAtUtc)
+                    : "Sin programar"
+                  : formatRemainingSeconds(selectedLiveSessionOverview?.remainingSeconds)}
+              </span>
+              <span className="ops-timer-label">restante</span>
+            </div>
           </div>
         </header>
 
-        <div className="ls-dashboard-main">
-          {/* Columna Izquierda: Progreso de Equipos */}
-          <div className="ls-column">
-            <div className="ls-column-header">
-              <h3>Progreso de Equipos</h3>
+        {errorMessage ? <div className="ops-banner is-error">{errorMessage}</div> : null}
+        {feedback ? <div className="ops-banner is-ok">{feedback}</div> : null}
+
+        <div className="ops-body">
+          <aside className="ops-sidebar">
+            <div className="ops-stat-grid">
+              <div className="ops-stat">
+                <span className="ops-stat-label">En juego</span>
+                <span className="ops-stat-value mono">{teamsInPlay}</span>
+              </div>
+              <div className="ops-stat">
+                <span className="ops-stat-label">En meta</span>
+                <span className="ops-stat-value mono is-green">{teamsAtGoal}</span>
+              </div>
+              <div className="ops-stat">
+                <span className="ops-stat-label">Inactivos</span>
+                <span className={inactiveCount > 0 ? "ops-stat-value mono is-red" : "ops-stat-value mono"}>{inactiveCount}</span>
+              </div>
+              <div className="ops-stat">
+                <span className="ops-stat-label">Equipos</span>
+                <span className="ops-stat-value mono">{flowTeams.length}</span>
+              </div>
             </div>
-            <div className="ls-column-content">
-              {selectedLiveSession.state === "Scheduled" ? (
-                 selectedLiveSessionOverviewTeams.length > 0 ? (
-                   selectedLiveSessionOverviewTeams.map(team => (
-                     <div key={team.sessionTeamId} className="ls-team-item">
-                       <div className="ls-team-item-info">
-                         <span className="ls-team-name">{team.teamName}</span>
-                         <span className="ls-team-stage">{team.participantCount} participante(s)</span>
-                       </div>
-                     </div>
-                   ))
-                 ) : (
-                   <div className="empty-state">
-                     <strong>Esperando equipos...</strong>
-                     <p>La sesión está programada. Los equipos que se unan aparecerán aquí.</p>
-                   </div>
-                 )
-              ) : selectedLiveSessionOverviewTeams.length > 0 ? (
-                 selectedLiveSessionOverviewTeams.map(team => {
-                   const rankingItem = selectedRankingItems.find(r => r.sessionTeamId === team.sessionTeamId);
-                   const isSelected = selectedSessionTeamId === team.sessionTeamId;
-                   return (
-                     <div
-                       key={team.sessionTeamId}
-                       className="ls-team-item clickable"
-                       style={{ borderColor: isSelected ? "var(--accent)" : "var(--border)" }}
-                       onClick={() => handleSelectSessionTeam(team.sessionTeamId)}
-                     >
-                       <div className="ls-team-item-info">
-                         <span className="ls-team-name">{team.teamName}</span>
-                         <span className="ls-team-stage">{team.currentStage?.name ?? "Sin etapa actual"} • {team.participantCount} participante(s)</span>
-                       </div>
-                       <div className="ls-team-score">
-                         {rankingItem ? rankingItem.visibleScore : 0}
-                       </div>
-                     </div>
-                   );
-                 })
-              ) : (
-                 <div className="empty-state">
-                   <strong>Bienvenido al Comando</strong>
-                   <p>Esperando interacciones y progreso de los equipos...</p>
-                 </div>
-              )}
+
+            <section className="ops-sb-section">
+              <span className="eyebrow">Control de sesión</span>
+              <div className="ops-control-actions">
+                {lifecycleActions.length > 0 ? (
+                  lifecycleActions.map((candidate) => {
+                    let cls = "btn btn-ghost";
+                    if (candidate.action === "start" || candidate.action === "resume") cls = "btn btn-success";
+                    if (candidate.action === "finalize") cls = "btn btn-primary";
+                    if (candidate.action === "cancel") cls = "btn btn-danger";
+                    return (
+                      <button
+                        className={cls}
+                        disabled={candidate.disabled || lifecycleActionPending !== null}
+                        key={candidate.action}
+                        onClick={() => void handleLifecycleAction(candidate.action)}
+                        type="button"
+                      >
+                        {lifecycleActionPending === candidate.action ? "..." : candidate.label}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="text-muted text-sm">Sin acciones disponibles.</span>
+                )}
+              </div>
+            </section>
+
+            <section className="ops-sb-section">
+              <span className="eyebrow">Clasificación</span>
+              <div className="ops-ranking">
+                {rankedSidebarTeams.length > 0 ? (
+                  rankedSidebarTeams.map(({ team, ranking }) => (
+                    <button
+                      className={selectedSessionTeamId === team.sessionTeamId ? "ops-rank-row is-selected" : "ops-rank-row"}
+                      key={team.sessionTeamId}
+                      onClick={() => handleSelectSessionTeam(team.sessionTeamId)}
+                      type="button"
+                    >
+                      <span className={getFlowRankClass(ranking?.rank)}>{ranking ? `#${ranking.rank}` : "#—"}</span>
+                      <span className="ops-rank-name">{team.teamName}</span>
+                      <span className="ops-rank-score mono">{ranking ? ranking.visibleScore : 0}</span>
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-muted text-sm">Sin equipos.</span>
+                )}
+              </div>
+            </section>
+
+            <section className="ops-sb-section ops-sb-grow">
+              <span className="eyebrow">Actividad en vivo</span>
+              <div className="ops-activity">
+                {selectedEventLogItems.length > 0 ? (
+                  selectedEventLogItems.map((log) => (
+                    <div className="ops-activity-row" key={log.id}>
+                      <span className="ops-activity-dot" />
+                      <div className="ops-activity-body">
+                        <span className="ops-activity-text">{log.description}</span>
+                        <span className="ops-activity-time mono">{formatShortTimestamp(log.timestamp)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-muted text-sm">Sin eventos recientes.</span>
+                )}
+              </div>
+            </section>
+          </aside>
+
+          <main className="ops-main">
+          <div className="ops-board-head">
+            <div className="stack-sm">
+              <span className="eyebrow">Tablero de flujo</span>
+              <span className="text-muted text-sm">
+                El grupo avanza en conjunto · cuando un equipo completa la etapa, todos pasan a la siguiente.
+              </span>
             </div>
+            <span className="ops-board-count">
+              <span className="ops-board-dot" />
+              {flowTeams.length} equipos · avance sincronizado
+            </span>
           </div>
 
-          {/* Columna Central: Centro de Mando */}
-          <div className="ls-column">
-            <div className="ls-column-header">
-               <div className="ls-segmented-controls">
-                 {(["Resumen", "Evidencias", "Pistas", "Penalizaciones"] as const).map(tab => (
-                   <button
-                     key={tab}
-                     className={`ls-segment-btn ${activeDashboardTab === tab ? "active" : ""}`}
-                     onClick={() => setActiveDashboardTab(tab)}
-                   >
-                     {tab}
-                   </button>
-                 ))}
-               </div>
+          {selectedLiveSession.state === "Scheduled" ? (
+            <div className="stack">
+              <div className="stack-sm">
+                <span className="eyebrow">Preparación de inscripción</span>
+                <h4>Código y Ventana</h4>
+                <p className="text-muted text-xs">
+                  1) Generá el código de unión. 2) Abrí la inscripción para que los participantes registren equipos con ese código. 3) Con al menos un equipo registrado, iniciá la sesión desde la barra lateral.
+                </p>
+              </div>
+              <div className="row-sm row-wrap">
+                <button
+                  className="btn btn-primary"
+                  disabled={Boolean(selectedLiveSession.joinCode) || enrollmentActionPending !== null}
+                  onClick={() => void handleEnrollmentAction("generate-join-code")}
+                  type="button"
+                >
+                  {enrollmentActionPending === "generate-join-code"
+                    ? "Generando..."
+                    : selectedLiveSession.joinCode
+                      ? "Código generado"
+                      : "Generar código de unión"}
+                </button>
+                <button
+                  className="btn btn-success"
+                  disabled={
+                    !selectedLiveSession.joinCode ||
+                    Boolean(selectedLiveSession.enrollmentWindowOpenedAtUtc) ||
+                    Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                    enrollmentActionPending !== null
+                  }
+                  onClick={() => void handleEnrollmentAction("open-window")}
+                  type="button"
+                >
+                  {enrollmentActionPending === "open-window" ? "Abriendo..." : "Abrir inscripción"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  disabled={
+                    !selectedLiveSession.enrollmentWindowOpenedAtUtc ||
+                    Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
+                    enrollmentActionPending !== null
+                  }
+                  onClick={() => void handleEnrollmentAction("close-window")}
+                  type="button"
+                >
+                  {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
+                </button>
+              </div>
+
+              {selectedLiveSession.joinCode && (
+                <div className="detail-panel" style={{ marginTop: "var(--space-sm)" }}>
+                  <div className="detail-row">
+                    <span className="detail-label">Código de unión</span>
+                    <span className="detail-value mono">{selectedLiveSession.joinCode}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label">Ventana de inscripción</span>
+                    <span className="detail-value">
+                      {selectedLiveSession.enrollmentWindowOpenedAtUtc
+                        ? selectedLiveSession.enrollmentWindowClosedAtUtc
+                          ? `Cerrado el ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
+                          : `Abierto desde ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
+                        : "No abierto"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <hr style={{ borderColor: "var(--border)", margin: "var(--space-md) 0" }} />
+
+              <div className="stack-sm">
+                <span className="eyebrow">Crear equipo (operador)</span>
+                <p className="text-muted text-xs">
+                  Podés armar equipos vacíos vos mismo para que los jugadores se unan, o ayudar si tienen problemas.
+                </p>
+                <form className="row-sm row-wrap" onSubmit={(event) => void handleCreateSessionTeam(event)}>
+                  <input
+                    className="form-input"
+                    maxLength={80}
+                    onChange={(event) => setNewTeamName(event.target.value)}
+                    placeholder="Nombre del equipo"
+                    value={newTeamName}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    disabled={isCreatingTeam || newTeamName.trim().length < 3}
+                    type="submit"
+                  >
+                    {isCreatingTeam ? "Creando..." : "Crear equipo"}
+                  </button>
+                </form>
+                {selectedLiveSessionOverviewTeams.length > 0 ? (
+                  <div className="row-sm row-wrap" style={{ marginTop: "var(--space-sm)" }}>
+                    {selectedLiveSessionOverviewTeams.map((team) => (
+                      <span className="badge badge-blue" key={team.sessionTeamId}>
+                        {team.teamName}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
-            <div className="ls-column-content">
-               {activeDashboardTab === "Resumen" && (
-                  <div className="stack">
-                    <div className="stack-sm">
-                      <span className="eyebrow">Estado general</span>
-                      <h4>Resumen de la Sesión</h4>
-                    </div>
-                    <div className="row-wrap" style={{ gap: "var(--space-md)" }}>
-                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
-                        <span className="text-muted text-sm">Misión</span>
-                        <div><strong>{selectedLiveSession.missionName}</strong></div>
+          ) : (
+            <>
+              <div className="flow-stepper">
+                {flowStages.map((stage, index) => {
+                  const stepStatus =
+                    stage.sessionStageOrder < currentFlowOrder
+                      ? "done"
+                      : stage.sessionStageOrder === currentFlowOrder
+                        ? "current"
+                        : "upcoming";
+                  return (
+                    <div className="flow-step" key={stage.missionStageId}>
+                      {index > 0 ? (
+                        <span className={`flow-step-connector is-${stepStatus === "upcoming" ? "upcoming" : "done"}`} />
+                      ) : null}
+                      <div className={`flow-step-node is-${stepStatus}`}>
+                        {stepStatus === "done" ? "✓" : stage.sessionStageOrder}
                       </div>
-                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
-                        <span className="text-muted text-sm">Equipos inscritos</span>
-                        <div><strong>{selectedLiveSession.registeredSessionTeamCount}</strong></div>
-                      </div>
-                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
-                        <span className="text-muted text-sm">Estado</span>
-                        <div><strong><span className={getSessionStateBadgeClass(selectedLiveSession.state)}>{translateSessionState(selectedLiveSession.state)}</span></strong></div>
-                      </div>
-                      <div className="card-compact" style={{ padding: "var(--space-sm)", backgroundColor: "var(--bg-deep)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
-                        <span className="text-muted text-sm">Código</span>
-                        <div><strong><span className="mono" style={{ letterSpacing: "1px" }}>{selectedLiveSession.joinCode || "No generado"}</span></strong></div>
-                      </div>
+                      <span className={`flow-step-name is-${stepStatus}`}>{stage.name}</span>
+                      <span className="flow-step-state">
+                        {stepStatus === "done" ? "Completada" : stepStatus === "current" ? "En curso" : "Próxima"}
+                      </span>
                     </div>
-                    
-                    <div className="stack-sm" style={{ marginTop: "var(--space-md)" }}>
-                      <span className="eyebrow">Flujo de etapas</span>
-                      <h4>Etapas de la Sesión</h4>
-                    </div>
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Orden</th>
-                            <th>Nombre</th>
-                            <th>Tipo de Juego</th>
-                            <th>Estado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedLiveSession.sessionStageFlow.map(stage => {
-                            const status = getSessionStageOperationalStatus(stage, selectedLiveSessionOverviewTeams);
-                            return (
-                              <tr key={stage.missionStageId}>
-                                <td className="mono text-sm">{stage.sessionStageOrder}</td>
-                                <td><strong>{stage.name}</strong></td>
-                                <td><span className="badge badge-blue">{translateGameType(stage.gameType)}</span></td>
-                                <td>
-                                  {status === "Completed" ? (
-                                    <span className="badge badge-green">Completado</span>
-                                  ) : (
-                                    <span className="badge badge-amber">Pendiente</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                  );
+                })}
+              </div>
 
-                    {/* Acciones de inscripción solo si está programada */}
-                    {selectedLiveSession.state === "Scheduled" ? (
-                      <div className="stack" style={{ marginTop: "var(--space-xl)" }}>
-                        <div className="stack-sm">
-                          <span className="eyebrow">Preparación de inscripción</span>
-                          <h4>Código y Ventana</h4>
-                          <p className="text-muted text-xs">
-                            1) Generá el código de unión. 2) Abrí la inscripción para que los participantes registren equipos con ese código. 3) Con al menos un equipo registrado, iniciá la sesión desde la barra superior.
-                          </p>
+              {currentFlowStage ? (
+                <div className={isSessionPaused ? "flow-current is-paused" : "flow-current"}>
+                  <div className="flow-current-header">
+                    <div className="flow-current-icon">
+                      {currentFlowStage.gameType === "Trivia" ? "?" : "◈"}
+                    </div>
+                    <div className="stack-sm flow-current-heading">
+                      <span className="flow-current-eyebrow">
+                        Etapa actual · E{currentFlowStage.sessionStageOrder}
+                        {isSessionPaused ? (
+                          <span className="flow-paused-chip"><span className="flow-pulse-dot" />En pausa</span>
+                        ) : null}
+                      </span>
+                      <strong className="flow-current-title">{currentFlowStage.name}</strong>
+                      <span className="text-secondary text-sm">
+                        {translateGameType(currentFlowStage.gameType)} · {currentFlowStage.resolvedTimeBudgetMinutes} min
+                      </span>
+                    </div>
+                    <div className="flow-current-count">
+                      <span className="mono flow-current-count-value">
+                        {teamsFinishedCurrentStage}/{flowTeams.length}
+                      </span>
+                      <span className="flow-current-count-label">terminaron la etapa</span>
+                    </div>
+                  </div>
+
+                  <div className="flow-progress-track">
+                    <div
+                      className="flow-progress-fill"
+                      style={{ width: `${flowTeams.length ? (teamsFinishedCurrentStage / flowTeams.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                  {nextFlowStage ? (
+                    <p className="text-muted text-sm">
+                      En cuanto un equipo termine, el grupo completo avanza a <strong>{nextFlowStage.name}</strong>.
+                    </p>
+                  ) : (
+                    <p className="text-muted text-sm">Es la última etapa de la sesión.</p>
+                  )}
+
+                  <div className="flow-current-actions">
+                    {flowPauseAction ? (
+                      <button
+                        type="button"
+                        className={flowPauseAction.action === "resume" ? "btn btn-success" : "btn btn-ghost"}
+                        disabled={flowPauseAction.disabled || lifecycleActionPending !== null}
+                        onClick={() => handleLifecycleAction(flowPauseAction.action)}
+                      >
+                        {lifecycleActionPending === flowPauseAction.action ? "Actualizando..." : flowPauseAction.label}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      disabled={!nextFlowStage || deactivatingStageId !== null}
+                      onClick={() => handleDeactivateStage(currentFlowStage.missionStageId)}
+                      title={!nextFlowStage ? "Última etapa" : "Fuerza el avance de todo el grupo a la siguiente etapa"}
+                    >
+                      {deactivatingStageId === currentFlowStage.missionStageId
+                        ? "Saltando..."
+                        : nextFlowStage
+                          ? "Saltar etapa"
+                          : "Última etapa"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {flowTeams.length > 0 ? (
+                <div className="flow-team-grid">
+                  {flowTeams.map((team) => {
+                    const rankingItem = selectedRankingItems.find((item) => item.sessionTeamId === team.sessionTeamId);
+                    const isSelected = selectedSessionTeamId === team.sessionTeamId;
+                    const hasFinishedStage =
+                      team.progressState === "Completed" ||
+                      (team.currentStage !== null && team.currentStage.sessionStageOrder > currentFlowOrder);
+                    return (
+                      <button
+                        key={team.sessionTeamId}
+                        type="button"
+                        className={isSelected ? "flow-team-card is-selected" : "flow-team-card"}
+                        onClick={() => handleSelectSessionTeam(team.sessionTeamId)}
+                      >
+                        <div className="flow-team-card-top">
+                          <span className={getFlowRankClass(rankingItem?.rank)}>
+                            {rankingItem ? `#${rankingItem.rank}` : "#—"}
+                          </span>
+                          <span className="flow-team-card-name">{team.teamName}</span>
                         </div>
-                        <div className="row-sm row-wrap">
-                          <button
-                            className="btn btn-primary"
-                            disabled={Boolean(selectedLiveSession.joinCode) || enrollmentActionPending !== null}
-                            onClick={() => void handleEnrollmentAction("generate-join-code")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "generate-join-code"
-                              ? "Generando..."
-                              : selectedLiveSession.joinCode
-                                ? "Código generado"
-                                : "Generar código de unión"}
-                          </button>
-                          <button
-                            className="btn btn-success"
-                            disabled={
-                              !selectedLiveSession.joinCode ||
-                              Boolean(selectedLiveSession.enrollmentWindowOpenedAtUtc) ||
-                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
-                              enrollmentActionPending !== null
-                            }
-                            onClick={() => void handleEnrollmentAction("open-window")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "open-window" ? "Abriendo..." : "Abrir inscripción"}
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            disabled={
-                              !selectedLiveSession.enrollmentWindowOpenedAtUtc ||
-                              Boolean(selectedLiveSession.enrollmentWindowClosedAtUtc) ||
-                              enrollmentActionPending !== null
-                            }
-                            onClick={() => void handleEnrollmentAction("close-window")}
-                            type="button"
-                          >
-                            {enrollmentActionPending === "close-window" ? "Cerrando..." : "Cerrar inscripción"}
-                          </button>
+                        <span className={hasFinishedStage ? "badge badge-green" : "badge badge-amber"}>
+                          {hasFinishedStage ? "Etapa lista · esperando" : "En curso"}
+                        </span>
+                        <div className="flow-team-card-footer">
+                          <span className="mono flow-team-card-score">{rankingItem ? rankingItem.visibleScore : 0} pts</span>
+                          <span className="flow-team-card-meta">
+                            {team.participantCount} part. · {team.releasedHints.length} pistas
+                          </span>
                         </div>
-                        
-                        {selectedLiveSession.joinCode && (
-                          <div className="detail-panel" style={{ marginTop: "var(--space-sm)" }}>
-                             <div className="detail-row">
-                               <span className="detail-label">Código de unión</span>
-                               <span className="detail-value mono">{selectedLiveSession.joinCode}</span>
-                             </div>
-                             <div className="detail-row">
-                               <span className="detail-label">Ventana de inscripción</span>
-                               <span className="detail-value">
-                                 {selectedLiveSession.enrollmentWindowOpenedAtUtc
-                                   ? selectedLiveSession.enrollmentWindowClosedAtUtc
-                                     ? `Cerrado el ${formatTimestamp(selectedLiveSession.enrollmentWindowClosedAtUtc)}`
-                                     : `Abierto desde ${formatTimestamp(selectedLiveSession.enrollmentWindowOpenedAtUtc)}`
-                                   : "No abierto"}
-                               </span>
-                             </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <strong>Bienvenido al Comando</strong>
+                  <p>Esperando interacciones y progreso de los equipos...</p>
+                </div>
+              )}
+            </>
+          )}
+          </main>
+        </div>
+
+        {selectedSessionTeamId && drawerTeam ? (
+          <div className="ops-drawer-overlay" onClick={() => setSelectedSessionTeamId(null)}>
+            <aside className="ops-drawer" onClick={(event) => event.stopPropagation()}>
+              <div className="ops-drawer-header">
+                <span className={getFlowRankClass(drawerRanking?.rank)}>{drawerRanking ? `#${drawerRanking.rank}` : "#—"}</span>
+                <div className="ops-drawer-heading">
+                  <h3>{drawerTeam.teamName}</h3>
+                  <span className="text-muted text-sm">
+                    {drawerCurrentStage ? `${drawerCurrentStage.name} · en etapa` : "Sin etapa actual"}
+                  </span>
+                </div>
+                <button className="ops-drawer-close" onClick={() => setSelectedSessionTeamId(null)} type="button" aria-label="Cerrar">
+                  ✕
+                </button>
+              </div>
+
+              <div className="ops-drawer-stats">
+                <div className="ops-stat">
+                  <span className="ops-stat-label">Puntaje</span>
+                  <span className="ops-stat-value mono is-accent">{drawerRanking ? drawerRanking.visibleScore : 0}</span>
+                </div>
+                <div className="ops-stat">
+                  <span className="ops-stat-label">Puesto</span>
+                  <span className="ops-stat-value mono">{drawerRanking ? `#${drawerRanking.rank}` : "#—"}</span>
+                </div>
+                <div className="ops-stat">
+                  <span className="ops-stat-label">Jugadores</span>
+                  <span className="ops-stat-value mono">{drawerTeam.participantCount}</span>
+                </div>
+              </div>
+
+              {drawerDetail?.isInactive ? (
+                <div className="ops-drawer-alert"><span className="flow-pulse-dot" />Sin actividad reciente. Considerá liberar una pista.</div>
+              ) : null}
+
+              <div className="ops-drawer-section">
+                <span className="eyebrow">Recorrido de etapas</span>
+                <div className="ops-journey">
+                  {flowStages.map((stage) => {
+                    const currentOrder = drawerCurrentStage?.sessionStageOrder ?? 0;
+                    const completed = drawerTeam.progressState === "Completed" || stage.sessionStageOrder < currentOrder;
+                    const isCurrent = !completed && stage.sessionStageOrder === currentOrder;
+                    const label = completed ? "Completada" : isCurrent ? "Actual" : "Pendiente";
+                    const rowClass = completed ? "is-done" : isCurrent ? "is-current" : "is-upcoming";
+                    return (
+                      <div className={`ops-journey-row ${rowClass}`} key={stage.missionStageId}>
+                        <span className="ops-journey-dot" />
+                        <div className="ops-journey-body">
+                          <div className="ops-journey-head">
+                            <strong>{stage.name}</strong>
+                            <span className={completed ? "badge badge-green" : isCurrent ? "badge badge-amber" : "badge"}>{label}</span>
                           </div>
-                        )}
-
-                        <hr style={{ borderColor: "var(--border)", margin: "var(--space-md) 0" }} />
-
-                        <div className="stack-sm">
-                          <span className="eyebrow">Crear equipo (operador)</span>
-                          <p className="text-muted text-xs">
-                            Podés armar equipos vacíos vos mismo para que los jugadores se unan, o ayudar si tienen problemas.
-                          </p>
-                          <form className="row-sm row-wrap" onSubmit={(event) => void handleCreateSessionTeam(event)}>
-                            <input
-                              className="form-input"
-                              maxLength={80}
-                              onChange={(event) => setNewTeamName(event.target.value)}
-                              placeholder="Nombre del equipo"
-                              value={newTeamName}
-                            />
-                            <button
-                              className="btn btn-primary"
-                              disabled={isCreatingTeam || newTeamName.trim().length < 3}
-                              type="submit"
-                            >
-                              {isCreatingTeam ? "Creando..." : "Crear equipo"}
-                            </button>
-                          </form>
-                          {selectedLiveSessionOverviewTeams.length > 0 ? (
-                            <div className="row-sm row-wrap" style={{ marginTop: "var(--space-sm)" }}>
-                              {selectedLiveSessionOverviewTeams.map((team) => (
-                                <span className="badge badge-blue" key={team.sessionTeamId}>
-                                  {team.teamName}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
+                          <span className="text-muted text-xs">{translateGameType(stage.gameType)} · {stage.resolvedTimeBudgetMinutes} min</span>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {drawerCurrentStage ? (
+                <div className="ops-drawer-section">
+                  <span className="eyebrow">Pistas · etapa actual</span>
+                  <div className="stack-sm">
+                    {drawerStageHints.map((hint) => {
+                      const released = getReleasedHintsForTeam(drawerTeam).some((item) => item.hintId === hint.id);
+                      return (
+                        <div className="ops-hint-row" key={hint.id}>
+                          <span className="ops-hint-text">{hint.content}</span>
+                          <button
+                            type="button"
+                            className={released ? "btn btn-ghost" : "btn btn-primary"}
+                            disabled={released || isSubmittingHint}
+                            onClick={() => void handleReleaseHint(hint.id, drawerTeam.sessionTeamId)}
+                          >
+                            {released ? "Liberada" : "Liberar"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {drawerStageHints.length === 0 ? (
+                      <span className="text-muted text-sm">Sin pistas predefinidas para esta etapa.</span>
                     ) : null}
                   </div>
-               )}
+                  <form className="ops-hint-create" onSubmit={handleCreateOperationalHint}>
+                    <textarea
+                      className="ls-input"
+                      maxLength={500}
+                      placeholder="Nueva pista operativa para esta etapa…"
+                      rows={2}
+                      value={operationalHintDraft.content}
+                      onChange={(event) =>
+                        setOperationalHintDraft((curr) => ({
+                          ...curr,
+                          content: event.target.value,
+                          missionStageId: drawerCurrentStage.missionStageId
+                        }))
+                      }
+                    />
+                    <button
+                      className="btn btn-ghost"
+                      disabled={isSubmittingHint || !operationalHintDraft.content.trim()}
+                      type="submit"
+                    >
+                      {isSubmittingHint ? "Guardando..." : "Crear pista para esta etapa"}
+                    </button>
+                  </form>
+                </div>
+              ) : null}
 
-               {activeDashboardTab === "Evidencias" && (
-                 <div className="stack">
-                   <div className="stack-sm">
-                     <span className="eyebrow">Validación</span>
-                     <h4>Evidencias Recientes</h4>
-                   </div>
-                   {!selectedSessionTeamDetail ? (
-                     <div className="empty-state">
-                       <strong>Selecciona un equipo de la izquierda</strong>
-                       <p>Debes seleccionar un equipo para revisar sus evidencias.</p>
-                     </div>
-                   ) : (
-                     <div className="stack-sm">
-                       {selectedSessionTeamDetail.evidenceSubmissions.length > 0 ? (
-                         selectedSessionTeamDetail.evidenceSubmissions.map(submission => (
-                           <div className="card card-compact" key={submission.id}>
-                             <div className="row-between">
-                               <div className="stack-sm">
-                                 <strong>{submission.stageName}</strong>
-                                 <span className="text-muted text-xs">Enviado: {formatShortTimestamp(submission.submittedAtUtc)}</span>
-                               </div>
-                               <span className={submission.validationOutcome === 'Rejected' ? "badge badge-red" : submission.validationOutcome === 'Accepted' ? "badge badge-green" : "badge badge-amber"}>{translateValidationOutcome(submission.validationOutcome)}</span>
-                             </div>
-                             {submission.submittedText && (
-                               <p className="text-muted text-sm" style={{ marginTop: "var(--space-sm)" }}><strong>Respuesta:</strong> {submission.submittedText}</p>
-                             )}
-                             {submission.validationOutcome === "Rejected" && (
-                               <div className="form-actions" style={{ marginTop: "var(--space-sm)" }}>
-                                 <button
-                                   className="btn btn-primary btn-sm"
-                                   disabled={overridePendingSubmissionId === submission.id}
-                                   onClick={() => void handleOverrideSubmission(submission.id, "Aceptado manualmente por el operador.")}
-                                   type="button"
-                                 >
-                                   {overridePendingSubmissionId === submission.id ? "Aceptando..." : "Aceptar (Forzar)"}
-                                 </button>
-                               </div>
-                             )}
-                           </div>
-                         ))
-                       ) : (
-                         <div className="empty-state">
-                           <p>Sin envíos de evidencias</p>
-                         </div>
-                       )}
-                     </div>
-                   )}
-                 </div>
-               )}
+              {drawerDetail && drawerDetail.evidenceSubmissions.length > 0 ? (
+                <div className="ops-drawer-section">
+                  <span className="eyebrow">Evidencias recientes</span>
+                  <div className="stack-sm">
+                    {drawerDetail.evidenceSubmissions.map((submission) => (
+                      <div className="card card-compact" key={submission.id}>
+                        <div className="row-between">
+                          <div className="stack-sm">
+                            <strong>{submission.stageName}</strong>
+                            <span className="text-muted text-xs">{formatShortTimestamp(submission.submittedAtUtc)}</span>
+                          </div>
+                          <span className={submission.validationOutcome === "Rejected" ? "badge badge-red" : submission.validationOutcome === "Accepted" ? "badge badge-green" : "badge badge-amber"}>
+                            {translateValidationOutcome(submission.validationOutcome)}
+                          </span>
+                        </div>
+                        {submission.submittedText ? (
+                          <p className="text-muted text-sm" style={{ marginTop: "var(--space-sm)" }}><strong>Respuesta:</strong> {submission.submittedText}</p>
+                        ) : null}
+                        {submission.validationOutcome === "Rejected" ? (
+                          <div className="form-actions" style={{ marginTop: "var(--space-sm)" }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled={overridePendingSubmissionId === submission.id}
+                              onClick={() => void handleOverrideSubmission(submission.id, "Aceptado manualmente por el operador.")}
+                            >
+                              {overridePendingSubmissionId === submission.id ? "Aceptando..." : "Aceptar (Forzar)"}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
-               {activeDashboardTab === "Pistas" && (
-                 <div className="stack">
-                   <div className="stack-sm">
-                     <span className="eyebrow">Liberación</span>
-                     <h4>Pistas de Etapas Activas</h4>
-                   </div>
-                   <div className="stage-flow">
-                     {(selectedLiveSession.sessionStageFlow || []).map((missionStage) => {
-                       const eligibleTeams = selectedLiveSessionOverviewTeams.filter(team => team.currentStage?.missionStageId === missionStage.missionStageId);
-                       if (eligibleTeams.length === 0) return null;
-
-                       return (
-                         <div className="card card-compact" key={missionStage.missionStageId} style={{ marginBottom: "var(--space-sm)" }}>
-                           <div className="stack-sm" style={{ marginBottom: "var(--space-sm)" }}>
-                             <strong>{missionStage.name}</strong>
-                             <span className="text-muted text-xs">{eligibleTeams.length} equipos elegibles</span>
-                           </div>
-                           {(missionStage.hints || []).map(hint => (
-                             <div className="stack-sm" key={hint.id} style={{ marginBottom: "var(--space-sm)", borderTop: "1px solid var(--border)", paddingTop: "var(--space-sm)" }}>
-                               <span>{hint.content}</span>
-                               <div className="row-sm row-wrap" style={{ marginTop: "var(--space-xs)" }}>
-                                 <button
-                                   className="btn btn-ghost btn-sm"
-                                   disabled={isSubmittingHint}
-                                   onClick={() => void handleReleaseHint(hint.id, null)}
-                                   type="button"
-                                 >
-                                   Liberar a todos
-                                 </button>
-                                 {eligibleTeams.map((team) => {
-                                   const alreadyReleased = getReleasedHintsForTeam(team).some(r => r.hintId === hint.id);
-                                   return (
-                                     <button
-                                       key={`${hint.id}-${team.sessionTeamId}`}
-                                       className="btn btn-ghost btn-sm"
-                                       disabled={isSubmittingHint || alreadyReleased}
-                                       onClick={() => void handleReleaseHint(hint.id, team.sessionTeamId)}
-                                       type="button"
-                                     >
-                                       {team.teamName}
-                                     </button>
-                                   );
-                                 })}
-                               </div>
-                             </div>
-                           ))}
-                         </div>
-                       );
-                     })}
-                     {selectedLiveSessionOverviewTeams.length > 0 && selectedLiveSession.sessionStageFlow.every(missionStage => 
-                       selectedLiveSessionOverviewTeams.filter(team => team.currentStage?.missionStageId === missionStage.missionStageId).length === 0
-                     ) && (
-                       <div className="empty-state">
-                         <p>No hay pistas disponibles para las etapas actuales de los equipos.</p>
-                       </div>
-                     )}
-                   </div>
-
-                   <hr style={{ borderColor: "var(--border)", margin: "var(--space-md) 0" }} />
-                   
-                   <form className="stack" onSubmit={handleCreateOperationalHint}>
-                     <div className="stack-sm">
-                       <span className="eyebrow">Pista Operativa</span>
-                       <h4>Crear nueva pista en vivo</h4>
-                     </div>
-                     <div className="form-group">
-                       <label className="form-label">Etapa</label>
-                       <select
-                         className="ls-input"
-                         onChange={(e) => setOperationalHintDraft(curr => ({ ...curr, missionStageId: e.target.value }))}
-                         value={operationalHintStageId}
-                       >
-                         {selectedLiveSession.sessionStageFlow.map(stage => (
-                           <option key={stage.missionStageId} value={stage.missionStageId}>{stage.name}</option>
-                         ))}
-                       </select>
-                     </div>
-                     <div className="form-group">
-                       <label className="form-label">Contenido</label>
-                       <textarea
-                         className="ls-input"
-                         maxLength={500}
-                         onChange={(e) => setOperationalHintDraft(curr => ({ ...curr, content: e.target.value }))}
-                         required
-                         value={operationalHintDraft.content}
-                         rows={2}
-                       />
-                     </div>
-                     <div className="form-actions">
-                       <button className="btn btn-primary" disabled={isSubmittingHint} type="submit">
-                         {isSubmittingHint ? "Guardando..." : "Guardar pista"}
-                       </button>
-                     </div>
-                   </form>
-                 </div>
-               )}
-
-               {activeDashboardTab === "Penalizaciones" && (
-                 <div className="stack">
-                   <div className="stack-sm">
-                     <span className="eyebrow">Corrección</span>
-                     <h4>Aplicar Penalización</h4>
-                   </div>
-                   {selectedLiveSessionOverviewTeams.length > 0 ? (
-                     <form className="stack" onSubmit={handleApplyPenalty}>
-                       <div className="form-group">
-                         <label className="form-label">Equipo</label>
-                         <select
-                           className="ls-input"
-                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, sessionTeamId: e.target.value }))}
-                           value={effectivePenaltySessionTeamId}
-                         >
-                           {selectedLiveSessionOverviewTeams.map(team => (
-                             <option key={team.sessionTeamId} value={team.sessionTeamId}>{team.teamName}</option>
-                           ))}
-                         </select>
-                       </div>
-                       <div className="form-group">
-                         <label className="form-label">Severidad</label>
-                         <select
-                           className="ls-input"
-                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, severity: e.target.value as PenaltySeverity }))}
-                           value={penaltyDraft.severity}
-                         >
-                           <option value="Minor">Menor</option>
-                           <option value="Major">Mayor</option>
-                           <option value="Critical">Crítica</option>
-                         </select>
-                       </div>
-                       <div className="form-group">
-                         <label className="form-label">Razón</label>
-                         <textarea
-                           className="ls-input"
-                           maxLength={200}
-                           onChange={(e) => setPenaltyDraft(curr => ({ ...curr, reason: e.target.value }))}
-                           required
-                           value={penaltyDraft.reason}
-                           rows={2}
-                         />
-                       </div>
-                       <div className="form-actions">
-                         <button className="btn btn-primary" disabled={isSubmittingPenalty} type="submit">
-                           {isSubmittingPenalty ? "Aplicando..." : "Aplicar Penalización"}
-                         </button>
-                       </div>
-                     </form>
-                   ) : (
-                     <div className="empty-state">
-                       <p>No hay equipos a los cuales penalizar.</p>
-                     </div>
-                   )}
-                 </div>
-               )}
-            </div>
+              <div className="ops-drawer-section">
+                <span className="eyebrow">Aplicar penalización</span>
+                <form className="stack-sm" onSubmit={handleApplyPenalty}>
+                  <div className="ops-severity-grid">
+                    {([
+                      { key: "Minor", label: "Menor", points: "-50" },
+                      { key: "Major", label: "Mayor", points: "-100" },
+                      { key: "Critical", label: "Crítica", points: "-200" }
+                    ] as const).map((severity) => (
+                      <button
+                        type="button"
+                        key={severity.key}
+                        className={penaltyDraft.severity === severity.key ? "ops-severity is-active" : "ops-severity"}
+                        onClick={() => setPenaltyDraft((curr) => ({ ...curr, severity: severity.key, sessionTeamId: drawerTeam.sessionTeamId }))}
+                      >
+                        <span className="ops-severity-label">{severity.label}</span>
+                        <span className="ops-severity-points mono">{severity.points}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    className="ls-input"
+                    maxLength={200}
+                    placeholder="Motivo (obligatorio)…"
+                    rows={2}
+                    value={penaltyDraft.reason}
+                    onChange={(event) => setPenaltyDraft((curr) => ({ ...curr, reason: event.target.value, sessionTeamId: drawerTeam.sessionTeamId }))}
+                  />
+                  <button type="submit" className="btn btn-danger" disabled={isSubmittingPenalty || !penaltyDraft.reason.trim()}>
+                    {isSubmittingPenalty ? "Aplicando..." : `Aplicar penalización a ${drawerTeam.teamName}`}
+                  </button>
+                </form>
+              </div>
+            </aside>
           </div>
-
-          {/* Columna Derecha: Bitácora de Auditoría */}
-          <div className="ls-column">
-            <div className="ls-column-header">
-               <h3>Bitácora de Auditoría</h3>
-            </div>
-            <div className="ls-column-content">
-               <div className="ls-timeline">
-                 {selectedEventLogItems.length > 0 ? (
-                   selectedEventLogItems.map(log => (
-                     <div key={log.id} className="ls-timeline-item">
-                       <div className="ls-timeline-dot"></div>
-                       <span className="ls-timeline-time">{formatShortTimestamp(log.timestamp)}</span>
-                       <span className="ls-timeline-content">{log.description}</span>
-                     </div>
-                   ))
-                 ) : (
-                   <div className="empty-state">
-                     <p>Sin eventos recientes</p>
-                   </div>
-                 )}
-               </div>
-            </div>
-          </div>
-        </div>
+        ) : null}
       </div>
     );
   }

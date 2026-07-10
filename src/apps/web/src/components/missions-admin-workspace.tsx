@@ -8,10 +8,12 @@ import {
 } from "react";
 import { getClientConfig } from "@/lib/config";
 import {
+  type ChallengeDraft,
   type MissionDetail,
   type MissionDraft,
   type MissionItemDraft,
   type MissionSummary,
+  type SectionDraft,
   difficultyOptions,
 } from "./mission-authoring-types";
 import {
@@ -20,7 +22,6 @@ import {
   createEmptySectionDraft,
   findMissionValidationIssue,
   serializeMissionDraft,
-  summarizeItems,
   toMissionDraft,
   cloneChallengeAsDraft,
   cloneSectionAsDraft,
@@ -122,8 +123,6 @@ export function MissionsAdminWorkspace({
     () => summarizeSelection(missions),
     [missions],
   );
-  const itemStats = useMemo(() => summarizeItems(draft.items), [draft.items]);
-
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [reuseModalKind, setReuseModalKind] = useState<"section" | "challenge" | null>(null);
 
@@ -401,14 +400,6 @@ export function MissionsAdminWorkspace({
   }
 
   if (isEditorOpen) {
-    if (isLoadingDetail) {
-      return (
-        <div className="workspace-section">
-          <div className="loading-center">Cargando detalles de la misión…</div>
-        </div>
-      );
-    }
-
     return (
       <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <MissionBuilderFull
@@ -416,7 +407,7 @@ export function MissionsAdminWorkspace({
           onUpdateField={updateDraftField}
           onItemsChange={setItems}
           onSubmit={handleSubmit}
-          onCancel={handleCloseEditor}
+          onClose={handleCloseEditor}
           isSubmitting={isSubmitting}
           isEditMode={editorMode === "edit"}
           validationIssue={errorMessage}
@@ -424,6 +415,11 @@ export function MissionsAdminWorkspace({
           onToggleActivation={handleActivationToggle}
           missionIsActive={selectedMission?.isActive}
           onReuseItem={setReuseModalKind}
+          missions={missions}
+          selectedMissionId={editorMode === "edit" ? selectedMissionId : null}
+          isLoadingList={isLoadingList || isLoadingDetail}
+          onSelectMission={handleOpenMission}
+          onCreateMission={handleCreateMode}
         />
 
         {reuseModalKind ? (

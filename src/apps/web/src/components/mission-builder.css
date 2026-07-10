@@ -1,20 +1,33 @@
 /* ================================================================
-   MISSION BUILDER (Pantalla Completa)
+   MISSION BUILDER — "Diseño de misiones"
+   3-pane console: app sidebar (DashboardLayout) · missions list ·
+   structure editor. The root is a fixed overlay that starts AFTER the
+   app sidebar so the UMBRAL rail stays visible (matches the redesign).
    ================================================================ */
 
 .mb-root {
   position: fixed;
-  inset: 0;
-  z-index: 100;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-w);
+  z-index: 60;
   background-color: var(--bg-deep);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: left var(--duration-fast) ease;
 }
 
-/* Header */
+/* Follow the app sidebar collapse so we never leave a gap. */
+.dashboard.sidebar-collapsed .mb-root {
+  left: 0;
+}
+
+/* Header ---------------------------------------------------------- */
 .mb-header {
   height: var(--header-h);
+  flex-shrink: 0;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -27,191 +40,434 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  min-width: 0;
 }
 
-.mb-header-title strong {
+.mb-header-title h1 {
+  font-size: var(--text-xl);
+  font-weight: 600;
   color: var(--text);
-  font-weight: 500;
+  white-space: nowrap;
 }
 
 .mb-header-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-sm);
 }
 
-/* Container */
-.mb-container {
-  display: flex;
+/* Body: list column + main canvas -------------------------------- */
+.mb-body {
   flex: 1;
+  display: flex;
+  min-height: 0;
   overflow: hidden;
 }
 
-/* Sidebar */
-.mb-sidebar {
-  width: 320px;
+/* --- Missions list column --------------------------------------- */
+.mb-list {
+  width: 280px;
+  flex-shrink: 0;
   background: var(--bg-deep);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  transition: width var(--duration-base) var(--ease-out);
 }
 
-.mb-sidebar-content {
+.mb-list.is-collapsed {
+  width: 0;
+  border-right-color: transparent;
+  overflow: hidden;
+}
+
+.mb-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  flex-shrink: 0;
+}
+
+.mb-list-header .eyebrow {
+  margin: 0;
+}
+
+.mb-list-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+.mb-icon-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.mb-list-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-md);
+  padding: 0 var(--space-md) var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
-.mb-sidebar-footer {
+.mb-mission-card {
+  text-align: left;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: var(--space-md);
-  border-top: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
+}
+.mb-mission-card:hover {
+  background: var(--surface-hover);
+}
+.mb-mission-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* Canvas (Bento Grid) */
-.mb-canvas {
+.mb-mission-card-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.mb-mission-card-name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text);
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mb-mission-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-left: 16px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* Muted uppercase label (Catálogo, Estructura). */
+.mb-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mb-mission-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+.mb-mission-dot.is-active { background: var(--green); }
+.mb-mission-dot.is-inactive { background: var(--text-muted); }
+
+/* --- Main canvas ------------------------------------------------- */
+.mb-main {
+  flex: 1;
+  overflow-y: auto;
   background: var(--bg);
   padding: var(--space-2xl);
-  overflow-y: auto;
+  min-width: 0;
 }
 
-.mb-bento {
-  max-width: 800px;
+.mb-main-inner {
+  max-width: 920px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
 }
 
-.mb-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
-  box-shadow: var(--shadow-md);
-}
-
-.mb-card-header {
-  margin-bottom: var(--space-lg);
+.mb-mission-heading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
-.mb-card-header h3 {
-  font-size: var(--text-lg);
-  color: var(--text);
-}
-
-.mb-card-header p {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-/* Tree Item */
-.mb-tree-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.mb-tree-row {
+.mb-heading-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-radius: var(--radius-md);
-  padding: 6px var(--space-sm);
+  gap: var(--space-md);
+}
+
+.mb-title-input {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
   border: 1px solid transparent;
-  transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease;
-  cursor: pointer;
-  user-select: none;
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.5rem;
+  margin-left: -0.5rem;
+  width: 100%;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
 }
-
-.mb-tree-row:hover {
-  background: var(--surface-hover);
+.mb-title-input:hover {
+  background: var(--surface);
 }
-
-.mb-tree-row.is-selected {
+.mb-title-input:focus {
+  outline: none;
   background: var(--surface);
   border-color: var(--border-strong);
-  box-shadow: 0 0 0 1px var(--accent-subtle);
 }
 
-.mb-tree-content {
+.mb-desc-input {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.25rem 0.5rem;
+  margin-left: -0.5rem;
+  width: 100%;
+  resize: vertical;
+  min-height: 3rem;
+  line-height: 1.5;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+.mb-desc-input:hover {
+  background: var(--surface);
+}
+.mb-desc-input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+/* Stat tiles ------------------------------------------------------ */
+.mb-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.mb-stat {
+  flex: 1;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.mb-stat.is-duration {
+  min-width: 160px;
+}
+
+.mb-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mb-stat-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+.mb-stat-value.is-amber { color: var(--amber-text); }
+.mb-stat-value.is-blue { color: var(--blue-text); }
+
+.mb-stat-input {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border-strong);
+  width: 100%;
+  padding: 0;
+}
+.mb-stat-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+/* Structure ------------------------------------------------------- */
+.mb-structure-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.mb-structure-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.mb-structure-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* A single node (section or challenge) --------------------------- */
+.mb-node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.mb-node.is-section {
+  background: var(--bg-raised);
+}
+
+.mb-node-head {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  flex: 1;
-  min-width: 0;
+  padding: var(--space-md);
+  cursor: pointer;
 }
 
-.mb-tree-title {
-  font-size: var(--text-sm);
-  font-weight: 500;
+.mb-node-drag {
+  cursor: grab;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.mb-node-drag:active { cursor: grabbing; }
+
+.mb-node-glyph {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--text-base);
+}
+.mb-node-glyph.is-section { background: var(--surface-active); color: var(--text-secondary); }
+.mb-node-glyph.is-trivia { background: var(--blue-subtle); color: var(--blue-text); }
+.mb-node-glyph.is-treasure { background: var(--amber-subtle); color: var(--amber-text); }
+
+.mb-node-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mb-node-title {
+  font-size: var(--text-base);
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.mb-tree-actions {
+.mb-node-sub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.mb-node-badges {
   display: flex;
   align-items: center;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity var(--duration-fast) ease;
+  gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
-.mb-tree-row:hover .mb-tree-actions,
-.mb-tree-row.is-selected .mb-tree-actions {
-  opacity: 1;
-}
-
-.mb-tree-drag {
-  cursor: grab;
+.mb-node-chevron {
   color: var(--text-muted);
-  padding: 4px;
+  transition: transform var(--duration-fast) ease;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
-.mb-tree-drag:active {
-  cursor: grabbing;
+.mb-node-chevron.is-open { transform: rotate(90deg); }
+
+.mb-node-body {
+  padding: 0 var(--space-md) var(--space-md);
+  border-top: 1px solid var(--border-subtle);
 }
 
-.mb-tree-children {
-  padding-left: 20px;
-  margin-left: 10px;
-  border-left: 1px solid var(--border-subtle);
+.mb-node-body-inner {
+  padding-top: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
+  gap: var(--space-md);
 }
 
-/* Glassmorphism overrides if needed */
-.mb-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 8, 10, 0.6);
-  backdrop-filter: blur(8px);
-  z-index: 200;
+.mb-node-children {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--border);
+  margin-left: 4px;
 }
 
-.mb-modal-content {
-  background: rgba(28, 28, 32, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-strong);
+.mb-node-child-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.mb-empty-structure {
+  border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
-  padding: var(--space-xl);
-  box-shadow: var(--shadow-lg);
-  max-width: 400px;
-  width: 100%;
+  padding: var(--space-2xl);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* On mobile the app sidebar is hidden, so the overlay spans the viewport
+   and the list column narrows. */
+@media (max-width: 768px) {
+  .mb-root {
+    left: 0;
+  }
+  .mb-list {
+    width: 240px;
+  }
+  .mb-main {
+    padding: var(--space-lg);
+  }
 }
