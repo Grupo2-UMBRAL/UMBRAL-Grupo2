@@ -62,10 +62,7 @@ public class CreateParticipantCommandHandlerTests
     public async Task Handle_EmailFails_StillReturnsParticipant()
     {
         // Arrange
-        var command = new CreateParticipantCommand(
-            Username: "testuser",
-            Email: "test@example.com",
-            Password: "Password123!");
+        var command = new CreateParticipantCommand("testuser", "test@example.com", "Password123!");
 
         var createdUser = new CreatedUserReference("player-123");
         var participantUser = new OperatorUser("player-123", "testuser", "test@example.com", "testuser", "Jugador", true);

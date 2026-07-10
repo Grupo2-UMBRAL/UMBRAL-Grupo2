@@ -49,9 +49,16 @@ foreach ($trackedFile in $trackedFiles) {
     }
 
     $assignmentMatches = [regex]::Matches($content, $quotedLiteralPattern)
-    $envLiteralMatches = [regex]::Matches($content, $envLiteralPattern)
     $jwtLiteralMatches = [regex]::Matches($content, $jwtLiteralPattern)
     $privateKeyMatches = [regex]::Matches($content, $privateKeyPattern)
+
+    # The env-style KEY=VALUE pattern targets .env / shell config. Source code uses
+    # `Identifier = otherIdentifier` assignments that this pattern flags as false
+    # positives (e.g. `AdminPassword = adminPassword` in C#). Those files are still
+    # covered by the quoted-literal, JWT and private-key patterns, so scope the env
+    # pattern away from recognized source-code extensions.
+    $isSourceCode = $trackedFile -match '\.(cs|ts|tsx|js|jsx|mjs|cjs|java|go|py|rb|php|cpp|cc|cxx|hpp|kt|kts|swift|rs|scala)$'
+    $envLiteralMatches = if ($isSourceCode) { @() } else { [regex]::Matches($content, $envLiteralPattern) }
 
     $allMatches = @($assignmentMatches) + @($envLiteralMatches) + @($jwtLiteralMatches) + @($privateKeyMatches)
 
