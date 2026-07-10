@@ -190,6 +190,7 @@ internal sealed class ScoringApiFactory : WebApplicationFactory<Program>
                 ["Auth:Authority"] = "http://localhost:8080/realms/umbral",
                 ["Auth:Audience"] = "umbral-scoring-monitoring-api",
                 ["RabbitMQ:Host"] = "localhost",
+                ["Messaging:UseRabbitMq"] = "false",
                 ["Persistence:ApplyMigrationsOnStartup"] = "false"
             });
         });

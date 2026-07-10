@@ -6,9 +6,9 @@ namespace SessionManagement.IntegrationTests;
 
 /// <summary>
 /// Audit is emitted as domain events raised by the <see cref="LiveSession"/> aggregate and
-/// dispatched to RabbitMQ by a post-commit interceptor. These tests assert on the raised
-/// domain events (a stronger contract than mocking a publisher), covering the submitted and
-/// immediate-validation facts for both accepted and rejected evidence.
+/// published to RabbitMQ through MassTransit's transactional outbox during SaveChanges. These
+/// tests assert on the raised domain events (a stronger contract than mocking a publisher),
+/// covering the submitted and immediate-validation facts for both accepted and rejected evidence.
 /// </summary>
 public sealed class EvidenceSubmissionAuditEventTests
 {

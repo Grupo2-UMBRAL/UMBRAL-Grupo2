@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Domain.LiveSessions;
@@ -25,6 +26,12 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.HasDefaultSchema(SessionManagementPersistence.SchemaName);
+
+        // MassTransit transactional outbox tables (OutboxState / OutboxMessage / InboxState),
+        // created in the session_management schema. Audit events raised during SaveChanges are
+        // staged here in the same transaction, then relayed to RabbitMQ by the delivery service.
+        modelBuilder.AddTransactionalOutboxEntities();
+
         modelBuilder.Entity<LiveSession>(liveSession =>
         {
             liveSession.ToTable("live_sessions");

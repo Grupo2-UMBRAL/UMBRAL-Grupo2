@@ -26,8 +26,10 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
 
     <!-- Service Defaults & Diagnostics -->
-    <!-- Messaging -->
-    <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
+    <!-- Messaging (MassTransit v8 — Apache-2.0; v9 moved to a commercial license) -->
+    <PackageVersion Include="MassTransit" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.5.10" />
 
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.0.0" />

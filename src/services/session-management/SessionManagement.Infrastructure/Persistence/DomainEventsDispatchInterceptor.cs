@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using SessionManagement.Domain.Abstractions;
@@ -6,17 +7,33 @@ using SessionManagement.Infrastructure.Messaging;
 namespace SessionManagement.Infrastructure.Persistence;
 
 /// <summary>
-/// Dispatches the domain events raised by tracked aggregates to RabbitMQ <b>after</b> the
-/// transaction has committed (the <see cref="SaveChangesInterceptor.SavedChangesAsync"/> hook),
-/// never inside it — publishing before commit would risk phantom events if the commit rolls
-/// back (ADR-013). Dispatch is best-effort; the publisher swallows broker failures.
+/// Publishes the audit events raised by tracked aggregates <b>inside</b> the business
+/// transaction, via MassTransit's transactional outbox. Runs on the
+/// <see cref="SaveChangesInterceptor.SavingChangesAsync"/> hook (before the rows are written):
+/// each <see cref="IPublishEndpoint.Publish{T}(T,CancellationToken)"/> call is captured by the
+/// EF Core bus outbox and staged as an <c>OutboxMessage</c> row on this same
+/// <see cref="DbContext"/>, so the business change and the audit event commit atomically. A
+/// background delivery service then relays the staged messages to RabbitMQ. This is the outbox
+/// upgrade over the previous best-effort, post-commit publish (ADR-013).
+/// <para>
+/// Registered as a <b>scoped</b> interceptor so it shares the DbContext's scope with the scoped
+/// <see cref="IPublishEndpoint"/> the outbox provides — that is what ties the staged messages to
+/// this context's transaction.
+/// </para>
+/// <para>
+/// <see cref="IPublishEndpoint"/> is resolved <b>lazily</b>, not constructor-injected: the outbox's
+/// publish endpoint needs the <see cref="SessionManagementDbContext"/> to stage OutboxMessage rows,
+/// while the DbContext needs this interceptor to build its options — constructor injection closes
+/// that loop and deadlocks host startup. Resolving inside SavingChanges is safe because by then the
+/// DbContext instance already exists in the scope.
+/// </para>
 /// </summary>
-public sealed class DomainEventsDispatchInterceptor(RabbitMqAuditEventPublisher publisher)
+public sealed class DomainEventsDispatchInterceptor(IServiceProvider serviceProvider)
     : SaveChangesInterceptor
 {
-    public override async ValueTask<int> SavedChangesAsync(
-        SaveChangesCompletedEventData eventData,
-        int result,
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventData);
@@ -26,7 +43,7 @@ public sealed class DomainEventsDispatchInterceptor(RabbitMqAuditEventPublisher 
             await DispatchDomainEventsAsync(eventData.Context, cancellationToken);
         }
 
-        return await base.SavedChangesAsync(eventData, result, cancellationToken);
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
     private async Task DispatchDomainEventsAsync(DbContext context, CancellationToken cancellationToken)
@@ -36,6 +53,13 @@ public sealed class DomainEventsDispatchInterceptor(RabbitMqAuditEventPublisher 
             .Where(entry => entry.Entity.DomainEvents.Count > 0)
             .Select(entry => entry.Entity)
             .ToArray();
+
+        if (aggregates.Length == 0)
+        {
+            return;
+        }
+
+        var publishEndpoint = serviceProvider.GetRequiredService<IPublishEndpoint>();
 
         foreach (var aggregate in aggregates)
         {
@@ -47,7 +71,9 @@ public sealed class DomainEventsDispatchInterceptor(RabbitMqAuditEventPublisher 
                 var message = SessionAuditEventMapper.Map(domainEvent);
                 if (message is not null)
                 {
-                    await publisher.PublishAsync(message, cancellationToken);
+                    // With UseBusOutbox() active, this stages an OutboxMessage on `context`
+                    // rather than hitting the broker; it is flushed with the current SaveChanges.
+                    await publishEndpoint.Publish(message, cancellationToken);
                 }
             }
         }
