@@ -1,24 +1,18 @@
-using MissionManagement.Domain.Missions;
-using MissionManagement.Application.Abstractions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.DeactivateMission;
 
-public sealed class DeactivateMissionCommandHandler(
-    IUnitOfWork unitOfWork,
-    IRepository<Mission> missionRepository,
-    IMissionManagementDbContext dbContext)
+public sealed class DeactivateMissionCommandHandler(IMissionStore missionStore)
     : IRequestHandler<DeactivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(DeactivateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await missionRepository.SingleOrDefaultAsync(
-            existingMission => existingMission.Id == request.MissionId,
-            cancellationToken);
+        // ponytail: loads the tree even though deactivation only flips a flag — the response body carries
+        // the full mission and the web admin re-renders the builder from it (a scalar-only load would blank it).
+        var mission = await missionStore.GetWithItemsAsync(request.MissionId, cancellationToken);
         if (mission is null)
         {
             throw new UmbralDomainException(
@@ -27,11 +21,8 @@ public sealed class DeactivateMissionCommandHandler(
                 UmbralFailureCategory.NotFound);
         }
 
-        var aggregate = await MissionLoader.RequireAsync(dbContext, request.MissionId, cancellationToken);
-        mission.ReplaceItems(aggregate.RootItems);
-
         mission.Deactivate();
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await missionStore.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }

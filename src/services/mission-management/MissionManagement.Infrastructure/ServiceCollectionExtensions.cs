@@ -15,9 +15,7 @@ public static class ServiceCollectionExtensions
 
         services.AddUmbralPostgresDbContext<MissionManagementDbContext>(configuration, MissionManagementPersistence.SchemaName);
 
-        
-        services.AddScoped(typeof(MissionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
-        services.AddScoped<MissionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.MissionManagementDbContext>());
+        services.AddScoped<MissionManagement.Application.Abstractions.IMissionStore, Persistence.MissionStore>();
         return services;
     }
 }

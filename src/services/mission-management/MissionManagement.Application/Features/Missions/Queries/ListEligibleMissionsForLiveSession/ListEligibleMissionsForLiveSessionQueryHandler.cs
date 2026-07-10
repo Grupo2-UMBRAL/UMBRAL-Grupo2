@@ -1,13 +1,10 @@
-using MissionManagement.Domain.Missions;
 using MissionManagement.Application.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace MissionManagement.Application.Features.Missions.Queries.ListEligibleMissionsForLiveSession;
 
-public sealed class ListEligibleMissionsForLiveSessionQueryHandler(
-    IRepository<Mission> missionRepository,
-    IMissionManagementDbContext dbContext)
+public sealed class ListEligibleMissionsForLiveSessionQueryHandler(IMissionManagementDbContext dbContext)
     : IRequestHandler<ListEligibleMissionsForLiveSessionQuery, IReadOnlyList<EligibleMissionForLiveSessionSummaryResponse>>
 {
     public async Task<IReadOnlyList<EligibleMissionForLiveSessionSummaryResponse>> Handle(
@@ -16,7 +13,8 @@ public sealed class ListEligibleMissionsForLiveSessionQueryHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var activeMissionIds = await missionRepository
+        var activeMissionIds = await dbContext.Missions
+            .AsNoTracking()
             .Where(mission => mission.IsActive)
             .OrderBy(mission => mission.Name)
             .Select(mission => mission.Id)

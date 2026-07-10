@@ -3,10 +3,7 @@ using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Features.Missions.Commands.CreateMission;
 
-public sealed class CreateMissionCommandHandler(
-    IUnitOfWork unitOfWork,
-    IRepository<Mission> missionRepository,
-    IMissionManagementDbContext dbContext)
+public sealed class CreateMissionCommandHandler(IMissionStore missionStore)
     : IRequestHandler<CreateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(CreateMissionCommand request, CancellationToken cancellationToken)
@@ -24,11 +21,10 @@ public sealed class CreateMissionCommandHandler(
             rootItems);
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
-            missionRepository, mission.Name, excludeMissionId: null, cancellationToken);
+            missionStore, mission.Name, excludeMissionId: null, cancellationToken);
 
-        missionRepository.Add(mission);
-        MissionLoader.AddItems(dbContext, mission);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        missionStore.Add(mission);
+        await missionStore.SaveChangesAsync(cancellationToken);
 
         return mission.ToResponse();
     }
