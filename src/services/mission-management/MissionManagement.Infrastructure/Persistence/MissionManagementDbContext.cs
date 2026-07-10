@@ -4,7 +4,7 @@ using MissionManagement.Domain.Missions;
 namespace MissionManagement.Infrastructure.Persistence;
 
 public sealed class MissionManagementDbContext(DbContextOptions<MissionManagementDbContext> options)
-    : DbContext(options), MissionManagement.Application.Abstractions.IUnitOfWork, IMissionManagementDbContext
+    : DbContext(options), IMissionManagementDbContext
 {
     public DbSet<Mission> Missions => Set<Mission>();
 
