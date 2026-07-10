@@ -1,8 +1,5 @@
-using System.Linq.Expressions;
-using MissionManagement.Application.Abstractions;
 using MissionManagement.Application.Features.Missions;
 using MissionManagement.Domain.Missions;
-using Moq;
 using Umbral.ServiceDefaults;
 using Xunit;
 
@@ -10,34 +7,35 @@ namespace MissionManagement.UnitTests;
 
 public sealed class MissionNameUniquenessValidatorTests
 {
-    private readonly Mock<IRepository<Mission>> _missions = new();
-
     [Fact]
     public async Task EnsureAvailableAsync_NoClash_DoesNotThrow()
     {
-        _missions
-            .Setup(repo => repo.FirstOrDefaultAsync(
-                It.IsAny<Expression<Func<Mission, bool>>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Mission?)null);
+        var store = new InMemoryMissionStore();
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
-            _missions.Object, "Unique", excludeMissionId: null, CancellationToken.None);
+            store, "Unique", excludeMissionId: null, CancellationToken.None);
     }
 
     [Fact]
     public async Task EnsureAvailableAsync_Clash_ThrowsConflict()
     {
-        var existing = Mission.Create(Guid.NewGuid(), "Taken", "Description", 30);
-        _missions
-            .Setup(repo => repo.FirstOrDefaultAsync(
-                It.IsAny<Expression<Func<Mission, bool>>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existing);
+        var store = new InMemoryMissionStore(Mission.Create(Guid.NewGuid(), "Taken", "Description", 30));
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             MissionNameUniquenessValidator.EnsureAvailableAsync(
-                _missions.Object, "Taken", excludeMissionId: Guid.NewGuid(), CancellationToken.None));
+                store, "Taken", excludeMissionId: Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal("mission_name_duplicate", exception.Code);
         Assert.Equal(UmbralFailureCategory.Conflict, exception.Category);
+    }
+
+    [Fact]
+    public async Task EnsureAvailableAsync_SameMissionExcluded_DoesNotThrow()
+    {
+        var mission = Mission.Create(Guid.NewGuid(), "Keep Name", "Description", 30);
+        var store = new InMemoryMissionStore(mission);
+
+        await MissionNameUniquenessValidator.EnsureAvailableAsync(
+            store, "Keep Name", excludeMissionId: mission.Id, CancellationToken.None);
     }
 }

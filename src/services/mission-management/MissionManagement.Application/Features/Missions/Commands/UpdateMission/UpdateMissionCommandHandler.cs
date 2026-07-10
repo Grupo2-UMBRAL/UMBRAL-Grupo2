@@ -1,22 +1,17 @@
-using MissionManagement.Domain.Missions;
 using MediatR;
+using MissionManagement.Domain.Missions;
 using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
 
-public sealed class UpdateMissionCommandHandler(
-    IUnitOfWork unitOfWork,
-    IRepository<Mission> missionRepository,
-    IMissionManagementDbContext dbContext)
+public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
     : IRequestHandler<UpdateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(UpdateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await missionRepository.SingleOrDefaultAsync(
-            existingMission => existingMission.Id == request.MissionId,
-            cancellationToken);
+        var mission = await missionStore.GetWithItemsAsync(request.MissionId, cancellationToken);
         if (mission is null)
         {
             throw new UmbralDomainException(
@@ -31,14 +26,13 @@ public sealed class UpdateMissionCommandHandler(
             request.MaximumDurationMinutes);
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
-            missionRepository, mission.Name, excludeMissionId: request.MissionId, cancellationToken);
+            missionStore, mission.Name, excludeMissionId: request.MissionId, cancellationToken);
 
         if (request.Items is null)
         {
-            // Scalar-only update: leave the path-item tree untouched, persist and reload for the response.
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            var reloaded = await MissionLoader.RequireAsync(dbContext, request.MissionId, cancellationToken);
-            return reloaded.ToResponse();
+            // Scalar-only update: the tree stays as loaded, so the response reflects it without a reload.
+            await missionStore.SaveChangesAsync(cancellationToken);
+            return mission.ToResponse();
         }
 
         var rootItems = request.Items.ToDomain(request.MissionId);
@@ -55,10 +49,8 @@ public sealed class UpdateMissionCommandHandler(
             updatedView.EnsureEligibleForLiveSession();
         }
 
-        await MissionLoader.DeleteItemsAsync(dbContext, request.MissionId, cancellationToken);
-        MissionLoader.AddItems(dbContext, updatedView);
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await missionStore.ReplaceItemsAsync(updatedView, cancellationToken);
+        await missionStore.SaveChangesAsync(cancellationToken);
 
         return updatedView.ToResponse();
     }
