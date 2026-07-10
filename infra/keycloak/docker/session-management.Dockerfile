@@ -6,6 +6,7 @@ WORKDIR /src
 #    This layer is cached and only rebuilds when a .csproj / props file changes,
 #    not on every source edit.
 COPY Directory.Build.props Directory.Packages.props ./
+COPY src/shared/Umbral.Kernel/Umbral.Kernel.csproj src/shared/Umbral.Kernel/
 COPY src/shared/Umbral.ServiceDefaults/Umbral.ServiceDefaults.csproj src/shared/Umbral.ServiceDefaults/
 COPY src/services/session-management/SessionManagement.Api/SessionManagement.Api.csproj src/services/session-management/SessionManagement.Api/
 COPY src/services/session-management/SessionManagement.Application/SessionManagement.Application.csproj src/services/session-management/SessionManagement.Application/

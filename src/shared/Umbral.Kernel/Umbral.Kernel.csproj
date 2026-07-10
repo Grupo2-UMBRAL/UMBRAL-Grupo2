@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Intencionalmente sin PackageReference ni FrameworkReference: este proyecto es
+       el núcleo sin framework que pueden referenciar los Domain (RNF-07, ADR-015).
+       El TFM, nullable e implicit usings vienen de Directory.Build.props. -->
+</Project>

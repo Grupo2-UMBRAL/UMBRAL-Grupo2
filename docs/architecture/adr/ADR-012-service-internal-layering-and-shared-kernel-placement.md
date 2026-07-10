@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted (superseded in part by [ADR-015](ADR-015-framework-free-shared-kernel.md))
+
+> ADR-015 refina dos puntos: (a) el "single `.Api` por servicio" ya no describe la realidad —
+> cada servicio esta escindido en cuatro proyectos por capa; y (b) la regla 9 ("`src/shared` no
+> absorbe vocabulario de negocio") admite una excepcion consciente para `UmbralRoles`
+> (vocabulario de autorizacion transversal) alojado en `Umbral.Kernel`.
 
 ## Context
 
