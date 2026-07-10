@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using Umbral.ServiceDefaults;
-using UserManagement.Application.Abstractions;
 using UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 using UserManagement.Domain.Entities;
 using Microsoft.Extensions.Logging;
@@ -43,6 +42,7 @@ public class CreateParticipantCommandHandlerTests
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdReference);
 
+        var participantUser = new OperatorUser("player-123", "player1", "player1@example.com", "player1", "Jugador", true);
         _portMock.Setup(p => p.GetUserByIdAsync("player-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(participantUser);
 
@@ -50,8 +50,8 @@ public class CreateParticipantCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.UserId.Should().Be("player-123");
+        Assert.NotNull(result);
+        Assert.Equal("player-123", result.UserId);
         _emailMock.Verify(e => e.SendParticipantWelcomeAsync(
             "player1@example.com",
             "player1",
@@ -90,8 +90,8 @@ public class CreateParticipantCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().NotBeNull();
-        result.UserId.Should().Be(participantUser.Id);
+        Assert.NotNull(result);
+        Assert.Equal(participantUser.Id, result.UserId);
     }
 
     [Fact]
