@@ -1,5 +1,6 @@
 using SessionManagement.Domain.Abstractions;
 using SessionManagement.Domain.LiveSessions;
+using Umbral.Contracts.Audit;
 
 namespace SessionManagement.Infrastructure.Messaging;
 

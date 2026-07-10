@@ -15,7 +15,7 @@ Forzar una arquitectura totalmente orientada a eventos agregaria complejidad inn
 - La comunicacion principal entre microservicios sera sincronica.
 - La mensajeria asincrona con `RabbitMQ` se usara solo para responsabilidades secundarias y desacoplables.
 - El flujo principal del negocio no dependera por defecto de coreografia distribuida.
-- `Session Operations Service` conserva la autoridad del flujo operativo principal.
+- `session-management` conserva la autoridad del flujo operativo principal.
 
 ## Consequences
 

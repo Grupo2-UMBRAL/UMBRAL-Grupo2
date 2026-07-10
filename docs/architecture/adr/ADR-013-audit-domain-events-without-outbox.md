@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-014](ADR-014-masstransit-transactional-outbox-for-audit.md)
+
+> El transporte pasó de `RabbitMQ.Client` crudo a **MassTransit**, que trae el outbox
+> transaccional EF Core "de fábrica". Eso invirtió el cálculo costo/beneficio de esta ADR
+> (el outbox dejó de ser plumbing caro), así que la entrega best-effort post-commit descrita
+> aquí fue reemplazada por el outbox transaccional. Se conserva por trazabilidad histórica.
 
 ## Context
 

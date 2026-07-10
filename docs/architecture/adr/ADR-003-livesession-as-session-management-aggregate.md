@@ -1,4 +1,4 @@
-# ADR-003: LiveSession es el agregado principal de Session Operations
+# ADR-003: LiveSession es el agregado principal de session-management
 
 ## Status
 
@@ -12,7 +12,7 @@ Si estas reglas se distribuyen sin un agregado principal, se vuelven difíciles 
 
 ## Decision
 
-`LiveSession` es el agregado principal de `Session Operations`.
+`LiveSession` es el agregado principal de `session-management`.
 
 La consistencia operativa de:
 
@@ -28,5 +28,5 @@ entra por `LiveSession`.
 ## Consequences
 
 - Las reglas de transición y coordinación operativa se centralizan.
-- Otros conceptos de `Session Operations` no deben comportarse como fuentes de verdad competidoras.
+- Otros conceptos de `session-management` no deben comportarse como fuentes de verdad competidoras.
 - La implementación puede descomponerse internamente, pero sin romper la autoridad del agregado sobre sus invariantes.

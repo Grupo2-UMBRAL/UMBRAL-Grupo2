@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using ScoringMonitoring.Infrastructure;
 using Umbral.ServiceDefaults;
@@ -38,7 +39,13 @@ app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/health");
+// Liveness probe: exclude MassTransit's bus readiness check (tagged "masstransit"), which
+// reports Unhealthy until the broker connection is up. Bus readiness belongs on a separate
+// readiness endpoint, not on the "is the process alive" check.
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = static registration => !registration.Tags.Contains("masstransit"),
+});
 app.MapControllers();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))

@@ -94,6 +94,7 @@ public sealed class SessionManagementRoleSmokeRouteTests
                         ["Auth:Authority"] = "http://localhost:8080/realms/umbral",
                         ["Auth:Audience"] = "umbral-session-management-api",
                         ["RabbitMQ:Host"] = "localhost",
+                        ["Messaging:UseRabbitMq"] = "false",
                         ["SignalR:Enabled"] = "true",
                         ["Persistence:ApplyMigrationsOnStartup"] = "false"
                     });
