@@ -9,7 +9,7 @@ namespace SessionManagement.UnitTests;
 // handlers query through EntityFrameworkQueryableExtensions: `.Include(...)` is a
 // no-op passthrough on a non-EF provider, and `.SingleOrDefaultAsync(...)` executes
 // against this async provider — so the full handler path runs without a DbContext.
-internal sealed class FakeRepository<T>(IEnumerable<T> items) : IRepository<T>
+internal class FakeRepository<T>(IEnumerable<T> items) : IRepository<T>
     where T : class
 {
     private readonly List<T> _items = items.ToList();
@@ -112,4 +112,24 @@ internal sealed class TestAsyncEnumerator<T>(IEnumerator<T> inner) : IAsyncEnume
 internal sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => now;
+}
+
+internal sealed class FakeLiveSessionRepository(IEnumerable<SessionManagement.Domain.LiveSessions.LiveSession> items) 
+    : FakeRepository<SessionManagement.Domain.LiveSessions.LiveSession>(items), ILiveSessionRepository
+{
+    public Task<SessionManagement.Domain.LiveSessions.LiveSession?> GetBySessionTeamIdWithEvidenceSubmissionsAsync(
+        Guid sessionTeamId, 
+        CancellationToken cancellationToken = default)
+    {
+        var session = this.FirstOrDefault(s => s.SessionTeams.Any(t => t.Id == sessionTeamId));
+        return Task.FromResult(session);
+    }
+
+    public Task<SessionManagement.Domain.LiveSessions.LiveSession?> GetByEvidenceSubmissionIdWithSubmissionsAndLogsAsync(
+        Guid submissionId, 
+        CancellationToken cancellationToken = default)
+    {
+        var session = this.FirstOrDefault(s => s.EvidenceSubmissions.Any(e => e.Id == submissionId));
+        return Task.FromResult(session);
+    }
 }

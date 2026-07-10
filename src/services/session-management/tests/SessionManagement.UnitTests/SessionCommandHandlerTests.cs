@@ -117,7 +117,7 @@ public sealed class OverrideValidationOutcomeHandlerTests
         scoring = new Mock<IScoringMonitoringClient>();
         return new OverrideValidationOutcomeHandler(
             unitOfWork.Object,
-            new FakeRepository<LiveSession>([session]),
+            new FakeLiveSessionRepository([session]),
             HandlerScaffold.Clock(),
             HandlerScaffold.Operator("operator-1").Object,
             notifier.Object,
@@ -205,7 +205,7 @@ public sealed class SubmitTriviaAnswerHandlerTests
         scoring = new Mock<IScoringMonitoringClient>();
         return new SubmitTriviaAnswerHandler(
             unitOfWork.Object,
-            new FakeRepository<LiveSession>([session]),
+            new FakeLiveSessionRepository([session]),
             HandlerScaffold.Clock(),
             HandlerScaffold.Participants(participantUserId).Object,
             notifier.Object,
@@ -289,7 +289,7 @@ public sealed class SubmitEvidenceCommandHandlerTests
         scoring = new Mock<IScoringMonitoringClient>();
         return new SubmitEvidenceCommandHandler(
             unitOfWork.Object,
-            new FakeRepository<LiveSession>([session]),
+            new FakeLiveSessionRepository([session]),
             HandlerScaffold.Clock(),
             HandlerScaffold.Participants(participantUserId).Object,
             notifier.Object,
@@ -381,7 +381,7 @@ public sealed class ReleaseHintHandlerTests
         notifier = new Mock<ISessionRealtimeNotifier>();
         return new ReleaseHintHandler(
             unitOfWork.Object,
-            new FakeRepository<LiveSession>([session]),
+            new FakeLiveSessionRepository([session]),
             HandlerScaffold.Clock(),
             notifier.Object);
     }

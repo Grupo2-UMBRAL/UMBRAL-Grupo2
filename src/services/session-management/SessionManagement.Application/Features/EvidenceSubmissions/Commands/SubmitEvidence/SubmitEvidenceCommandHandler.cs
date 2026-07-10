@@ -1,227 +1,79 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Umbral.ServiceDefaults;
+
 using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Abstractions.Realtime;
-using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Features.SessionSnapshots;
-using SessionManagement.Domain.LiveSessions;
-using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Abstractions;
+using SessionManagement.Application.Features.SessionEnrollment;
+using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public sealed class SubmitEvidenceCommandHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    IUnitOfWork unitOfWork, 
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
     IScoringMonitoringClient scoringAuditClient)
-    : IRequestHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>
+    : EvidenceSubmissionFlowHandler<SubmitEvidenceCommand, SubmitEvidenceResponse>(
+        unitOfWork, liveSessionRepository, timeProvider, realtimeNotifier, scoringAuditClient)
 {
-    public async Task<SubmitEvidenceResponse> Handle(
-        SubmitEvidenceCommand request,
-        CancellationToken cancellationToken)
+    protected override async Task<LiveSession?> GetLiveSessionAsync(SubmitEvidenceCommand request, ILiveSessionRepository repository, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        return await repository.GetBySessionTeamIdWithEvidenceSubmissionsAsync(request.SessionTeamId, cancellationToken);
+    }
 
+    protected override Exception CreateNotFoundException(SubmitEvidenceCommand request)
+    {
+        return new UmbralDomainException(
+            "session_team_not_found",
+            $"Session Team '{request.SessionTeamId}' was not found.",
+            UmbralFailureCategory.NotFound);
+    }
+
+    protected override Guid GetSessionTeamId(SubmitEvidenceCommand request, LiveSession session)
+        => request.SessionTeamId;
+
+    protected override void EnsurePermissions(SubmitEvidenceCommand request, LiveSession session)
+    {
         var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .Include(session => session.TeamParticipations)
-            .Include(session => session.TeamProgressions)
-            .Include(session => session.EvidenceSubmissions)
-            .SingleOrDefaultAsync(
-                session => session.SessionTeams.Any(team => team.Id == request.SessionTeamId),
-                cancellationToken);
-        if (liveSession is null)
-        {
-            throw new UmbralDomainException(
-                "session_team_not_found",
-                $"Session Team '{request.SessionTeamId}' was not found.",
-                UmbralFailureCategory.NotFound);
-        }
+        EnsureParticipantBelongsToSessionTeam(session, request.SessionTeamId, participantUserId.Value);
+    }
 
-        EnsureParticipantBelongsToSessionTeam(liveSession, request.SessionTeamId, participantUserId.Value);
-
-        var submittedAtUtc = timeProvider.GetUtcNow();
-        var previousLiveSessionState = liveSession.State;
-        var previousStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
-        var stageStartedAtUtc = GetCurrentStageStartedAtUtc(liveSession, request.SessionTeamId);
-        var evidenceSubmission = liveSession.SubmitEvidence(
+    protected override Task<DomainStepResult> ExecuteDomainStepAsync(SubmitEvidenceCommand request, LiveSession session, DateTimeOffset occurredAtUtc, CancellationToken cancellationToken)
+    {
+        var evidenceSubmission = session.SubmitEvidence(
             request.SessionTeamId,
             request.QrHash,
-            submittedAtUtc);
-        var currentStage = liveSession.GetCurrentStageForTeam(request.SessionTeamId);
-        var progressState = liveSession.GetProgressStateForTeam(request.SessionTeamId);
+            occurredAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var result = new DomainStepResult(
+            EvidenceSubmission: evidenceSubmission,
+            PublishOutcomeChanged: false,
+            PreviousOutcome: null,
+            OutcomeChangedReason: null,
+            RecordStageCredit: evidenceSubmission.Outcome == ValidationOutcome.Accepted,
+            IsValidationOverride: false,
+            PublishProgressChanged: evidenceSubmission.Outcome == ValidationOutcome.Accepted,
+            ProgressChangedReason: "Evidence accepted; Session Team progression changed.",
+            StateChangedReason: "LiveSession finalized after Evidence Submission."
+        );
 
-        if (evidenceSubmission.Outcome == ValidationOutcome.Accepted)
-        {
-            await scoringAuditClient.RecordStageCreditAsync(
-                CreateStageCreditRequest(
-                    liveSession.Id,
-                    request.SessionTeamId,
-                    previousStage,
-                    stageStartedAtUtc,
-                    submittedAtUtc,
-                    validationOverride: false),
-                cancellationToken);
+        return Task.FromResult(result);
+    }
 
-        await PublishTeamProgressChangedAsync(
-            liveSession,
-            request.SessionTeamId,
-            previousStage,
-            currentStage,
-                progressState,
-                submittedAtUtc,
-                cancellationToken);
-
-            if (!string.Equals(previousLiveSessionState, liveSession.State, StringComparison.Ordinal))
-            {
-            await PublishSessionStateChangedAsync(
-                liveSession,
-                previousLiveSessionState,
-                submittedAtUtc,
-                cancellationToken);
-            }
-        }
-
+    protected override SubmitEvidenceResponse CreateResponse(SubmitEvidenceCommand request, LiveSession session, EvidenceSubmission evidenceSubmission, DomainStepResult domainResult, LiveSessionStage? currentStage, string progressState, DateTimeOffset occurredAtUtc)
+    {
         return new SubmitEvidenceResponse(
-            liveSession.Id,
+            session.Id,
             request.SessionTeamId,
             evidenceSubmission.Id,
             evidenceSubmission.Outcome.ToString(),
             progressState,
             MapCurrentStage(currentStage),
-            liveSession.SequenceNumber,
-            submittedAtUtc);
+            session.SequenceNumber,
+            occurredAtUtc);
     }
-
-    private static void EnsureParticipantBelongsToSessionTeam(
-        LiveSession liveSession,
-        Guid sessionTeamId,
-        string participantUserId)
-    {
-        var participation = liveSession.TeamParticipations.FirstOrDefault(existingParticipation =>
-            existingParticipation.SessionTeamId == sessionTeamId
-            && string.Equals(existingParticipation.ParticipantUserId, participantUserId, StringComparison.Ordinal));
-        if (participation is not null)
-        {
-            return;
-        }
-
-        throw new UmbralDomainException(
-            "session_team_participation_required",
-            "Participant must belong to this Session Team to submit evidence.",
-            UmbralFailureCategory.Forbidden);
-    }
-
-    private async Task PublishTeamProgressChangedAsync(
-        LiveSession liveSession,
-        Guid sessionTeamId,
-        LiveSessionStage? previousStage,
-        LiveSessionStage? currentStage,
-        string progressState,
-        DateTimeOffset occurredAtUtc,
-        CancellationToken cancellationToken)
-    {
-        var payload = new TeamProgressChangedPayload(
-            CreateMetadata(liveSession, occurredAtUtc, "Evidence accepted; Session Team progression changed."),
-            sessionTeamId,
-            MapCurrentStage(previousStage),
-            MapCurrentStage(currentStage),
-            progressState);
-
-        await realtimeNotifier.NotifyTeamProgressChangedAsync(payload, cancellationToken);
-    }
-
-    private async Task PublishSessionStateChangedAsync(
-        LiveSession liveSession,
-        string previousState,
-        DateTimeOffset occurredAtUtc,
-        CancellationToken cancellationToken)
-        => await realtimeNotifier.NotifySessionStateChangedAsync(
-            new LiveSessionStateChangedEvent(
-                liveSession.Id,
-                previousState,
-                liveSession.State,
-                liveSession.SessionTeams.Count,
-                liveSession.SequenceNumber,
-                "LiveSession finalized after Evidence Submission.",
-                occurredAtUtc),
-            cancellationToken);
-
-    private static RealtimeEventMetadata CreateMetadata(
-        LiveSession liveSession,
-        DateTimeOffset occurredAtUtc,
-        string reason)
-        => new(
-            liveSession.Id,
-            liveSession.SequenceNumber,
-            occurredAtUtc,
-            SnapshotRefreshPolicy.RefreshSnapshot,
-            reason);
-
-    private static CurrentSessionStageSnapshot? MapCurrentStage(LiveSessionStage? currentStage)
-    {
-        if (currentStage is null)
-        {
-            return null;
-        }
-
-        return new CurrentSessionStageSnapshot(
-            currentStage.MissionStageId,
-            currentStage.Name,
-            currentStage.SessionStageOrder,
-            currentStage.SourceOrder,
-            currentStage.ResolvedTimeBudgetMinutes,
-            currentStage.Difficulty,
-            currentStage.GameType,
-            currentStage.Prompt,
-            currentStage.Choices.Select(choice => new SessionStageChoiceSnapshot(choice.Id, choice.Text)).ToArray());
-    }
-
-    private static RecordStageCreditRequest CreateStageCreditRequest(
-        Guid liveSessionId,
-        Guid sessionTeamId,
-        LiveSessionStage? acceptedStage,
-        DateTimeOffset stageStartedAtUtc,
-        DateTimeOffset recordedAtUtc,
-        bool validationOverride)
-    {
-        if (acceptedStage is null)
-        {
-            throw new UmbralDomainException(
-                "score_stage_credit_stage_required",
-                "Accepted Evidence Submission must have a Session Stage to record Stage Credit.",
-                UmbralFailureCategory.Conflict);
-        }
-
-        return new RecordStageCreditRequest(
-            liveSessionId,
-            sessionTeamId,
-            acceptedStage.MissionStageId,
-            acceptedStage.Difficulty,
-            CalculateResolutionTime(stageStartedAtUtc, recordedAtUtc),
-            recordedAtUtc,
-            validationOverride);
-    }
-
-    private static DateTimeOffset GetCurrentStageStartedAtUtc(LiveSession liveSession, Guid sessionTeamId)
-        => liveSession.TeamProgressions
-            .FirstOrDefault(progress => progress.SessionTeamId == sessionTeamId)
-            ?.UpdatedAtUtc
-            ?? liveSession.ScheduledStartAtUtc
-            ?? liveSession.CreatedAtUtc;
-
-    private static TimeSpan CalculateResolutionTime(DateTimeOffset stageStartedAtUtc, DateTimeOffset recordedAtUtc)
-        => recordedAtUtc >= stageStartedAtUtc
-            ? recordedAtUtc - stageStartedAtUtc
-            : TimeSpan.Zero;
 }
-
-
-
