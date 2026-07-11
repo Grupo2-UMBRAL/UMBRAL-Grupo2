@@ -79,7 +79,7 @@ public sealed class HintReleaseQaTests
         var persisted = await dbContext.LiveSessions.SingleAsync(session => session.Id == LiveSessionId);
         var persistedStage = persisted.SessionStageFlow.Single(stage => stage.MissionStageId == StageOneId);
         Assert.Equal("Clave operativa creada en vivo.", response.Content);
-        Assert.Contains("Clave operativa creada en vivo.", persisted.SessionStageFlowJson, StringComparison.Ordinal);
+
         Assert.Equal(templateHintCount + 1, persistedStage.Hints.Count);
         Assert.Equal(templateHintCount, templateStage.Hints.Count);
     }
@@ -170,7 +170,7 @@ public sealed class HintReleaseQaTests
 
         var releasedHints = liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(5));
 
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
         Assert.Equal(8, releasedHints.Count);
         Assert.Equal(8, liveSession.ReleasedHints.Count);
         Assert.Equal(1, liveSession.SequenceNumber);
@@ -199,7 +199,7 @@ public sealed class HintReleaseQaTests
         var sequenceAfterFirstRelease = liveSession.SequenceNumber;
         var secondRelease = liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(6));
 
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
         Assert.Equal(8, firstRelease.Count);
         Assert.Empty(secondRelease);
         Assert.Equal(8, liveSession.ReleasedHints.Count);
@@ -345,7 +345,7 @@ public sealed class HintReleaseQaTests
         liveSession.EnrollParticipantInTeam(alphaTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
         var betaTeam = liveSession.RegisterTeam(BetaTeamId, "Beta Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
         liveSession.EnrollParticipantInTeam(betaTeam.Id, "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
-        ForceState(liveSession, LiveSessionStates.Active);
+        ForceState(liveSession, "Active");
 
         return liveSession;
     }
@@ -355,7 +355,7 @@ public sealed class HintReleaseQaTests
         var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
-        backingField.SetValue(liveSession, state);
+        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

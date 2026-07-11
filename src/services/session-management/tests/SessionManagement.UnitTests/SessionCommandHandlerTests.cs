@@ -102,7 +102,7 @@ public sealed class OverrideValidationOutcomeHandlerTests
 
         await handler.Handle(new OverrideValidationOutcomeCommand(submission.Id, true, "Operator confirmation."), default);
 
-        Assert.Equal(LiveSessionStates.Finalized, session.State);
+        Assert.Equal("Finalized", session.State.Value);
         notifier.Verify(n => n.NotifySessionStateChangedAsync(It.IsAny<LiveSessionStateChangedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -189,7 +189,7 @@ public sealed class SubmitTriviaAnswerHandlerTests
 
         await handler.Handle(new SubmitTriviaAnswerCommand(HandlerScaffold.Team, SampleLiveSessions.CorrectChoiceId), default);
 
-        Assert.Equal(LiveSessionStates.Finalized, session.State);
+        Assert.Equal("Finalized", session.State.Value);
         notifier.Verify(n => n.NotifySessionStateChangedAsync(It.IsAny<LiveSessionStateChangedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -273,7 +273,7 @@ public sealed class SubmitEvidenceCommandHandlerTests
 
         await handler.Handle(new SubmitEvidenceCommand(HandlerScaffold.Team, "qr-stage-1"), default);
 
-        Assert.Equal(LiveSessionStates.Finalized, session.State);
+        Assert.Equal("Finalized", session.State.Value);
         notifier.Verify(n => n.NotifySessionStateChangedAsync(It.IsAny<LiveSessionStateChangedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

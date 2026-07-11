@@ -57,7 +57,7 @@ public sealed class GetSessionTeamDetailQueryHandler(
         return new SessionTeamDetailResponse(
             liveSession.Id,
             liveSession.Name,
-            liveSession.State,
+            liveSession.State.Value,
             sessionTeam.Id,
             sessionTeam.Name,
             liveSession.TeamParticipations.Count(participation => participation.SessionTeamId == sessionTeam.Id),

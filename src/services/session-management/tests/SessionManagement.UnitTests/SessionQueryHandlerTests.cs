@@ -249,7 +249,7 @@ public sealed class GetSessionTeamSnapshotQueryHandlerTests
             SampleLiveSessions.TreasureStage(2)
         ]);
         session.ReleaseHint(QueryScaffold.Team, SampleLiveSessions.HintId(1), SampleLiveSessions.Now);
-        SampleLiveSessions.ForceState(session, LiveSessionStates.Finalized);
+        SampleLiveSessions.ForceState(session, "Finalized");
         var handler = Build(session);
 
         var snapshot = await handler.Handle(new GetSessionTeamSnapshotQuery(QueryScaffold.Team), default);

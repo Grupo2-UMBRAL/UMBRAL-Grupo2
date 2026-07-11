@@ -43,9 +43,9 @@ public sealed class EvidenceSubmissionQaTests
     }
 
     [Theory]
-    [InlineData(LiveSessionStates.Paused)]
-    [InlineData(LiveSessionStates.Canceled)]
-    [InlineData(LiveSessionStates.Finalized)]
+    [InlineData("Paused")]
+    [InlineData("Canceled")]
+    [InlineData("Finalized")]
     public void SubmitEvidence_ThrowsBusinessError_WhenLiveSessionDoesNotAcceptEvidence(string blockedState)
     {
         var liveSession = CreateLiveSessionWithTeam(stageCount: 2);
@@ -67,7 +67,7 @@ public sealed class EvidenceSubmissionQaTests
         var submission = liveSession.SubmitEvidence(TeamId, "qr-stage-1", NowUtc);
 
         Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
         Assert.Equal(SessionTeamProgressStates.Completed, liveSession.GetProgressStateForTeam(TeamId));
         Assert.Null(liveSession.GetCurrentStageForTeam(TeamId));
         Assert.Equal(1, liveSession.SequenceNumber);
@@ -243,7 +243,7 @@ public sealed class EvidenceSubmissionQaTests
         var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
-        backingField.SetValue(liveSession, state);
+        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 }
 

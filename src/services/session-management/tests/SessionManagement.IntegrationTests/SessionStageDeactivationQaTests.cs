@@ -145,8 +145,8 @@ public sealed class SessionStageDeactivationQaTests
     }
 
     [Theory]
-    [InlineData(LiveSessionStates.Finalized)]
-    [InlineData(LiveSessionStates.Canceled)]
+    [InlineData("Finalized")]
+    [InlineData("Canceled")]
     public void DeactivateStage_Throws_WhenLiveSessionStateDoesNotAllowOperationalDeactivation(string state)
     {
         var liveSession = CreateLiveSessionWithTeams(stageCount: 2);
@@ -180,8 +180,8 @@ public sealed class SessionStageDeactivationQaTests
         Assert.Equal(SnapshotRefreshPolicy.RefreshSnapshot, payload.Metadata.RefreshPolicy);
         Assert.Equal(LiveSessionId, payload.Metadata.LiveSessionId);
         Assert.Equal(1, payload.Metadata.SequenceNumber);
-        Assert.Equal(LiveSessionStates.Scheduled, payload.PreviousState);
-        Assert.Equal(LiveSessionStates.Scheduled, payload.CurrentState);
+        Assert.Equal("Scheduled", payload.PreviousState);
+        Assert.Equal("Scheduled", payload.CurrentState);
     }
 
     private static SessionManagementDbContext CreateDbContext()
@@ -240,7 +240,7 @@ public sealed class SessionStageDeactivationQaTests
         var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
-        backingField.SetValue(liveSession, state);
+        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

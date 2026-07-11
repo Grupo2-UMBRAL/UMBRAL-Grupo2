@@ -36,7 +36,7 @@ public sealed class SessionEnrollmentParticipantApiQaTests
         var response = await handler.Handle(new ValidateJoinCodeQuery("ABC234"), CancellationToken.None);
 
         Assert.Equal(liveSession.Id, response.LiveSessionId);
-        Assert.Equal(LiveSessionStates.Scheduled, response.SessionState);
+        Assert.Equal("Scheduled", response.SessionState);
         Assert.Equal(NowUtc, response.OpenedAtUtc);
         Assert.Null(response.ClosedAtUtc);
         Assert.True(response.IsOpen);

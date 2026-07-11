@@ -56,14 +56,7 @@ public sealed class ApplyPenaltyHandler(
                 UmbralFailureCategory.NotFound);
         }
 
-        if (!string.Equals(liveSession.State, "Active", StringComparison.Ordinal)
-            && !string.Equals(liveSession.State, "Paused", StringComparison.Ordinal))
-        {
-            throw new UmbralDomainException(
-                "live_session_not_accepting_penalties",
-                "LiveSession must be Active or Paused to apply a Penalty.",
-                UmbralFailureCategory.Conflict);
-        }
+        liveSession.EnsurePenaltyAllowed();
 
         var recordedAtUtc = timeProvider.GetUtcNow();
         var operatorUserId = currentOperatorIdentity.GetRequiredOperatorUserId();

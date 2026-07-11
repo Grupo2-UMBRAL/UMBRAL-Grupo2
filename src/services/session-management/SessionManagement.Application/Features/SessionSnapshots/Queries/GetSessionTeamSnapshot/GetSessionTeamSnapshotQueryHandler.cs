@@ -56,7 +56,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             liveSession.Id,
             sessionTeam.Id,
             sessionTeam.Name,
-            liveSession.State,
+            liveSession.State.Value,
             liveSession.GetProgressStateForTeam(sessionTeam.Id),
             MapCurrentStage(liveSession.GetCurrentStageForTeam(sessionTeam.Id)),
             MapVisibleHints(liveSession, sessionTeam.Id),
@@ -134,7 +134,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
 
     private static IReadOnlyList<CurrentSessionStageSnapshot>? MapAllStages(LiveSession liveSession)
     {
-        if (!string.Equals(liveSession.State, LiveSessionStates.Finalized, StringComparison.Ordinal))
+        if (liveSession.State != LiveSessionState.Finalized)
         {
             return null;
         }
@@ -168,7 +168,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             }
 
             if (hint.IsSolution
-                && !string.Equals(liveSession.State, LiveSessionStates.Finalized, StringComparison.Ordinal))
+                && liveSession.State != LiveSessionState.Finalized)
             {
                 continue;
             }

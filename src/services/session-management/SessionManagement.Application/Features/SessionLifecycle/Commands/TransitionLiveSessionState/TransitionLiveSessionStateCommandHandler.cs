@@ -48,8 +48,8 @@ public sealed class TransitionLiveSessionStateCommandHandler(
         await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
-                previousState,
-                liveSession.State,
+                previousState.Value,
+                liveSession.State.Value,
                 liveSession.SessionTeams.Count,
                 liveSession.SequenceNumber,
                 "LiveSession state changed.",

@@ -83,7 +83,7 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
                 cancellationToken);
         }
 
-        if (!string.Equals(previousLiveSessionState, liveSession.State, StringComparison.Ordinal))
+        if (previousLiveSessionState != liveSession.State)
         {
             await PublishSessionStateChangedAsync(
                 liveSession,
@@ -171,15 +171,15 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
 
     private async Task PublishSessionStateChangedAsync(
         LiveSession liveSession,
-        string previousState,
+        LiveSessionState previousState,
         string reason,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
         => await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
-                previousState,
-                liveSession.State,
+                previousState.Value,
+                liveSession.State.Value,
                 liveSession.SessionTeams.Count,
                 liveSession.SequenceNumber,
                 reason,

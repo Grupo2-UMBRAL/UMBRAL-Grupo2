@@ -38,7 +38,7 @@ public sealed class SessionSnapshotsQaTests
         var overview = await handler.Handle(new GetLiveSessionOverviewQuery(liveSession.Id), CancellationToken.None);
 
         Assert.Equal(liveSession.Id, overview.LiveSessionId);
-        Assert.Equal(LiveSessionStates.Scheduled, overview.SessionState);
+        Assert.Equal("Scheduled", overview.SessionState);
         Assert.Equal(600, overview.RemainingSeconds);
         Assert.Equal(SessionSnapshotConstants.InitialSequenceNumber, overview.Sync.SequenceNumber);
         Assert.Equal(NowUtc, overview.ServerTimeUtc);
@@ -82,7 +82,7 @@ public sealed class SessionSnapshotsQaTests
         Assert.Equal(liveSession.Id, snapshot.LiveSessionId);
         Assert.Equal(AlphaTeamId, snapshot.SessionTeamId);
         Assert.Equal("Alpha Team", snapshot.TeamName);
-        Assert.Equal(LiveSessionStates.Scheduled, snapshot.SessionState);
+        Assert.Equal("Scheduled", snapshot.SessionState);
         Assert.Equal(SessionSnapshotConstants.NotStartedProgressState, snapshot.ProgressState);
         Assert.NotNull(snapshot.CurrentStage);
         Assert.Equal(StageOneId, snapshot.CurrentStage.MissionStageId);

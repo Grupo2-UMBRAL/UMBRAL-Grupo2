@@ -99,7 +99,7 @@ public sealed class PenaltyApplicationQaTests
                     "Intento fuera de regla."),
                 CancellationToken.None));
 
-        Assert.Equal("live_session_not_accepting_penalties", exception.Code);
+        Assert.Equal("live_session_cannot_penalize", exception.Code);
         Assert.Empty(scoringAuditClient.Requests);
     }
 
@@ -122,7 +122,7 @@ public sealed class PenaltyApplicationQaTests
     private static LiveSession CreateActiveLiveSession()
     {
         var liveSession = CreateScheduledLiveSession();
-        ForceState(liveSession, LiveSessionStates.Active);
+        ForceState(liveSession, "Active");
         return liveSession;
     }
 
@@ -159,7 +159,7 @@ public sealed class PenaltyApplicationQaTests
         var backingField = typeof(LiveSession).GetField("<State>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
-        backingField.SetValue(liveSession, state);
+        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
