@@ -25,6 +25,7 @@ public static class DependencyInjection
         });
 
         services.AddValidatorsFromAssembly(applicationAssembly);
+        services.AddScoped<Common.Handlers.UserCreationFlowHandler>();
 
         return services;
     }

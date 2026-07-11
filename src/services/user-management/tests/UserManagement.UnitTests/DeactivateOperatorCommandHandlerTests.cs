@@ -1,8 +1,9 @@
 using Moq;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Operators.Commands.DeactivateOperator;
-using UserManagement.Domain.Entities;
+
 using Xunit;
 
 namespace UserManagement.UnitTests;
@@ -24,7 +25,7 @@ public sealed class DeactivateOperatorCommandHandlerTests
     public async Task Handle_UnknownUser_ThrowsNotFound()
     {
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(
             () => _handler.Handle(new DeactivateOperatorCommand("missing"), CancellationToken.None));
@@ -36,9 +37,9 @@ public sealed class DeactivateOperatorCommandHandlerTests
     [Fact]
     public async Task Handle_AlreadyInactive_ReturnsUser_WithoutCallingKeycloak()
     {
-        var inactive = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", false);
+        var inactive = new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", false);
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser> { inactive });
+            .ReturnsAsync(new List<OperatorDto> { inactive });
 
         var result = await _handler.Handle(new DeactivateOperatorCommand("user-1"), CancellationToken.None);
 
@@ -52,10 +53,10 @@ public sealed class DeactivateOperatorCommandHandlerTests
     [Fact]
     public async Task Handle_ActiveUser_DisablesViaPort_AndTrimsUserId()
     {
-        var active = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        var active = new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
         var disabled = active with { IsActive = false };
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser> { active });
+            .ReturnsAsync(new List<OperatorDto> { active });
         _portMock.Setup(p => p.SetUserEnabledAsync("user-1", false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(disabled);
 

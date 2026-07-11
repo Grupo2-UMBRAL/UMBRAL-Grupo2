@@ -2,7 +2,7 @@ using UserManagement.Application.Abstractions;
 using MediatR;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common.Dtos;
-using UserManagement.Application.Common.Mappings;
+using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Commands.DeactivateOperator;
 
@@ -26,10 +26,10 @@ public sealed class DeactivateOperatorCommandHandler(IOperatorAdministrationPort
 
         if (!operatorUser.IsActive)
         {
-            return operatorUser.ToDto();
+            return operatorUser;
         }
 
         var disabled = await port.SetUserEnabledAsync(normalizedUserId, enabled: false, cancellationToken);
-        return disabled.ToDto();
+        return disabled;
     }
 }

@@ -1,9 +1,9 @@
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using UserManagement.Domain.Entities;
 using Umbral.ServiceDefaults;
 
 namespace UserManagement.Infrastructure.Keycloak;
@@ -17,7 +17,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
     private string? cachedAccessToken;
     private DateTimeOffset accessTokenExpiresAtUtc;
 
-    public async Task<IReadOnlyList<OperatorUser>> ListOperatorsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<OperatorDto>> ListOperatorsAsync(CancellationToken cancellationToken)
     {
         var response = await SendAuthorizedAsync(
             HttpMethod.Get,
@@ -25,10 +25,10 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
             cancellationToken: cancellationToken);
         var users = await ReadJsonAsync<List<KeycloakUserRepresentation>>(response, cancellationToken);
 
-        return users.Select(ToOperatorUser).ToArray();
+        return users.Select(ToOperatorDto).ToArray();
     }
 
-    public async Task<IReadOnlyList<OperatorUser>> FindUsersByEmailAsync(string email, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<OperatorDto>> FindUsersByEmailAsync(string email, CancellationToken cancellationToken)
     {
         var response = await SendAuthorizedAsync(
             HttpMethod.Get,
@@ -38,11 +38,11 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
 
         return users
             .Where(user => string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
-            .Select(ToOperatorUser)
+            .Select(ToOperatorDto)
             .ToArray();
     }
 
-    public async Task<IReadOnlyList<OperatorUser>> FindUsersByUsernameAsync(
+    public async Task<IReadOnlyList<OperatorDto>> FindUsersByUsernameAsync(
         string username,
         CancellationToken cancellationToken)
     {
@@ -54,11 +54,11 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
 
         return users
             .Where(user => string.Equals(user.Username, username, StringComparison.OrdinalIgnoreCase))
-            .Select(ToOperatorUser)
+            .Select(ToOperatorDto)
             .ToArray();
     }
 
-    public async Task<CreatedUserReference> CreateUserAsync(
+    public async Task<string> CreateUserAsync(
         string username,
         string email,
         string firstName,
@@ -93,7 +93,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
 
         if (!string.IsNullOrWhiteSpace(createdUserId))
         {
-            return new CreatedUserReference(createdUserId);
+            return createdUserId;
         }
 
         var matchingUsers = await FindUsersByUsernameAsync(username, cancellationToken);
@@ -106,7 +106,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
                 "Keycloak created User without location header.");
         }
 
-        return new CreatedUserReference(recoveredUser.Id);
+        return recoveredUser.Id;
     }
 
     public Task AssignOperatorRoleAsync(string userId, CancellationToken cancellationToken)
@@ -143,7 +143,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         response.Dispose();
     }
 
-    public async Task<OperatorUser?> GetUserByIdAsync(string userId, CancellationToken cancellationToken)
+    public async Task<OperatorDto?> GetUserByIdAsync(string userId, CancellationToken cancellationToken)
     {
         var response = await SendAuthorizedAsync(
             HttpMethod.Get,
@@ -160,11 +160,11 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         using (response)
         {
             var user = await ReadJsonAsync<KeycloakUserRepresentation>(response, cancellationToken);
-            return ToOperatorUser(user);
+            return ToOperatorDto(user);
         }
     }
 
-    public async Task<OperatorUser> SetUserEnabledAsync(
+    public async Task<OperatorDto> SetUserEnabledAsync(
         string userId,
         bool enabled,
         CancellationToken cancellationToken)
@@ -434,7 +434,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         return text.Trim();
     }
 
-    private static OperatorUser ToOperatorUser(KeycloakUserRepresentation user) =>
+    private static OperatorDto ToOperatorDto(KeycloakUserRepresentation user) =>
         new(
             user.Id ?? string.Empty,
             user.Username ?? string.Empty,
