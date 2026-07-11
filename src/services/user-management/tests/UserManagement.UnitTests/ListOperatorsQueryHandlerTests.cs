@@ -1,7 +1,8 @@
 using Moq;
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Operators.Queries.ListOperators;
-using UserManagement.Domain.Entities;
+
 using Xunit;
 
 namespace UserManagement.UnitTests;
@@ -20,7 +21,7 @@ public sealed class ListOperatorsQueryHandlerTests
     public async Task Handle_OrdersActiveFirst_ThenByUsernameCaseInsensitive()
     {
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>
+            .ReturnsAsync(new List<OperatorDto>
             {
                 new("u-zoe", "zoe", "zoe@example.com", "Z", "Z", false),
                 new("u-bravo", "Bravo", "bravo@example.com", "B", "B", true),
@@ -33,14 +34,14 @@ public sealed class ListOperatorsQueryHandlerTests
         // Active group first (alpha, Bravo), inactive group second (Yan, zoe); username compare is case-insensitive.
         Assert.Equal(
             new[] { "alpha", "Bravo", "Yan", "zoe" },
-            result.Select(operatorUser => operatorUser.Username).ToArray());
+            result.Select(OperatorDto => OperatorDto.Username).ToArray());
     }
 
     [Fact]
     public async Task Handle_EmptyPort_ReturnsEmpty()
     {
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
         var result = await _handler.Handle(new ListOperatorsQuery(), CancellationToken.None);
 

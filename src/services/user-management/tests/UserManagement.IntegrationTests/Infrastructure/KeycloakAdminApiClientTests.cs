@@ -81,7 +81,7 @@ public sealed class KeycloakAdminApiClientTests
 
         var result = await client.CreateUserAsync("jdoe", "jdoe@x.com", "John", "Doe", "pw123456", CancellationToken.None);
 
-        Assert.Equal(newId, result.Id);
+        Assert.Equal(newId, result);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class KeycloakAdminApiClientTests
 
         var result = await client.CreateUserAsync("jdoe", "jdoe@x.com", "John", "Doe", "pw123456", CancellationToken.None);
 
-        Assert.Equal(recoveredId, result.Id);
+        Assert.Equal(recoveredId, result);
         Assert.Contains(handler.Requests, r =>
             r.Method == HttpMethod.Get &&
             r.RequestUri!.AbsolutePath.EndsWith($"/admin/realms/{Realm}/users", StringComparison.Ordinal) &&

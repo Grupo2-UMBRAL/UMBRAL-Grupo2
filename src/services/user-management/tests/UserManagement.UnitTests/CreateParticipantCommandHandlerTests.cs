@@ -1,10 +1,11 @@
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Features.Participants.Commands.CreateParticipant;
-using UserManagement.Domain.Entities;
+
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -22,7 +23,7 @@ public class CreateParticipantCommandHandlerTests
         _portMock = new Mock<IOperatorAdministrationPort>();
         _emailMock = new Mock<IEmailNotificationService>();
         _loggerMock = new Mock<ILogger<CreateParticipantCommandHandler>>();
-        _handler = new CreateParticipantCommandHandler(_portMock.Object, _emailMock.Object, _loggerMock.Object);
+        var flowHandler = new UserManagement.Application.Common.Handlers.UserCreationFlowHandler(_portMock.Object); _handler = new CreateParticipantCommandHandler(flowHandler, _emailMock.Object, _loggerMock.Object);
     }
 
     [Fact]
@@ -32,17 +33,17 @@ public class CreateParticipantCommandHandlerTests
         var command = new CreateParticipantCommand("player1", "player1@example.com", "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
         _portMock.Setup(p => p.FindUsersByUsernameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
-        var createdReference = new CreatedUserReference("player-123");
+        var createdReference = "player-123";
         _portMock.Setup(p => p.CreateUserAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdReference);
 
-        var participantUser = new OperatorUser("player-123", "player1", "player1@example.com", "player1", "Jugador", true);
+        var participantUser = new OperatorDto("player-123", "player1", "player1@example.com", "player1", "Jugador", true);
         _portMock.Setup(p => p.GetUserByIdAsync("player-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(participantUser);
 
@@ -64,13 +65,13 @@ public class CreateParticipantCommandHandlerTests
         // Arrange
         var command = new CreateParticipantCommand("testuser", "test@example.com", "Password123!");
 
-        var createdUser = new CreatedUserReference("player-123");
-        var participantUser = new OperatorUser("player-123", "testuser", "test@example.com", "testuser", "Jugador", true);
+        var createdUser = "player-123";
+        var participantUser = new OperatorDto("player-123", "testuser", "test@example.com", "testuser", "Jugador", true);
 
         _portMock.Setup(p => p.FindUsersByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.FindUsersByUsernameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.CreateUserAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdUser);
@@ -98,7 +99,7 @@ public class CreateParticipantCommandHandlerTests
         var command = new CreateParticipantCommand("player1", "duplicate@example.com", "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync("duplicate@example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser> { new OperatorUser("other-1", "other", "duplicate@example.com", "O", "T", true) });
+            .ReturnsAsync(new List<OperatorDto> { new OperatorDto("other-1", "other", "duplicate@example.com", "O", "T", true) });
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(() => _handler.Handle(command, CancellationToken.None));

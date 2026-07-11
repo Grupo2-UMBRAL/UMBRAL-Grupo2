@@ -2,8 +2,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
-using UserManagement.Domain.Entities;
+
 using Xunit;
 
 namespace UserManagement.UnitTests;
@@ -20,9 +21,9 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
         _handler = new RotateOperatorPasswordCommandHandler(_portMock.Object, _emailMock.Object, loggerMock.Object);
     }
 
-    private void SetupExistingUser(OperatorUser user) =>
+    private void SetupExistingUser(OperatorDto user) =>
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser> { user });
+            .ReturnsAsync(new List<OperatorDto> { user });
 
     // Input validation (blank user id, password rules) now lives in the FluentValidation pipeline
     // and is covered by RotateOperatorPasswordCommandValidatorTests. Handler tests below focus on
@@ -32,7 +33,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     public async Task Handle_UnknownUser_ThrowsNotFound()
     {
         _portMock.Setup(p => p.ListOperatorsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(
             () => _handler.Handle(new RotateOperatorPasswordCommand("missing", "ValidPass123"), CancellationToken.None));
@@ -46,7 +47,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     [InlineData("short", "operator_password_too_short")]
     public async Task Handle_InvalidPassword_ThrowsValidation(string? password, string expectedCode)
     {
-        SetupExistingUser(new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true));
+        SetupExistingUser(new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true));
 
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(
             () => _handler.Handle(new RotateOperatorPasswordCommand("user-1", password), CancellationToken.None));
@@ -60,7 +61,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     [Fact]
     public async Task Handle_PasswordOver128Chars_ThrowsTooLong()
     {
-        SetupExistingUser(new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true));
+        SetupExistingUser(new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true));
 
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(
             () => _handler.Handle(
@@ -72,7 +73,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     [Fact]
     public async Task Handle_ValidRequest_RotatesViaPort_WithTrimmedValues()
     {
-        var user = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        var user = new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
         SetupExistingUser(user);
 
         var result = await _handler.Handle(
@@ -87,7 +88,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     [Fact]
     public async Task Handle_ValidRequest_SendsPasswordRotatedEmail()
     {
-        var user = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        var user = new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
         SetupExistingUser(user);
 
         await _handler.Handle(
@@ -100,7 +101,7 @@ public sealed class RotateOperatorPasswordCommandHandlerTests
     [Fact]
     public async Task Handle_EmailFails_StillReturnsOperator()
     {
-        var user = new OperatorUser("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        var user = new OperatorDto("user-1", "jdoe", "jdoe@example.com", "John", "Doe", true);
         SetupExistingUser(user);
 
         _emailMock.Setup(e => e.SendPasswordRotatedAsync(

@@ -1,11 +1,12 @@
 using UserManagement.Application.Abstractions;
+using UserManagement.Application.Common.Dtos;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Features.Operators.Commands.CreateOperator;
-using UserManagement.Domain.Entities;
+
 using Xunit;
 
 namespace UserManagement.UnitTests;
@@ -21,7 +22,7 @@ public class CreateOperatorCommandHandlerTests
         _portMock = new Mock<IOperatorAdministrationPort>();
         _emailMock = new Mock<IEmailNotificationService>();
         var loggerMock = new Mock<ILogger<CreateOperatorCommandHandler>>();
-        _handler = new CreateOperatorCommandHandler(_portMock.Object, _emailMock.Object, loggerMock.Object);
+        var flowHandler = new UserManagement.Application.Common.Handlers.UserCreationFlowHandler(_portMock.Object); _handler = new CreateOperatorCommandHandler(flowHandler, _emailMock.Object, loggerMock.Object);
     }
 
     [Fact]
@@ -36,17 +37,17 @@ public class CreateOperatorCommandHandlerTests
             "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
             
         _portMock.Setup(p => p.FindUsersByUsernameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
 
-        var createdReference = new CreatedUserReference("user-123");
+        var createdReference = "user-123";
         _portMock.Setup(p => p.CreateUserAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(createdReference);
 
-        var finalUser = new OperatorUser("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true);
+        var finalUser = new OperatorDto("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true);
         _portMock.Setup(p => p.GetUserByIdAsync("user-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(finalUser);
 
@@ -67,7 +68,7 @@ public class CreateOperatorCommandHandlerTests
         var command = new CreateOperatorCommand("jdoe", "duplicate@example.com", "John", "Doe", "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync("duplicate@example.com", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser> { new OperatorUser("other-1", "other", "duplicate@example.com", "O", "T", true) });
+            .ReturnsAsync(new List<OperatorDto> { new OperatorDto("other-1", "other", "duplicate@example.com", "O", "T", true) });
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(() => _handler.Handle(command, CancellationToken.None));
@@ -81,14 +82,14 @@ public class CreateOperatorCommandHandlerTests
         var command = new CreateOperatorCommand("jdoe", "jdoe@example.com", "John", "Doe", "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.FindUsersByUsernameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.CreateUserAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreatedUserReference("user-123"));
+            .ReturnsAsync("user-123");
         _portMock.Setup(p => p.GetUserByIdAsync("user-123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OperatorUser("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true));
+            .ReturnsAsync(new OperatorDto("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true));
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -105,14 +106,14 @@ public class CreateOperatorCommandHandlerTests
         var command = new CreateOperatorCommand("jdoe", "jdoe@example.com", "John", "Doe", "SecurePass123!");
 
         _portMock.Setup(p => p.FindUsersByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.FindUsersByUsernameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<OperatorUser>());
+            .ReturnsAsync(new List<OperatorDto>());
         _portMock.Setup(p => p.CreateUserAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CreatedUserReference("user-123"));
+            .ReturnsAsync("user-123");
         _portMock.Setup(p => p.GetUserByIdAsync("user-123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OperatorUser("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true));
+            .ReturnsAsync(new OperatorDto("user-123", "jdoe", "jdoe@example.com", "John", "Doe", true));
         _emailMock.Setup(e => e.SendOperatorCredentialsAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("SMTP down"));

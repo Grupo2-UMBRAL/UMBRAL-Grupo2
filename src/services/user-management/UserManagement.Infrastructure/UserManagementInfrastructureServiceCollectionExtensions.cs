@@ -1,7 +1,6 @@
 using UserManagement.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using UserManagement.Domain.Entities;
 using UserManagement.Infrastructure.Keycloak;
 using UserManagement.Infrastructure.Services.Email;
 
