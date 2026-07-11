@@ -23,7 +23,7 @@ public class CreateParticipantCommandHandlerTests
         _portMock = new Mock<IOperatorAdministrationPort>();
         _emailMock = new Mock<IEmailNotificationService>();
         _loggerMock = new Mock<ILogger<CreateParticipantCommandHandler>>();
-        var flowHandler = new UserManagement.Application.Common.Handlers.UserCreationFlowHandler(_portMock.Object); _handler = new CreateParticipantCommandHandler(flowHandler, _emailMock.Object, _loggerMock.Object);
+        var flowHandler = new UserManagement.Application.Common.Handlers.UserCreationFlowHandler(_portMock.Object, Mock.Of<ILogger<UserManagement.Application.Common.Handlers.UserCreationFlowHandler>>()); _handler = new CreateParticipantCommandHandler(flowHandler, _emailMock.Object, _loggerMock.Object);
     }
 
     [Fact]

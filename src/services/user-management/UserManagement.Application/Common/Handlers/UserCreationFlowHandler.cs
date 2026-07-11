@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Abstractions;
 using UserManagement.Application.Common.Dtos;
@@ -8,7 +9,9 @@ namespace UserManagement.Application.Common.Handlers;
 /// Encapsulates the duplicated creation, uniqueness check, and rollback logic
 /// for creating Keycloak users (both Operators and Participants).
 /// </summary>
-public sealed class UserCreationFlowHandler(IOperatorAdministrationPort port)
+public sealed class UserCreationFlowHandler(
+    IOperatorAdministrationPort port,
+    ILogger<UserCreationFlowHandler> logger)
 {
     public async Task<OperatorDto> CreateUserAsync(
         string email,
@@ -69,7 +72,14 @@ public sealed class UserCreationFlowHandler(IOperatorAdministrationPort port)
             {
                 await port.DeleteUserAsync(createdUserId, cancellationToken);
             }
-            catch { }
+            catch (Exception rollbackEx)
+            {
+                logger.LogError(
+                    rollbackEx,
+                    "Failed to roll back Keycloak user {UserId} ({UserType}) after role assignment failed; the user may be orphaned.",
+                    createdUserId,
+                    userType);
+            }
             throw;
         }
 

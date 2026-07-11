@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Abstractions.Scoring;
@@ -36,7 +35,6 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
         var occurredAtUtc = timeProvider.GetUtcNow();
         var previousLiveSessionState = liveSession.State;
         var previousStage = liveSession.GetCurrentStageForTeam(sessionTeamId);
-        var previousProgressState = liveSession.GetProgressStateForTeam(sessionTeamId);
         var stageStartedAtUtc = GetCurrentStageStartedAtUtc(liveSession, sessionTeamId);
 
         var domainResult = await ExecuteDomainStepAsync(request, liveSession, occurredAtUtc, cancellationToken);
@@ -47,27 +45,48 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        if (domainResult.PublishOutcomeChanged)
+        // Preserve the per-command ordering of the original handlers: the participant submit
+        // paths broadcast the outcome before recording the Stage Credit, whereas a Validation
+        // Override records the credit first. Under a scoring failure the two orders differ in
+        // whether the realtime outcome event has already been emitted.
+        async Task PublishOutcomeChangedIfNeededAsync()
         {
-            await PublishEvidenceSubmissionOutcomeChangedAsync(
-                liveSession,
-                evidenceSubmission,
-                domainResult.PreviousOutcome,
-                domainResult.OutcomeChangedReason!,
-                occurredAtUtc,
-                cancellationToken);
-        }
-
-        if (domainResult.RecordStageCredit)
-        {
-            await scoringAuditClient.RecordStageCreditAsync(
-                CreateStageCreditRequest(
+            if (domainResult.PublishOutcomeChanged)
+            {
+                await PublishEvidenceSubmissionOutcomeChangedAsync(
                     liveSession,
                     evidenceSubmission,
-                    stageStartedAtUtc,
-                    domainResult.StageCreditRecordedAtUtc ?? occurredAtUtc,
-                    domainResult.IsValidationOverride),
-                cancellationToken);
+                    domainResult.PreviousOutcome,
+                    domainResult.OutcomeChangedReason!,
+                    occurredAtUtc,
+                    cancellationToken);
+            }
+        }
+
+        async Task RecordStageCreditIfNeededAsync()
+        {
+            if (domainResult.RecordStageCredit)
+            {
+                await scoringAuditClient.RecordStageCreditAsync(
+                    CreateStageCreditRequest(
+                        liveSession,
+                        evidenceSubmission,
+                        stageStartedAtUtc,
+                        domainResult.StageCreditRecordedAtUtc ?? occurredAtUtc,
+                        domainResult.IsValidationOverride),
+                    cancellationToken);
+            }
+        }
+
+        if (domainResult.RecordStageCreditBeforeOutcomeChanged)
+        {
+            await RecordStageCreditIfNeededAsync();
+            await PublishOutcomeChangedIfNeededAsync();
+        }
+        else
+        {
+            await PublishOutcomeChangedIfNeededAsync();
+            await RecordStageCreditIfNeededAsync();
         }
 
         if (domainResult.PublishProgressChanged)
@@ -268,5 +287,6 @@ public sealed record DomainStepResult(
     string? ProgressChangedReason,
     string StateChangedReason,
     Guid ValidationOverrideLogId = default,
-    DateTimeOffset? StageCreditRecordedAtUtc = null
+    DateTimeOffset? StageCreditRecordedAtUtc = null,
+    bool RecordStageCreditBeforeOutcomeChanged = false
 );
