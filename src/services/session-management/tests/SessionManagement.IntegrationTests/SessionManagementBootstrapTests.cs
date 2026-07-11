@@ -203,7 +203,7 @@ public sealed class LiveSessionDomainTests
                     [])
             ]);
 
-        Assert.Equal(LiveSessionStates.Scheduled, liveSession.State);
+        Assert.Equal("Scheduled", liveSession.State.Value);
         Assert.Single(liveSession.SessionStageFlow);
         Assert.Equal("Stage 1", liveSession.SessionStageFlow[0].Name);
         Assert.Equal("Which code opens the archive?", liveSession.SessionStageFlow[0].Prompt);
@@ -235,7 +235,7 @@ public sealed class LiveSessionDomainTests
 
         liveSession.Start(startedAtUtc);
 
-        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal("Active", liveSession.State.Value);
         Assert.Equal(startedAtUtc, liveSession.EnrollmentWindowClosedAtUtc);
     }
 
@@ -245,13 +245,13 @@ public sealed class LiveSessionDomainTests
         var liveSession = CreateStartedLiveSession();
 
         liveSession.Pause();
-        Assert.Equal(LiveSessionStates.Paused, liveSession.State);
+        Assert.Equal("Paused", liveSession.State.Value);
 
         liveSession.Resume();
-        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal("Active", liveSession.State.Value);
 
         liveSession.FinalizeSession();
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
     }
 
     [Fact]
@@ -343,7 +343,7 @@ public sealed class LiveSessionEndpointTests
 
         Assert.NotNull(liveSession);
         Assert.Equal("Night Mission / Wave A", liveSession.Name);
-        Assert.Equal(LiveSessionStates.Scheduled, liveSession.State);
+        Assert.Equal("Scheduled", liveSession.State);
         Assert.Collection(
             liveSession.SessionStageFlow,
             first =>
@@ -501,15 +501,15 @@ public sealed class LiveSessionEndpointTests
         await using var scope = factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SessionManagementDbContext>();
         var storedSession = await dbContext.LiveSessions.SingleAsync(session => session.Id == liveSession.Id);
-        Assert.Equal(LiveSessionStates.Finalized, storedSession.State);
+        Assert.Equal("Finalized", storedSession.State.Value);
         Assert.NotNull(storedSession.EnrollmentWindowClosedAtUtc);
 
         Assert.Collection(
             factory.RecordedStateChanges,
-            first => Assert.Equal(LiveSessionStates.Active, first.State),
-            second => Assert.Equal(LiveSessionStates.Paused, second.State),
-            third => Assert.Equal(LiveSessionStates.Active, third.State),
-            fourth => Assert.Equal(LiveSessionStates.Finalized, fourth.State));
+            first => Assert.Equal("Active", first.State),
+            second => Assert.Equal("Paused", second.State),
+            third => Assert.Equal("Active", third.State),
+            fourth => Assert.Equal("Finalized", fourth.State));
     }
 
     private static EligiblePlaySnapshot CreateMissionStageSnapshot(

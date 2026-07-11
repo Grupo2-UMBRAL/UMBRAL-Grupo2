@@ -2,6 +2,8 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Domain.LiveSessions;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SessionManagement.Infrastructure.Persistence;
 
@@ -20,6 +22,11 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
     public DbSet<ValidationOverrideLog> ValidationOverrideLogs => Set<ValidationOverrideLog>();
 
     public DbSet<ReleasedHint> ReleasedHints => Set<ReleasedHint>();
+
+    private static readonly JsonSerializerOptions SessionStageFlowSerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +56,9 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
                 .HasMaxLength(120)
                 .IsRequired();
             liveSession.Property(entity => entity.State)
+                .HasConversion(
+                    state => state.Value,
+                    value => LiveSessionState.FromName(value))
                 .HasMaxLength(40)
                 .IsRequired();
             liveSession.Property(entity => entity.ScheduledStartAtUtc);
@@ -57,9 +67,13 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
             liveSession.Property(entity => entity.SequenceNumber)
                 .HasColumnName("sequence_number")
                 .IsRequired();
-            liveSession.Property(entity => entity.SessionStageFlowJson)
+            liveSession.Property(entity => entity.SessionStageFlow)
+                .HasColumnName("SessionStageFlowJson")
                 .HasColumnType("text")
-                .IsRequired();
+                .IsRequired()
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, SessionStageFlowSerializerOptions),
+                    v => JsonSerializer.Deserialize<List<LiveSessionStage>>(v, SessionStageFlowSerializerOptions) ?? new List<LiveSessionStage>());
             liveSession.Property(entity => entity.JoinCodeValue)
                 .HasColumnName("join_code_value")
                 .HasMaxLength(JoinCode.Length);

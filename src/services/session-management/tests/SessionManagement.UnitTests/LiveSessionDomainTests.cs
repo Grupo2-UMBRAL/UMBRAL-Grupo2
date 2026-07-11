@@ -16,7 +16,7 @@ public sealed class LiveSessionCreateTests
         var liveSession = SampleLiveSessions.Create(SampleLiveSessions.TreasureStages(3));
 
         Assert.NotEqual(Guid.Empty, liveSession.Id);
-        Assert.Equal(LiveSessionStates.Scheduled, liveSession.State);
+        Assert.Equal("Scheduled", liveSession.State.Value);
         Assert.Equal(3, liveSession.SessionStageFlow.Count);
         Assert.Equal([1, 2, 3], liveSession.SessionStageFlow.Select(stage => stage.SessionStageOrder));
     }
@@ -115,7 +115,7 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void Start_Throws_WhenNotScheduled()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+        var liveSession = SampleLiveSessions.InState("Active");
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.Start(SampleLiveSessions.Now));
         Assert.Equal("live_session_cannot_start", exception.Code);
@@ -144,7 +144,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Start(SampleLiveSessions.CreatedAt.AddMinutes(20));
 
-        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal("Active", liveSession.State.Value);
         Assert.NotNull(liveSession.EnrollmentWindowClosedAtUtc);
     }
 
@@ -155,7 +155,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Start(SampleLiveSessions.Now);
 
-        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal("Active", liveSession.State.Value);
         Assert.Null(liveSession.EnrollmentWindowOpenedAtUtc);
     }
 
@@ -186,7 +186,7 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void RegisterTeamByOperator_Throws_WhenNotScheduled()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+        var liveSession = SampleLiveSessions.InState("Active");
 
         Assert.Throws<UmbralDomainException>(() =>
             liveSession.RegisterTeamByOperator(Guid.NewGuid(), "Late Team", SampleLiveSessions.Now));
@@ -195,11 +195,11 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void Pause_TransitionsActiveToPaused()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+        var liveSession = SampleLiveSessions.InState("Active");
 
         liveSession.Pause();
 
-        Assert.Equal(LiveSessionStates.Paused, liveSession.State);
+        Assert.Equal("Paused", liveSession.State.Value);
     }
 
     [Fact]
@@ -214,39 +214,39 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void Resume_TransitionsPausedToActive()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Paused);
+        var liveSession = SampleLiveSessions.InState("Paused");
 
         liveSession.Resume();
 
-        Assert.Equal(LiveSessionStates.Active, liveSession.State);
+        Assert.Equal("Active", liveSession.State.Value);
     }
 
     [Fact]
     public void Resume_Throws_WhenNotPaused()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+        var liveSession = SampleLiveSessions.InState("Active");
 
         var exception = Assert.Throws<UmbralDomainException>(liveSession.Resume);
         Assert.Equal("live_session_cannot_resume", exception.Code);
     }
 
     [Theory]
-    [InlineData(LiveSessionStates.Scheduled)]
-    [InlineData(LiveSessionStates.Active)]
-    [InlineData(LiveSessionStates.Paused)]
+    [InlineData("Scheduled")]
+    [InlineData("Active")]
+    [InlineData("Paused")]
     public void Cancel_AllowedFromScheduledActiveOrPaused(string state)
     {
         var liveSession = SampleLiveSessions.InState(state);
 
         liveSession.Cancel();
 
-        Assert.Equal(LiveSessionStates.Canceled, liveSession.State);
+        Assert.Equal("Canceled", liveSession.State.Value);
     }
 
     [Fact]
     public void Cancel_Throws_WhenFinalized()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Finalized);
+        var liveSession = SampleLiveSessions.InState("Finalized");
 
         var exception = Assert.Throws<UmbralDomainException>(liveSession.Cancel);
         Assert.Equal("live_session_cannot_cancel", exception.Code);
@@ -255,11 +255,11 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void FinalizeSession_IsNoOp_WhenAlreadyFinalized()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Finalized);
+        var liveSession = SampleLiveSessions.InState("Finalized");
 
         liveSession.FinalizeSession();
 
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
     }
 
     [Fact]
@@ -272,15 +272,15 @@ public sealed class LiveSessionLifecycleTests
     }
 
     [Theory]
-    [InlineData(LiveSessionStates.Active)]
-    [InlineData(LiveSessionStates.Paused)]
+    [InlineData("Active")]
+    [InlineData("Paused")]
     public void FinalizeSession_Finalizes_FromActiveOrPaused(string state)
     {
         var liveSession = SampleLiveSessions.InState(state);
 
         liveSession.FinalizeSession();
 
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
     }
 
     [Fact]
@@ -291,12 +291,12 @@ public sealed class LiveSessionLifecycleTests
             SampleLiveSessions.TreasureStage(1, hints: [SampleLiveSessions.Hint(1)]),
             SampleLiveSessions.TreasureStage(2)
         ];
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, teamCount: 1, stages: stages);
+        var liveSession = SampleLiveSessions.InState("Active", teamCount: 1, stages: stages);
 
         var released = liveSession.FinalizeAndRevealAllHints(SampleLiveSessions.Now);
 
         Assert.Single(released);
-        Assert.Equal(LiveSessionStates.Finalized, liveSession.State);
+        Assert.Equal("Finalized", liveSession.State.Value);
         Assert.Equal(1, liveSession.SequenceNumber);
     }
 
@@ -308,7 +308,7 @@ public sealed class LiveSessionLifecycleTests
             SampleLiveSessions.TreasureStage(1, hints: [SampleLiveSessions.Hint(1)]),
             SampleLiveSessions.TreasureStage(2)
         ];
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, teamCount: 1, stages: stages);
+        var liveSession = SampleLiveSessions.InState("Active", teamCount: 1, stages: stages);
 
         liveSession.FinalizeAndRevealAllHints(SampleLiveSessions.Now);
         var second = liveSession.FinalizeAndRevealAllHints(SampleLiveSessions.Now.AddMinutes(1));
@@ -320,7 +320,7 @@ public sealed class LiveSessionLifecycleTests
     [Fact]
     public void FinalizeAndRevealAllHints_ReturnsEmpty_WhenNoStageHints()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, stages: SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", stages: SampleLiveSessions.TreasureStages(2));
 
         var released = liveSession.FinalizeAndRevealAllHints(SampleLiveSessions.Now);
 
@@ -374,7 +374,7 @@ public sealed class LiveSessionEnrollmentTests
     [Fact]
     public void OpenEnrollmentWindow_Throws_WhenNotScheduled()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active);
+        var liveSession = SampleLiveSessions.InState("Active");
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
             liveSession.OpenEnrollmentWindow(SampleLiveSessions.Now));
@@ -686,9 +686,9 @@ public sealed class LiveSessionHintTests
     ];
 
     [Theory]
-    [InlineData(LiveSessionStates.Scheduled)]
-    [InlineData(LiveSessionStates.Finalized)]
-    [InlineData(LiveSessionStates.Canceled)]
+    [InlineData("Scheduled")]
+    [InlineData("Finalized")]
+    [InlineData("Canceled")]
     public void ReleaseHint_Throws_WhenSessionNotActiveOrPaused(string state)
     {
         var liveSession = SampleLiveSessions.InState(state, 1, StagesWithHint());
@@ -701,7 +701,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void ReleaseHint_Throws_WhenTeamHasNoCurrentStage()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, StagesWithHint());
+        var liveSession = SampleLiveSessions.InState("Active", 1, StagesWithHint());
         var progress = SessionTeamProgress.Create(liveSession.Id, Team, SampleLiveSessions.Now);
         progress.Complete(SampleLiveSessions.Now);
         liveSession.TeamProgressions.Add(progress);
@@ -714,7 +714,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void ReleaseHint_Throws_WhenHintNotInCurrentStage()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, StagesWithHint());
+        var liveSession = SampleLiveSessions.InState("Active", 1, StagesWithHint());
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
             liveSession.ReleaseHint(Team, Guid.NewGuid(), SampleLiveSessions.Now));
@@ -724,7 +724,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void ReleaseHint_Throws_WhenHintAlreadyReleased()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, StagesWithHint());
+        var liveSession = SampleLiveSessions.InState("Active", 1, StagesWithHint());
         liveSession.ReleaseHint(Team, SampleLiveSessions.HintId(1), SampleLiveSessions.Now);
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
@@ -735,7 +735,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void ReleaseHint_ReleasesHint_OnHappyPath()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, StagesWithHint());
+        var liveSession = SampleLiveSessions.InState("Active", 1, StagesWithHint());
 
         var released = liveSession.ReleaseHint(Team, SampleLiveSessions.HintId(1), SampleLiveSessions.Now);
 
@@ -757,7 +757,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void AddOperationalHint_Throws_WhenStageNotInFlow()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", 1, SampleLiveSessions.TreasureStages(2));
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.AddOperationalHint(
             Guid.NewGuid(), "Look north", null, null, SampleLiveSessions.Now));
@@ -769,7 +769,7 @@ public sealed class LiveSessionHintTests
     [InlineData(double.PositiveInfinity)]
     public void AddOperationalHint_Throws_WhenLatitudeNotFinite(double latitude)
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", 1, SampleLiveSessions.TreasureStages(2));
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.AddOperationalHint(
             SampleLiveSessions.StageId(1), "Look north", latitude, 10.0, SampleLiveSessions.Now));
@@ -779,7 +779,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void AddOperationalHint_Throws_WhenLongitudeNotFinite()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", 1, SampleLiveSessions.TreasureStages(2));
 
         var exception = Assert.Throws<UmbralDomainException>(() => liveSession.AddOperationalHint(
             SampleLiveSessions.StageId(1), "Look north", 10.0, double.NegativeInfinity, SampleLiveSessions.Now));
@@ -789,7 +789,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void AddOperationalHint_AddsHintWithoutCoordinates_OnHappyPath()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", 1, SampleLiveSessions.TreasureStages(2));
 
         var hint = liveSession.AddOperationalHint(
             SampleLiveSessions.StageId(1), "Look north", null, null, SampleLiveSessions.Now);
@@ -803,7 +803,7 @@ public sealed class LiveSessionHintTests
     [Fact]
     public void AddOperationalHint_StoresCoordinates_WhenProvided()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Active, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Active", 1, SampleLiveSessions.TreasureStages(2));
 
         var hint = liveSession.AddOperationalHint(
             SampleLiveSessions.StageId(1), "Look north", 10.5, 20.25, SampleLiveSessions.Now);
@@ -848,7 +848,7 @@ public sealed class LiveSessionStageDeactivationTests
     [Fact]
     public void DeactivateStage_Throws_WhenStateDoesNotAllowIt()
     {
-        var liveSession = SampleLiveSessions.InState(LiveSessionStates.Finalized, 1, SampleLiveSessions.TreasureStages(2));
+        var liveSession = SampleLiveSessions.InState("Finalized", 1, SampleLiveSessions.TreasureStages(2));
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
             liveSession.DeactivateStage(SampleLiveSessions.StageId(1), SampleLiveSessions.Now));

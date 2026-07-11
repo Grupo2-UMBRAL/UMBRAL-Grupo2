@@ -152,6 +152,6 @@ internal static class SampleLiveSessions
             BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
 
-        backingField.SetValue(liveSession, state);
+        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 }

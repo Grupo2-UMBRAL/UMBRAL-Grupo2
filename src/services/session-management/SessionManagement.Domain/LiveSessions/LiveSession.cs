@@ -1,6 +1,4 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using SessionManagement.Domain.Abstractions;
 using Umbral.ServiceDefaults;
 
@@ -8,11 +6,6 @@ namespace SessionManagement.Domain.LiveSessions;
 
 public sealed class LiveSession : AggregateRoot
 {
-    private static readonly JsonSerializerOptions SessionStageFlowSerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     private LiveSession()
     {
     }
@@ -22,10 +15,10 @@ public sealed class LiveSession : AggregateRoot
         Guid missionId,
         string missionName,
         string name,
-        string state,
+        LiveSessionState state,
         DateTimeOffset? scheduledStartAtUtc,
         DateTimeOffset createdAtUtc,
-        string sessionStageFlowJson)
+        IReadOnlyList<LiveSessionStage> sessionStageFlow)
     {
         Id = id;
         MissionId = missionId;
@@ -34,7 +27,7 @@ public sealed class LiveSession : AggregateRoot
         State = state;
         ScheduledStartAtUtc = scheduledStartAtUtc;
         CreatedAtUtc = createdAtUtc;
-        SessionStageFlowJson = sessionStageFlowJson;
+        SessionStageFlow = sessionStageFlow;
     }
 
     public Guid Id { get; private set; }
@@ -45,15 +38,13 @@ public sealed class LiveSession : AggregateRoot
 
     public string Name { get; private set; } = string.Empty;
 
-    public string State { get; private set; } = string.Empty;
+    public LiveSessionState State { get; private set; }
 
     public DateTimeOffset? ScheduledStartAtUtc { get; private set; }
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
     public long SequenceNumber { get; private set; }
-
-    public string SessionStageFlowJson { get; private set; } = "[]";
 
     public string? JoinCodeValue { get; private set; }
 
@@ -73,11 +64,8 @@ public sealed class LiveSession : AggregateRoot
 
     public ICollection<ReleasedHint> ReleasedHints { get; private set; } = new List<ReleasedHint>();
 
-    [JsonIgnore]
-    [NotMapped]
-    public IReadOnlyList<LiveSessionStage> SessionStageFlow => DeserializeSessionStageFlow(SessionStageFlowJson);
+    public IReadOnlyList<LiveSessionStage> SessionStageFlow { get; private set; } = Array.Empty<LiveSessionStage>();
 
-    [JsonIgnore]
     [NotMapped]
     public EnrollmentWindow EnrollmentWindow => new(EnrollmentWindowOpenedAtUtc, EnrollmentWindowClosedAtUtc);
 
@@ -95,10 +83,10 @@ public sealed class LiveSession : AggregateRoot
             NormalizeGuid(missionId, "live_session_mission_required", "LiveSession must reference a Mission."),
             NormalizeRequiredText(missionName, "live_session_mission_name_required", "Mission name is required.", 120),
             NormalizeRequiredText(name, "live_session_name_required", "LiveSession name is required.", 120),
-            LiveSessionStates.Scheduled,
+            LiveSessionState.Scheduled,
             scheduledStartAtUtc,
             createdAtUtc,
-            "[]");
+            Array.Empty<LiveSessionStage>());
 
         liveSession.ReplaceSessionStageFlow(sessionStageFlow);
 
@@ -109,14 +97,13 @@ public sealed class LiveSession : AggregateRoot
     {
         ArgumentNullException.ThrowIfNull(sessionStageFlow);
 
-        var normalizedSessionStageFlow = NormalizeSessionStageFlow(sessionStageFlow);
-        SessionStageFlowJson = JsonSerializer.Serialize(normalizedSessionStageFlow, SessionStageFlowSerializerOptions);
+        SessionStageFlow = NormalizeSessionStageFlow(sessionStageFlow);
     }
 
     public void Start(DateTimeOffset startedAtUtc)
     {
         EnsureState(
-            LiveSessionStates.Scheduled,
+            LiveSessionState.Scheduled,
             "live_session_cannot_start",
             "Only a Scheduled LiveSession can start.");
 
@@ -133,43 +120,43 @@ public sealed class LiveSession : AggregateRoot
             CloseEnrollmentWindow(startedAtUtc);
         }
 
-        State = LiveSessionStates.Active;
+        State = LiveSessionState.Active;
     }
 
     public void Pause()
     {
         EnsureState(
-            LiveSessionStates.Active,
+            LiveSessionState.Active,
             "live_session_cannot_pause",
             "Only an Active LiveSession can pause.");
 
-        State = LiveSessionStates.Paused;
+        State = LiveSessionState.Paused;
     }
 
     public void Resume()
     {
         EnsureState(
-            LiveSessionStates.Paused,
+            LiveSessionState.Paused,
             "live_session_cannot_resume",
             "Only a Paused LiveSession can resume.");
 
-        State = LiveSessionStates.Active;
+        State = LiveSessionState.Active;
     }
 
     public void FinalizeSession()
     {
-        if (string.Equals(State, LiveSessionStates.Finalized, StringComparison.Ordinal))
+        if (State == LiveSessionState.Finalized)
         {
             return;
         }
 
         EnsureState(
-            LiveSessionStates.Active,
-            LiveSessionStates.Paused,
+            LiveSessionState.Active,
+            LiveSessionState.Paused,
             "live_session_cannot_finalize",
             "Only an Active or Paused LiveSession can finalize.");
 
-        State = LiveSessionStates.Finalized;
+        State = LiveSessionState.Finalized;
     }
 
     public IReadOnlyList<ReleasedHint> FinalizeAndRevealAllHints(DateTimeOffset releasedAtUtc)
@@ -217,13 +204,13 @@ public sealed class LiveSession : AggregateRoot
     public void Cancel()
     {
         EnsureState(
-            LiveSessionStates.Scheduled,
-            LiveSessionStates.Active,
-            LiveSessionStates.Paused,
+            LiveSessionState.Scheduled,
+            LiveSessionState.Active,
+            LiveSessionState.Paused,
             "live_session_cannot_cancel",
             "Only a Scheduled, Active or Paused LiveSession can cancel.");
 
-        State = LiveSessionStates.Canceled;
+        State = LiveSessionState.Canceled;
     }
 
     public void AssignJoinCode(JoinCode joinCode)
@@ -582,6 +569,15 @@ public sealed class LiveSession : AggregateRoot
         return releasedHint;
     }
 
+    public void EnsurePenaltyAllowed()
+    {
+        EnsureState(
+            LiveSessionState.Active,
+            LiveSessionState.Paused,
+            "live_session_cannot_penalize",
+            "LiveSession must be Active or Paused to apply a Penalty.");
+    }
+
     public LiveSessionStageHint AddOperationalHint(
         Guid missionStageId,
         string content,
@@ -811,7 +807,7 @@ public sealed class LiveSession : AggregateRoot
         if (progress.CurrentStageIndex >= orderedStages.Count - 1)
         {
             progress.Complete(acceptedAtUtc);
-            State = LiveSessionStates.Finalized;
+            State = LiveSessionState.Finalized;
             return;
         }
 
@@ -882,9 +878,9 @@ public sealed class LiveSession : AggregateRoot
 
     private void EnsureEvidenceSubmissionAllowed()
     {
-        if (string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Finalized, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Canceled, StringComparison.Ordinal))
+        if (State == LiveSessionState.Paused
+            || State == LiveSessionState.Finalized
+            || State == LiveSessionState.Canceled)
         {
             throw new UmbralDomainException(
                 "live_session_not_accepting_evidence",
@@ -895,8 +891,8 @@ public sealed class LiveSession : AggregateRoot
 
     private void EnsureHintReleaseAllowed()
     {
-        if (string.Equals(State, LiveSessionStates.Active, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
+        if (State == LiveSessionState.Active
+            || State == LiveSessionState.Paused)
         {
             return;
         }
@@ -909,9 +905,9 @@ public sealed class LiveSession : AggregateRoot
 
     private void EnsureStageDeactivationAllowed()
     {
-        if (string.Equals(State, LiveSessionStates.Scheduled, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Active, StringComparison.Ordinal)
-            || string.Equals(State, LiveSessionStates.Paused, StringComparison.Ordinal))
+        if (State == LiveSessionState.Scheduled
+            || State == LiveSessionState.Active
+            || State == LiveSessionState.Paused)
         {
             return;
         }
@@ -1045,35 +1041,35 @@ public sealed class LiveSession : AggregateRoot
     private void EnsureScheduled()
     {
         EnsureState(
-            LiveSessionStates.Scheduled,
+            LiveSessionState.Scheduled,
             "live_session_not_scheduled",
             "LiveSession must be scheduled to accept enrollment changes.");
     }
 
-    private void EnsureState(string expectedState, string errorCode, string errorMessage)
+    private void EnsureState(LiveSessionState expectedState, string errorCode, string errorMessage)
         => EnsureState([expectedState], errorCode, errorMessage);
 
     private void EnsureState(
-        string expectedStateA,
-        string expectedStateB,
+        LiveSessionState expectedStateA,
+        LiveSessionState expectedStateB,
         string errorCode,
         string errorMessage)
         => EnsureState([expectedStateA, expectedStateB], errorCode, errorMessage);
 
     private void EnsureState(
-        string expectedStateA,
-        string expectedStateB,
-        string expectedStateC,
+        LiveSessionState expectedStateA,
+        LiveSessionState expectedStateB,
+        LiveSessionState expectedStateC,
         string errorCode,
         string errorMessage)
         => EnsureState([expectedStateA, expectedStateB, expectedStateC], errorCode, errorMessage);
 
     private void EnsureState(
-        IReadOnlyCollection<string> expectedStates,
+        IReadOnlyCollection<LiveSessionState> expectedStates,
         string errorCode,
         string errorMessage)
     {
-        if (expectedStates.Contains(State, StringComparer.Ordinal))
+        if (expectedStates.Contains(State))
         {
             return;
         }
@@ -1169,20 +1165,5 @@ public sealed class LiveSession : AggregateRoot
         }
 
         return orderedStages;
-    }
-
-    private static IReadOnlyList<LiveSessionStage> DeserializeSessionStageFlow(string? sessionStageFlowJson)
-    {
-        if (string.IsNullOrWhiteSpace(sessionStageFlowJson))
-        {
-            return Array.Empty<LiveSessionStage>();
-        }
-
-        var sessionStageFlow =
-            JsonSerializer.Deserialize<List<LiveSessionStage>>(sessionStageFlowJson, SessionStageFlowSerializerOptions);
-
-        return sessionStageFlow is null
-            ? Array.Empty<LiveSessionStage>()
-            : sessionStageFlow;
     }
 }

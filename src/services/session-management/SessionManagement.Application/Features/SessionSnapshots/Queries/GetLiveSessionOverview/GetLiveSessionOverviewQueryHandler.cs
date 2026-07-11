@@ -49,7 +49,7 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             liveSession.Name,
             liveSession.MissionId,
             liveSession.MissionName,
-            liveSession.State,
+            liveSession.State.Value,
             liveSession.ScheduledStartAtUtc,
             CalculateRemainingSeconds(liveSession, serverTimeUtc),
             serverTimeUtc,
@@ -65,7 +65,7 @@ public sealed class GetLiveSessionOverviewQueryHandler(
 
     private static int? CalculateRemainingSeconds(LiveSession liveSession, DateTimeOffset serverTimeUtc)
     {
-        if (!string.Equals(liveSession.State, LiveSessionStates.Scheduled, StringComparison.Ordinal))
+        if (liveSession.State != LiveSessionState.Scheduled)
         {
             return null;
         }
