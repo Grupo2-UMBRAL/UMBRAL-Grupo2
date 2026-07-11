@@ -79,7 +79,8 @@ public sealed class OverrideValidationOutcomeHandler(
             ProgressChangedReason: "Validation Override accepted Evidence Submission; Session Team progression changed.",
             StateChangedReason: "LiveSession finalized after Validation Override.",
             ValidationOverrideLogId: validationOverrideLog.Id,
-            StageCreditRecordedAtUtc: occurredAtUtc
+            StageCreditRecordedAtUtc: occurredAtUtc,
+            RecordStageCreditBeforeOutcomeChanged: true
         );
 
         return Task.FromResult(result);
