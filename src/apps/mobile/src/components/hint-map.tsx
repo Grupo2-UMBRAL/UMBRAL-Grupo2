@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 import * as Location from "expo-location";
+import { GameButton } from "./game-button";
 import { buildLeafletHtml, type LatLng } from "./leaflet-map-html";
+import { buildGoogleMapsDirectionsUrl } from "./maps-links";
 import { colors } from "../theme/tokens";
 
 type HintMapProps = {
@@ -67,6 +69,10 @@ export function HintMap({ latitude, longitude }: HintMapProps) {
 
   const html = buildLeafletHtml({ latitude, longitude }, userLocation);
 
+  const openDirections = () => {
+    void Linking.openURL(buildGoogleMapsDirectionsUrl(latitude, longitude));
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mapa de la pista</Text>
@@ -84,6 +90,7 @@ export function HintMap({ latitude, longitude }: HintMapProps) {
         Pista: Lat {formatCoordinate(latitude)} | Lon {formatCoordinate(longitude)}
         {locationBlocked ? " · Activa la ubicación para verte en el mapa" : ""}
       </Text>
+      <GameButton label="Cómo llegar" icon="🧭" variant="ghost" onPress={openDirections} />
     </View>
   );
 }
