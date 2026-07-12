@@ -17,7 +17,7 @@ import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
 import { SessionLobby } from "../../../src/components/session-lobby";
 import { StartCountdown } from "../../../src/components/start-countdown";
 import { StageProgressBar } from "../../../src/components/stage-progress-bar";
-import { StaticHintMap } from "../../../src/components/static-hint-map";
+import { HintMap } from "../../../src/components/hint-map";
 import { StatusChip } from "../../../src/components/status-chip";
 import { colors } from "../../../src/theme/tokens";
 import {
@@ -605,7 +605,7 @@ export default function BoardPage() {
                           </View>
                           <Text style={styles.resolutionHintText}>{hint.content}</Text>
                           {isStaticMapReady(hint) ? (
-                            <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                            <HintMap latitude={hint.latitude!} longitude={hint.longitude!} />
                           ) : null}
                         </View>
                       ))
@@ -755,7 +755,7 @@ export default function BoardPage() {
                   </View>
                   <Text style={shellStyles.cardText}>{hint.content}</Text>
                   {isStaticMapReady(hint) ? (
-                    <StaticHintMap latitude={hint.latitude!} longitude={hint.longitude!} />
+                    <HintMap latitude={hint.latitude!} longitude={hint.longitude!} />
                   ) : null}
                 </View>
               ))

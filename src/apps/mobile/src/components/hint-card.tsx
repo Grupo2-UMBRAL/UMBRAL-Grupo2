@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { StaticHintMap } from "./static-hint-map";
+import { HintMap } from "./hint-map";
 import { StatusChip } from "./status-chip";
 import { colors } from "../theme/tokens";
 
@@ -24,7 +24,7 @@ export function HintCard({ content, reason, isSolution = false, latitude, longit
       </View>
       <Text style={styles.content}>{content}</Text>
       {hasCoordinates(latitude, longitude) ? (
-        <StaticHintMap latitude={latitude as number} longitude={longitude as number} />
+        <HintMap latitude={latitude as number} longitude={longitude as number} />
       ) : null}
     </View>
   );
