@@ -70,8 +70,12 @@ function HubTile({ icon, title, onPress }: HubTileProps) {
 export default function HomePage() {
   const router = useRouter();
   const { signOut } = useSession();
-  const { loading, enrollment, snapshot, error, refresh, session } = useTeamSnapshot();
+  const { loading, enrollment, snapshot, error, refresh, leave, session } = useTeamSnapshot();
   const config = useMemo(() => getClientConfig(), []);
+
+  const switchSession = () => {
+    void leave().then(() => router.push("/mobile/join"));
+  };
 
   const connectionState = useSessionManagementConnection({
     accessToken: session?.accessToken ?? "",
@@ -91,6 +95,7 @@ export default function HomePage() {
   const sessionState = resolveSessionState(snapshot?.sessionState);
   const currentStage = snapshot?.currentStage;
   const isFinalized = snapshot?.sessionState === "Finalized";
+  const isEnded = isFinalized || snapshot?.sessionState === "Canceled";
   const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
 
   return (
@@ -186,11 +191,30 @@ export default function HomePage() {
       )}
 
       {enrollment ? (
-        <View style={styles.tileRow}>
-          <HubTile icon="🗺️" title="Progreso" onPress={() => router.push("/mobile/progress")} />
-          <HubTile icon="💡" title="Pistas" onPress={() => router.push("/mobile/resolutions")} />
-          <HubTile icon="🏆" title="Ranking" onPress={() => router.push("/mobile/ranking")} />
-        </View>
+        <>
+          <View style={styles.tileRow}>
+            <HubTile icon="🗺️" title="Progreso" onPress={() => router.push("/mobile/progress")} />
+            <HubTile icon="💡" title="Pistas" onPress={() => router.push("/mobile/resolutions")} />
+            <HubTile icon="🏆" title="Ranking" onPress={() => router.push("/mobile/ranking")} />
+          </View>
+          {isEnded ? (
+            <View style={styles.heroCard}>
+              <Text style={styles.heroTitle}>¿Lista otra partida?</Text>
+              <Text style={shellStyles.cardText}>
+                Esta sesión ya terminó. Sal de tu equipo y únete con un nuevo código cuando el
+                operador abra otra sesión.
+              </Text>
+              <GameButton label="Unirse a otra sesión" icon="🚪" onPress={switchSession} />
+            </View>
+          ) : (
+            <Pressable
+              onPress={switchSession}
+              style={({ pressed }) => [styles.signOut, pressed && styles.tilePressed]}
+            >
+              <Text style={styles.switchLabel}>Cambiar de sesión</Text>
+            </Pressable>
+          )}
+        </>
       ) : null}
 
       <Pressable
@@ -272,6 +296,11 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     color: "#EA2B2B",
+    fontSize: 15,
+    fontWeight: "700"
+  },
+  switchLabel: {
+    color: "#1CB0F6",
     fontSize: 15,
     fontWeight: "700"
   }

@@ -3,7 +3,11 @@ import {
   createAuthorizedApiClient,
   type SessionTeamSnapshot
 } from "../lib/api-client";
-import { loadStoredEnrollment, type StoredEnrollment } from "../lib/session-storage";
+import {
+  clearStoredEnrollment,
+  loadStoredEnrollment,
+  type StoredEnrollment
+} from "../lib/session-storage";
 import { useSession } from "../providers/session-provider";
 
 function readErrorMessage(error: unknown) {
@@ -42,6 +46,13 @@ export function useTeamSnapshot() {
     }
   }, [apiClient, enrollment]);
 
+  const leave = useCallback(async () => {
+    await clearStoredEnrollment();
+    setEnrollment(null);
+    setSnapshot(null);
+    setError(null);
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -78,5 +89,5 @@ export function useTeamSnapshot() {
     };
   }, [apiClient]);
 
-  return { loading, enrollment, snapshot, error, refresh, apiClient, session };
+  return { loading, enrollment, snapshot, error, refresh, leave, apiClient, session };
 }
