@@ -217,7 +217,6 @@ services:
       AllowedOrigins__0: http://localhost:5173
       AllowedOrigins__1: http://localhost:3000
       AllowedOrigins__2: http://localhost:${MOBILE_WEB_PORT}
-      COVERAGE_REPORT_PATH: /app/coverage
       ReverseProxy__Clusters__user-management__Destinations__primary__Address: http://user-management-service:8080/
       ReverseProxy__Clusters__mission-management__Destinations__primary__Address: http://mission-management-service:8080/
       ReverseProxy__Clusters__session-management__Destinations__primary__Address: http://session-management-service:8080/
@@ -227,8 +226,6 @@ services:
       ReverseProxy__Clusters__web__Destinations__primary__Address: http://web:3000/
     ports:
       - "${EDGE_PROXY_PORT}:8080"
-    volumes:
-      - ./temp/validation/backend-coverage-report:/app/coverage
     depends_on:
       user-management-service:
         condition: service_started
