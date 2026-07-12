@@ -6,12 +6,47 @@ marker) instead of typing raw latitude/longitude. This complements the mobile
 participant map (Leaflet + "Cómo llegar" link) delivered on
 `feature/mobile-hint-map-webview`.
 
-**Status:** planned, not implemented. This branch contains only this document.
+**Status:** IMPLEMENTED on this branch (code below). Not yet runtime-verified
+against a live key — see "What still needs a human" at the bottom.
 
 **Why a handoff:** different surface from the mobile work; needs a Google Maps
 JavaScript API key with billing enabled; loading the Maps/Places SDK is a new
 pattern in the web app; and it can't be verified in the current sandbox
 (external `maps.googleapis.com` is network-blocked here).
+
+---
+
+## Implementation notes (what actually shipped vs the plan)
+
+- **Config:** var is `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, allowlisted in
+  `vite.config.ts`, surfaced as `googleMapsApiKey` from `config.ts`
+  (`getServerConfig` + `getClientConfig`), documented in `.env.example`.
+  **Gotcha the plan missed:** the web service in `docker-compose.dev.yml`
+  enumerates env vars explicitly (no `env_file`), so the key was also added to
+  its `environment:` map (`${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}`) — otherwise a
+  key in `.env` never reaches the container.
+- **Loader:** `@googlemaps/js-api-loader@^2` — the `Loader` class is deprecated
+  in v2; used the **functional API** `setOptions()` + `importLibrary()` instead.
+  New hook `src/lib/use-google-maps.ts` loads `maps` + `places` once (shared
+  singleton) and reports `disabled | loading | ready | error`.
+- **Places choice:** legacy `google.maps.places.Autocomplete` + classic
+  `google.maps.Marker`, per the plan's recommendation.
+- **Component:** `src/components/map-location-picker.tsx` — search box + map +
+  draggable marker + click-to-place; renders `null` when no key so the manual
+  lat/lng inputs remain the working fallback. Wired into the `showLocation`
+  block of `hint-editor.tsx`, above the manual inputs (both stay in sync).
+- **Styles:** `.map-picker` / `.map-picker-canvas` in `index.css` (tokens).
+- **Tests:** the web app had **no unit-test runner** — added `vitest` + jsdom +
+  `@testing-library/react` (+ `vitest.config.ts`, `vitest.setup.ts`, `npm test`).
+  `map-location-picker.test.tsx` mocks the SDK (`setOptions`/`importLibrary`)
+  and asserts the no-key fallback (renders nothing, never touches Google) and
+  the with-key load path. Green. `tsc`, ESLint (my files), and tests all pass.
+- **Pre-existing build blocker found:** a fresh full `tsc -b` fails with 21
+  `TS6133` (unused local/param) errors in `live-sessions-workspace.tsx`,
+  `missions-admin-workspace.tsx`, `qr-code.ts` — files this branch never
+  touched; the same symbols exist on `develop`. So `npm run build` is already
+  red on a clean checkout (locally masked by incremental build cache). Not
+  fixed here (out of scope); flag before relying on web CI `build`.
 
 ---
 
@@ -124,21 +159,33 @@ Reuse design tokens from `src/apps/web/src/index.css`: `.form-group`
   no-op without a key so existing tests render the numeric-input fallback. Add a
   focused test that the picker falls back when `googleMapsApiKey` is empty.
 - **CSP**: no Content-Security-Policy exists in `src/apps/web`
-  (`index.html`, `vite.config.ts`). The runtime `edge-proxy` service was **not**
-  audited — if it injects CSP headers, allow `maps.googleapis.com` /
-  `maps.gstatic.com` (script/img/connect) there. Check before blaming the code.
+  (`index.html`, `vite.config.ts`). The `edge-proxy` service **was audited this
+  time** (`grep` for CSP / security headers in `src/apps/edge-proxy`): it injects
+  **no** CSP either, so nothing blocks the SDK today. If CSP is added later,
+  allow `*.googleapis.com` / `*.gstatic.com` for `script-src` / `img-src` /
+  `connect-src`. Noted as future hardening, not done here.
 
 ## Prerequisites (owner action, not code)
 
 1. GCP project with **billing enabled**.
 2. Enable **Maps JavaScript API** + **Places API**.
 3. Create a browser key, restrict by HTTP referrer, put it in the web `.env`
-   under the chosen var name.
+   as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (empty → picker hidden, manual inputs work).
 
-## Suggested commit slices
+## Commit slices (all implemented on this branch)
 
-1. config wiring (vite allowlist + config.ts + .env.example) — no UI yet.
-2. `useGoogleMaps` loader hook + dep.
-3. `MapLocationPicker` component + styles.
-4. integrate into `hint-editor.tsx`.
-5. fallback unit test.
+1. ✅ config wiring (vite allowlist + `config.ts` + `.env.example`).
+2. ✅ `useGoogleMaps` loader hook + `@googlemaps/js-api-loader` dep.
+3. ✅ `MapLocationPicker` component + `.map-picker` styles.
+4. ✅ integrate into `hint-editor.tsx`.
+5. ✅ fallback unit test (added vitest infra to enable it).
+
+## What still needs a human
+
+1. **GCP setup** — the prerequisites above (billing, APIs, restricted key).
+2. **Runtime verification** with a live key (blocked in this sandbox): the
+   manual smoke test under "Testing & caveats".
+3. **Decide on the 21 pre-existing `tsc -b` errors** (see Implementation notes)
+   so `npm run build` can go green — independent of this feature.
+4. **Commit / merge** — the implementation is currently uncommitted on
+   `feature/web-hint-location-map-picker` (the plan doc is its only commit).

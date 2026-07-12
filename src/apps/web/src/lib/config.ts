@@ -23,7 +23,8 @@ export function getServerConfig() {
     keycloakRealm: process.env.KEYCLOAK_REALM ?? defaults.keycloakRealm,
     keycloakClientId: process.env.KEYCLOAK_WEB_CLIENT_ID ?? defaults.keycloakClientId,
     sessionHubPath: process.env.NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH ?? defaults.sessionHubPath,
-    scoringHubPath: process.env.NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH ?? defaults.scoringHubPath
+    scoringHubPath: process.env.NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH ?? defaults.scoringHubPath,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ""
   };
 }
 
@@ -35,6 +36,7 @@ export function getClientConfig() {
     keycloakPublicBaseUrl: config.keycloakPublicBaseUrl,
     keycloakRealm: config.keycloakRealm,
     sessionHubUrl: `${config.edgeProxyPublicBaseUrl}${config.sessionHubPath}`,
-    scoringHubUrl: `${config.edgeProxyPublicBaseUrl}${config.scoringHubPath}`
+    scoringHubUrl: `${config.edgeProxyPublicBaseUrl}${config.scoringHubPath}`,
+    googleMapsApiKey: config.googleMapsApiKey
   };
 }

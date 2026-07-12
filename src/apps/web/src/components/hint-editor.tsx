@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MapLocationPicker } from "./map-location-picker";
 
 type HintEditorProps = {
   hint: {
@@ -69,6 +70,14 @@ export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps)
                 Quitar ubicación
               </button>
             </div>
+            <MapLocationPicker
+              latitude={hint.latitude}
+              longitude={hint.longitude}
+              onChange={(lat, lng) => {
+                onUpdate("latitude", lat);
+                onUpdate("longitude", lng);
+              }}
+            />
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Latitud</label>
