@@ -76,14 +76,31 @@ Cobertura backend:
 
 ## Coverage policy
 
-- Meta academica: `90%` backend.
-- Umbral temporal actual: `10%`.
+- **Meta academica (expectativa del profesor): `90%` de branch coverage del backend.** La meta es cobertura
+  de **ramas** (branch), no de lineas.
+- Umbral temporal actual que rompe el build: `10%`.
 - Razon: repo todavia combina suites robustas en `user-management` con bootstrap tests minimos en otros servicios.
 - Plan de subida:
   1. llevar cada servicio a casos de aplicacion y dominio medibles
   2. subir umbral temporal a `50%`
   3. cerrar cobertura de ramas de error y autorizacion
-  4. subir gate final a `90%`
+  4. subir gate final a `90%` de branch coverage
+
+### Metrica del gate: branch coverage
+
+`scripts/Get-BackendCoverageSummary.ps1` agrega y enforca **branch coverage** (`branches-covered` /
+`branches-valid` del `coverage.cobertura.xml`), alineado con la meta academica. La line coverage se sigue
+agregando y reportando como referencia secundaria (`OverallLineCoverage`), pero **no** es la metrica gateada.
+
+Detalles:
+
+- El agregado es por totales (`Σ branches-covered / Σ branches-valid`), no promedio de porcentajes por
+  proyecto. Un proyecto sin ramas (`branches-valid = 0`) cuenta como `100%` vacuo y no arrastra el agregado.
+- El JSON de salida trae `Metric = "branch"`, `OverallBranchCoverage`, `OverallLineCoverage` y por proyecto
+  `BranchCoverage` + `LineCoverage`.
+- El gate que rompe el build compara `OverallBranchCoverage` contra el umbral temporal (`10%` hoy). El
+  `90%` sigue reportandose como "Academic target"; el paso final del plan de subida es enforcar `90%` branch
+  subiendo el umbral (`-TemporaryCoverageThreshold` / `TargetCoverage` en `Invoke-RepositoryValidation.ps1`).
 
 ## CI
 
@@ -96,5 +113,9 @@ Jobs:
 
 ## Known gaps
 
+- **Umbral de cobertura**: el gate ya mide branch coverage (meta `90%`) pero el umbral que rompe el build
+  sigue en `10%` temporal; subir a `90%` es el paso final del plan de subida.
+- **E2E de UI ausente**: `@playwright/test` esta como devDependency de `web` pero no hay specs ni script de
+  e2e. La cobertura tipo E2E hoy es el smoke de auth por rol contra el edge-proxy (`infra/keycloak/verify/verify_auth.py`).
 - `web` y `mobile` aun no tienen suites automatizadas de tests funcionales; por ahora el gate usa lint, typecheck y build.
 - scan de secretos usa reglas conservadoras y allowlist explicita para seeds locales documentadas. Si aparecen nuevos fixtures de bootstrap, actualizar `scripts/Test-VersionedSecrets.ps1`.

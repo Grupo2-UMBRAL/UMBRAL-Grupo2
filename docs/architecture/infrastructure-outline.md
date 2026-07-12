@@ -1,5 +1,11 @@
 ﻿# Infrastructure Outline
 
+> **Estado: bosquejo temprano, parcialmente superado.** Este documento fijó la intención inicial. Dos
+> secciones ya no reflejan `develop` y están corregidas más abajo: (1) el layering interno por servicio ya
+> no es "un solo proyecto `.Api`" sino cuatro proyectos por servicio (ver [ADR-015](adr/ADR-015-framework-free-shared-kernel.md)
+> y `repo-structure.md`); (2) el CI ya existe (`.github/workflows/validation.yml`, ver `validation-pipeline.md`),
+> no es "futuro". La topología, las fronteras y la mensajería siguen vigentes.
+
 Bosquejo inicial de la infraestructura de UMBRAL para una arquitectura de microservicios real desde el dia uno, con integracion hibrida: comunicacion sincronica como mecanismo principal y mensajeria asincrona solo para responsabilidades secundarias. Incluye desarrollo local en `docker-compose` y evolucion futura hacia despliegue en nube y `CI/CD`.
 
 ## Objetivo
@@ -322,7 +328,10 @@ Ejemplo posible:
 
 ## Target interno por servicio
 
-Mientras cada bounded context siga viviendo en un solo proyecto `.Api`, el target interno esperado por servicio es:
+> **Actualizado (superado el supuesto original).** Cada servicio ya está partido en **cuatro proyectos**
+> (`*.Api` / `*.Application` / `*.Domain` / `*.Infrastructure`) más `tests/`, no en un único `.Api`. Ver
+> [ADR-015](adr/ADR-015-framework-free-shared-kernel.md) y `repo-structure.md`. El target interno esperado
+> por servicio es:
 
 - `Presentation`
 - `Application`
@@ -485,18 +494,24 @@ sequenceDiagram
 - observabilidad centralizada
 - balanceo, TLS y dominio
 
-## `CI/CD` futuro en GitHub Actions
+## `CI/CD` en GitHub Actions
 
-Sin implementarlo aun, el pipeline futuro deberia cubrir:
+> **Actualizado: ya implementado (parcial).** El pipeline existe en `.github/workflows/validation.yml`
+> (jobs `code-validation` y `compose-smoke`, más un lane rápido de unit tests) — ver `validation-pipeline.md`.
+> Cubre restore/build, tests por servicio, checks de web y mobile, cobertura backend, validación de
+> `docker-compose` y smoke de auth. **Aún NO** cubre build/push de imágenes a un registry ni despliegue por
+> ambiente (fase cloud, pendiente).
 
-1. restore e install
-2. build por microservicio
-3. tests por microservicio
-4. build web
-5. validacion basica de `docker-compose`
-6. build de imagenes
-7. push a registry
-8. despliegue por ambiente
+Alcance objetivo del pipeline (✓ = ya implementado):
+
+1. ✓ restore e install
+2. ✓ build por microservicio
+3. ✓ tests por microservicio
+4. ✓ build web (y checks de mobile)
+5. ✓ validacion basica de `docker-compose`
+6. build de imagenes — pendiente
+7. push a registry — pendiente
+8. despliegue por ambiente — pendiente
 
 ## Decisiones ya asumidas por este bosquejo
 
