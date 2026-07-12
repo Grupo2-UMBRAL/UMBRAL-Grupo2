@@ -10,7 +10,6 @@ COPY src/shared/Umbral.Kernel/Umbral.Kernel.csproj src/shared/Umbral.Kernel/
 COPY src/shared/Umbral.ServiceDefaults/Umbral.ServiceDefaults.csproj src/shared/Umbral.ServiceDefaults/
 COPY src/services/user-management/UserManagement.Api/UserManagement.Api.csproj src/services/user-management/UserManagement.Api/
 COPY src/services/user-management/UserManagement.Application/UserManagement.Application.csproj src/services/user-management/UserManagement.Application/
-COPY src/services/user-management/UserManagement.Domain/UserManagement.Domain.csproj src/services/user-management/UserManagement.Domain/
 COPY src/services/user-management/UserManagement.Infrastructure/UserManagement.Infrastructure.csproj src/services/user-management/UserManagement.Infrastructure/
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/services/user-management/UserManagement.Api/UserManagement.Api.csproj
