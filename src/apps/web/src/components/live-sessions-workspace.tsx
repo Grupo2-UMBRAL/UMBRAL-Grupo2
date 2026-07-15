@@ -7,7 +7,6 @@ import {
   LogLevel
 } from "@microsoft/signalr";
 import { getClientConfig } from "@/lib/config";
-import { QrCode, printQrCode } from "./qr-code";
 import "./live-session-dashboard.css";
 
 // Vocabulario del front: "etapa" = la unidad jugable (el "play" del backend),
@@ -615,11 +614,6 @@ function translateProgressState(progressState: string): string {
   }
 }
 
-function isTreasureHuntGameType(gameType?: string): boolean {
-  if (!gameType) return false;
-  return gameType.replace(/\s+/g, "").toLowerCase() === "treasurehunt";
-}
-
 function translateGameType(gameType?: string): string {
   if (!gameType) return "Desconocido";
   const normalized = gameType.replace(/\s+/g, "").toLowerCase();
@@ -847,14 +841,6 @@ function getSessionStageOperationalStatus(
   );
 
   return completedByAnyTeam ? "Completed" : "Pending";
-}
-
-function countTeamsAtOrBeyondSessionStage(sessionStage: LiveSessionStage, sessionTeams: LiveSessionOverviewTeam[]) {
-  return sessionTeams.filter(
-    (team) =>
-      team.progressState === "Completed" ||
-      (team.currentStage !== null && team.currentStage.sessionStageOrder >= sessionStage.sessionStageOrder)
-  ).length;
 }
 
 // Ranking-position badge tint for the synchronized flow-board team cards.
@@ -1343,7 +1329,7 @@ function SessionTeamDetailPanel({
   );
 }
 
-function LiveSessionOverviewDashboard({
+export function LiveSessionOverviewDashboard({
   liveSession,
   overview,
   connectionState,
@@ -1575,7 +1561,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [selectedLiveSessionEventLog, setSelectedLiveSessionEventLog] = useState<SessionEventLogItem[]>([]);
   const [selectedSessionTeamId, setSelectedSessionTeamId] = useState<string | null>(null);
   const [selectedSessionTeamDetail, setSelectedSessionTeamDetail] = useState<SessionTeamDetailResponse | null>(null);
-  const [inactivityThresholdMinutes, setInactivityThresholdMinutes] = useState(10);
+  const [inactivityThresholdMinutes] = useState(10);
   const [draft, setDraft] = useState<LiveSessionDraft>(createEmptyDraft);
   const [penaltyDraft, setPenaltyDraft] = useState<PenaltyDraft>(createEmptyPenaltyDraft);
   const [operationalHintDraft, setOperationalHintDraft] = useState<OperationalHintDraft>(
@@ -1584,10 +1570,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [isLoadingMissions, setIsLoadingMissions] = useState(true);
   const [isLoadingMissionDetail, setIsLoadingMissionDetail] = useState(false);
   const [isLoadingLiveSessions, setIsLoadingLiveSessions] = useState(true);
-  const [isLoadingLiveSessionOverview, setIsLoadingLiveSessionOverview] = useState(false);
-  const [isLoadingSessionTeamDetail, setIsLoadingSessionTeamDetail] = useState(false);
-  const [isLoadingRanking, setIsLoadingRanking] = useState(false);
-  const [isLoadingEventLog, setIsLoadingEventLog] = useState(false);
+  const [, setIsLoadingLiveSessionOverview] = useState(false);
+  const [, setIsLoadingSessionTeamDetail] = useState(false);
+  const [, setIsLoadingRanking] = useState(false);
+  const [, setIsLoadingEventLog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmittingPenalty, setIsSubmittingPenalty] = useState(false);
   const [isSubmittingHint, setIsSubmittingHint] = useState(false);
@@ -1602,14 +1588,14 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     label: "Desconectado",
     detail: "SignalR esperando la selección de una LiveSession."
   });
-  const [scoringRealtimeConnection, setScoringRealtimeConnection] = useState<RealtimeConnectionState>({
+  const [, setScoringRealtimeConnection] = useState<RealtimeConnectionState>({
     kind: "disconnected",
     label: "Desconectado",
     detail: "SignalR esperando la selección de una LiveSession."
   });
-  const [rankingError, setRankingError] = useState<string | null>(null);
-  const [eventLogError, setEventLogError] = useState<string | null>(null);
-  const [sessionTeamDetailError, setSessionTeamDetailError] = useState<string | null>(null);
+  const [, setRankingError] = useState<string | null>(null);
+  const [, setEventLogError] = useState<string | null>(null);
+  const [, setSessionTeamDetailError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -1637,11 +1623,6 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
 
   const selectedLiveSession =
     liveSessions.find((liveSession) => liveSession.id === selectedLiveSessionId) ?? null;
-  const isSelectedLiveSessionActive =
-    selectedLiveSession !== null && ["Active", "Paused"].includes(selectedLiveSession.state);
-  const isSelectedLiveSessionStageDeactivationAllowed =
-    selectedLiveSession !== null && ["Scheduled", "Active", "Paused"].includes(selectedLiveSession.state);
-
   const lifecycleActions = useMemo(() => {
     if (!selectedLiveSession) {
       return [];
@@ -1717,7 +1698,6 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   }, [selectedMission, selectedMissionStageIds]);
 
   const selectedLiveSessionStages = selectedLiveSession?.sessionStageFlow ?? [];
-  const hasSingleSelectedLiveSessionStage = selectedLiveSessionStages.length <= 1;
   const isSelectedLiveSessionOverviewCurrent =
     selectedLiveSession !== null && selectedLiveSessionOverview?.liveSessionId === selectedLiveSession.id;
   const selectedLiveSessionOverviewTeams = useMemo(
@@ -1731,9 +1711,6 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const selectedEventLogItems = selectedLiveSession
     ? selectedLiveSessionEventLog.filter((eventLog) => eventLog.liveSessionId === selectedLiveSession.id) || []
     : [];
-  const pendingLiveSessionStageCount = (selectedLiveSessionStages || []).filter(
-    (sessionStage) => getSessionStageOperationalStatus(sessionStage, selectedLiveSessionOverviewTeams) === "Pending"
-  ).length;
   const operationalHintStageId =
     operationalHintDraft.missionStageId || selectedLiveSessionStages[0]?.missionStageId || "";
   const effectivePenaltySessionTeamId = useMemo(() => {
@@ -1974,22 +1951,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
     void loadLiveSessionOverview(selectedLiveSessionId);
   }, [loadLiveSessionOverview, loadLiveSessions, selectedLiveSessionId]);
 
-  const refreshSelectedSessionTeamDetail = useCallback(() => {
-    if (!selectedLiveSessionId || !selectedSessionTeamId) {
-      return;
-    }
-
-    void loadSessionTeamDetail(selectedLiveSessionId, selectedSessionTeamId, inactivityThresholdMinutes);
-  }, [inactivityThresholdMinutes, loadSessionTeamDetail, selectedLiveSessionId, selectedSessionTeamId]);
-
   function handleSelectSessionTeam(sessionTeamId: string | null) {
     setSelectedSessionTeamId(sessionTeamId);
     setSelectedSessionTeamDetail(null);
     setSessionTeamDetailError(null);
-  }
-
-  function handleInactivityThresholdChange(nextValue: number) {
-    setInactivityThresholdMinutes(normalizeInactivityThresholdMinutes(nextValue));
   }
 
   const applySessionStateChanged = useCallback(

@@ -1,0 +1,192 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  keycloak:
+    build:
+      context: ..
+      dockerfile: deployment/docker/keycloak.Dockerfile
+      args:
+        DEMO_PUBLIC_BASE_URL: ${DEMO_PUBLIC_BASE_URL}
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    command:
+      - start
+      - --import-realm
+      - --http-relative-path=/auth
+      - --hostname=${DEMO_PUBLIC_BASE_URL}/auth
+      - --hostname-backchannel-dynamic=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  user-management-service:
+    build:
+      context: ..
+      dockerfile: infra/keycloak/docker/user-management.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=user_management
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-user-management-api
+      UserManagement__Keycloak__BaseUrl: http://keycloak:8080/auth
+      UserManagement__Keycloak__Realm: ${KEYCLOAK_REALM}
+      UserManagement__Keycloak__AdminRealm: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_REALM}
+      UserManagement__Keycloak__AdminClientId: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_CLIENT_ID}
+      UserManagement__Keycloak__AdminUsername: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_USERNAME}
+      UserManagement__Keycloak__AdminPassword: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD}
+      Persistence__ApplyMigrationsOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  mission-management-service:
+    build:
+      context: ..
+      dockerfile: infra/keycloak/docker/mission-management.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=mission_management
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-mission-management-api
+      Persistence__ApplyMigrationsOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  session-management-service:
+    build:
+      context: ..
+      dockerfile: infra/keycloak/docker/session-management.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=session_management
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: "5672"
+      RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      ScoringMonitoring__BaseUrl: http://scoring-monitoring-service:8080/
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-session-management-api
+      SignalR__Enabled: "true"
+      Persistence__ApplyMigrationsOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  scoring-monitoring-service:
+    build:
+      context: ..
+      dockerfile: infra/keycloak/docker/scoring-monitoring.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Search Path=scoring_monitoring
+      RabbitMQ__Host: rabbitmq
+      RabbitMQ__Port: "5672"
+      RabbitMQ__User: ${RABBITMQ_DEFAULT_USER}
+      RabbitMQ__Password: ${RABBITMQ_DEFAULT_PASS}
+      Auth__Authority: ${AUTH_AUTHORITY}
+      Auth__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA}
+      Auth__Audience: umbral-scoring-monitoring-api
+      Persistence__ApplyMigrationsOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  web:
+    build:
+      context: ..
+      dockerfile: deployment/docker/web.Dockerfile
+      args:
+        KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+        KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID}
+        NEXT_PUBLIC_EDGE_PROXY_BASE_URL: ${NEXT_PUBLIC_EDGE_PROXY_BASE_URL}
+        NEXT_PUBLIC_KEYCLOAK_BASE_URL: ${NEXT_PUBLIC_KEYCLOAK_BASE_URL}
+        NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH: ${NEXT_PUBLIC_SESSION_OPERATIONS_HUB_PATH}
+        NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH: ${NEXT_PUBLIC_SCORING_MONITORING_HUB_PATH}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+
+  edge-proxy:
+    build:
+      context: ..
+      dockerfile: infra/keycloak/docker/edge-proxy.Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      AllowedOrigins__0: ${DEMO_PUBLIC_BASE_URL}
+      ReverseProxy__Clusters__user-management__Destinations__primary__Address: http://user-management-service:8080/
+      ReverseProxy__Clusters__mission-management__Destinations__primary__Address: http://mission-management-service:8080/
+      ReverseProxy__Clusters__session-management__Destinations__primary__Address: http://session-management-service:8080/
+      ReverseProxy__Clusters__scoring-monitoring__Destinations__primary__Address: http://scoring-monitoring-service:8080/
+      ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080/
+      ReverseProxy__Clusters__web__Destinations__primary__Address: http://web:8080/
+    ports:
+      - "${DEMO_EDGE_PORT:-7600}:8080"
+    depends_on:
+      user-management-service:
+        condition: service_started
+      mission-management-service:
+        condition: service_started
+      session-management-service:
+        condition: service_started
+      scoring-monitoring-service:
+        condition: service_started
+      keycloak:
+        condition: service_started
+
+volumes:
+  postgres-data:
+  rabbitmq-data:

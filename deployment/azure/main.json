@@ -1,0 +1,998 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.45.15.27210",
+      "templateHash": "2315923682583051878"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all demo resources."
+      }
+    },
+    "postgresHost": {
+      "type": "string",
+      "metadata": {
+        "description": "Neon PostgreSQL host used by Keycloak and the demo services."
+      }
+    },
+    "postgresDatabase": {
+      "type": "string",
+      "metadata": {
+        "description": "Neon PostgreSQL database used by Keycloak and the demo services."
+      }
+    },
+    "postgresUser": {
+      "type": "string",
+      "metadata": {
+        "description": "Neon PostgreSQL user used by Keycloak and the demo services."
+      }
+    },
+    "resourcePrefix": {
+      "type": "string",
+      "defaultValue": "umbral-demo",
+      "metadata": {
+        "description": "Short prefix used for resource names and tags."
+      }
+    },
+    "containerAppsEnvironmentName": {
+      "type": "string",
+      "defaultValue": "cae-umbral-demo",
+      "metadata": {
+        "description": "Azure Container Apps environment name."
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Globally unique Azure Container Registry name. Use lowercase letters and numbers only."
+      }
+    },
+    "publicBaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Public HTTPS base URL exposed by the Edge Proxy. Do not include a trailing slash."
+      }
+    },
+    "imageTag": {
+      "type": "string",
+      "metadata": {
+        "description": "Immutable image tag pushed by CI, usually the git SHA."
+      }
+    },
+    "deployContainerApps": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Set false for the first bootstrap deployment that only creates shared infrastructure and ACR."
+      }
+    },
+    "postgresPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Neon PostgreSQL password used by Keycloak and all demo services."
+      }
+    },
+    "rabbitMqPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "RabbitMQ default user password."
+      }
+    },
+    "keycloakAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Keycloak bootstrap admin password."
+      }
+    },
+    "userManagementKeycloakAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password used by User Management to call Keycloak admin APIs."
+      }
+    }
+  },
+  "variables": {
+    "tags": {
+      "project": "umbral",
+      "workload": "academic-demo"
+    },
+    "rabbitMqUser": "umbral",
+    "keycloakRealm": "umbral",
+    "keycloakAdminUser": "admin",
+    "authAuthority": "[format('{0}/auth/realms/{1}', parameters('publicBaseUrl'), variables('keycloakRealm'))]",
+    "requireHttpsMetadata": "true",
+    "registryLoginServer": "[format('{0}.azurecr.io', parameters('containerRegistryName'))]",
+    "storageName": "[take(replace(toLower(format('{0}{1}', parameters('resourcePrefix'), uniqueString(resourceGroup().id))), '-', ''), 24)]",
+    "imageNames": {
+      "rabbitmq": "rabbitmq:3.13-management-alpine",
+      "keycloak": "[format('{0}/umbral/keycloak:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "userManagement": "[format('{0}/umbral/user-management:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "missionManagement": "[format('{0}/umbral/mission-management:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "sessionManagement": "[format('{0}/umbral/session-management:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "scoringMonitoring": "[format('{0}/umbral/scoring-monitoring:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "web": "[format('{0}/umbral/web:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
+      "edgeProxy": "[format('{0}/umbral/edge-proxy:{1}', variables('registryLoginServer'), parameters('imageTag'))]"
+    },
+    "postgresConnectionSecrets": [
+      {
+        "name": "postgres-connection-user-management",
+        "value": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Search Path=user_management', parameters('postgresHost'), parameters('postgresDatabase'), parameters('postgresUser'), parameters('postgresPassword'))]"
+      },
+      {
+        "name": "postgres-connection-mission-management",
+        "value": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Search Path=mission_management', parameters('postgresHost'), parameters('postgresDatabase'), parameters('postgresUser'), parameters('postgresPassword'))]"
+      },
+      {
+        "name": "postgres-connection-session-management",
+        "value": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Search Path=session_management', parameters('postgresHost'), parameters('postgresDatabase'), parameters('postgresUser'), parameters('postgresPassword'))]"
+      },
+      {
+        "name": "postgres-connection-scoring-monitoring",
+        "value": "[format('Host={0};Port=5432;Database={1};Username={2};Password={3};SSL Mode=Require;Search Path=scoring_monitoring', parameters('postgresHost'), parameters('postgresDatabase'), parameters('postgresUser'), parameters('postgresPassword'))]"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}-logs', parameters('resourcePrefix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 30
+      }
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('containerRegistryName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": true
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('storageName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "allowBlobPublicAccess": false,
+        "minimumTlsVersion": "TLS1_2"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', variables('storageName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', variables('storageName'), 'default', 'rabbitmq-data')]",
+      "properties": {
+        "shareQuota": 4,
+        "enabledProtocols": "SMB"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('storageName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('containerAppsEnvironmentName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('resourcePrefix'))), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('resourcePrefix'))), '2023-09-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('resourcePrefix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}/{1}', parameters('containerAppsEnvironmentName'), 'rabbitmq-data')]",
+      "properties": {
+        "azureFile": {
+          "accountName": "[variables('storageName')]",
+          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value]",
+          "shareName": "rabbitmq-data",
+          "accessMode": "ReadWrite"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageName'), 'default', 'rabbitmq-data')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "rabbitmq",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "secrets": [
+            {
+              "name": "rabbitmq-password",
+              "value": "[parameters('rabbitMqPassword')]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 5672,
+            "transport": "tcp"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "volumes": [
+            {
+              "name": "rabbitmq-data",
+              "storageType": "AzureFile",
+              "storageName": "rabbitmq-data"
+            }
+          ],
+          "containers": [
+            {
+              "name": "rabbitmq",
+              "image": "[variables('imageNames').rabbitmq]",
+              "env": [
+                {
+                  "name": "RABBITMQ_DEFAULT_USER",
+                  "value": "[variables('rabbitMqUser')]"
+                },
+                {
+                  "name": "RABBITMQ_DEFAULT_PASS",
+                  "secretRef": "rabbitmq-password"
+                }
+              ],
+              "volumeMounts": [
+                {
+                  "volumeName": "rabbitmq-data",
+                  "mountPath": "/var/lib/rabbitmq"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('containerAppsEnvironmentName'), 'rabbitmq-data')]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "keycloak",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            {
+              "name": "keycloak-admin-password",
+              "value": "[parameters('keycloakAdminPassword')]"
+            },
+            {
+              "name": "postgres-password",
+              "value": "[parameters('postgresPassword')]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "keycloak",
+              "image": "[variables('imageNames').keycloak]",
+              "command": [
+                "/opt/keycloak/bin/kc.sh"
+              ],
+              "args": [
+                "start",
+                "--import-realm",
+                "--http-relative-path=/auth",
+                "[format('--hostname={0}/auth', parameters('publicBaseUrl'))]",
+                "--hostname-backchannel-dynamic=true"
+              ],
+              "env": [
+                {
+                  "name": "KEYCLOAK_ADMIN",
+                  "value": "[variables('keycloakAdminUser')]"
+                },
+                {
+                  "name": "KEYCLOAK_ADMIN_PASSWORD",
+                  "secretRef": "keycloak-admin-password"
+                },
+                {
+                  "name": "KC_DB",
+                  "value": "postgres"
+                },
+                {
+                  "name": "KC_DB_URL",
+                  "value": "[format('jdbc:postgresql://{0}:5432/{1}?sslmode=require', parameters('postgresHost'), parameters('postgresDatabase'))]"
+                },
+                {
+                  "name": "KC_DB_USERNAME",
+                  "value": "[parameters('postgresUser')]"
+                },
+                {
+                  "name": "KC_DB_PASSWORD",
+                  "secretRef": "postgres-password"
+                },
+                {
+                  "name": "KC_HTTP_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "KC_HEALTH_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "KC_PROXY_HEADERS",
+                  "value": "xforwarded"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "user-management-service",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            "[variables('postgresConnectionSecrets')[0]]",
+            {
+              "name": "keycloak-admin-password",
+              "value": "[parameters('userManagementKeycloakAdminPassword')]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "user-management-service",
+              "image": "[variables('imageNames').userManagement]",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__Postgres",
+                  "secretRef": "postgres-connection-user-management"
+                },
+                {
+                  "name": "Auth__Authority",
+                  "value": "[variables('authAuthority')]"
+                },
+                {
+                  "name": "Auth__RequireHttpsMetadata",
+                  "value": "[variables('requireHttpsMetadata')]"
+                },
+                {
+                  "name": "Auth__Audience",
+                  "value": "umbral-user-management-api"
+                },
+                {
+                  "name": "Persistence__ApplyMigrationsOnStartup",
+                  "value": "true"
+                },
+                {
+                  "name": "UserManagement__Keycloak__BaseUrl",
+                  "value": "http://keycloak/auth"
+                },
+                {
+                  "name": "UserManagement__Keycloak__Realm",
+                  "value": "[variables('keycloakRealm')]"
+                },
+                {
+                  "name": "UserManagement__Keycloak__AdminRealm",
+                  "value": "master"
+                },
+                {
+                  "name": "UserManagement__Keycloak__AdminClientId",
+                  "value": "admin-cli"
+                },
+                {
+                  "name": "UserManagement__Keycloak__AdminUsername",
+                  "value": "[variables('keycloakAdminUser')]"
+                },
+                {
+                  "name": "UserManagement__Keycloak__AdminPassword",
+                  "secretRef": "keycloak-admin-password"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'keycloak')]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "mission-management-service",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            "[variables('postgresConnectionSecrets')[1]]"
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "mission-management-service",
+              "image": "[variables('imageNames').missionManagement]",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__Postgres",
+                  "secretRef": "postgres-connection-mission-management"
+                },
+                {
+                  "name": "Auth__Authority",
+                  "value": "[variables('authAuthority')]"
+                },
+                {
+                  "name": "Auth__RequireHttpsMetadata",
+                  "value": "[variables('requireHttpsMetadata')]"
+                },
+                {
+                  "name": "Auth__Audience",
+                  "value": "umbral-mission-management-api"
+                },
+                {
+                  "name": "Persistence__ApplyMigrationsOnStartup",
+                  "value": "true"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'keycloak')]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "session-management-service",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            "[variables('postgresConnectionSecrets')[2]]",
+            {
+              "name": "rabbitmq-password",
+              "value": "[parameters('rabbitMqPassword')]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "session-management-service",
+              "image": "[variables('imageNames').sessionManagement]",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__Postgres",
+                  "secretRef": "postgres-connection-session-management"
+                },
+                {
+                  "name": "Auth__Authority",
+                  "value": "[variables('authAuthority')]"
+                },
+                {
+                  "name": "Auth__RequireHttpsMetadata",
+                  "value": "[variables('requireHttpsMetadata')]"
+                },
+                {
+                  "name": "Auth__Audience",
+                  "value": "umbral-session-management-api"
+                },
+                {
+                  "name": "Persistence__ApplyMigrationsOnStartup",
+                  "value": "true"
+                },
+                {
+                  "name": "RabbitMQ__Host",
+                  "value": "rabbitmq"
+                },
+                {
+                  "name": "RabbitMQ__Port",
+                  "value": "5672"
+                },
+                {
+                  "name": "RabbitMQ__User",
+                  "value": "[variables('rabbitMqUser')]"
+                },
+                {
+                  "name": "RabbitMQ__Password",
+                  "secretRef": "rabbitmq-password"
+                },
+                {
+                  "name": "ScoringMonitoring__BaseUrl",
+                  "value": "http://scoring-monitoring-service/"
+                },
+                {
+                  "name": "SignalR__Enabled",
+                  "value": "true"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'keycloak')]",
+        "[resourceId('Microsoft.App/containerApps', 'rabbitmq')]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'scoring-monitoring-service')]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "scoring-monitoring-service",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            },
+            "[variables('postgresConnectionSecrets')[3]]",
+            {
+              "name": "rabbitmq-password",
+              "value": "[parameters('rabbitMqPassword')]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "scoring-monitoring-service",
+              "image": "[variables('imageNames').scoringMonitoring]",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "ConnectionStrings__Postgres",
+                  "secretRef": "postgres-connection-scoring-monitoring"
+                },
+                {
+                  "name": "Auth__Authority",
+                  "value": "[variables('authAuthority')]"
+                },
+                {
+                  "name": "Auth__RequireHttpsMetadata",
+                  "value": "[variables('requireHttpsMetadata')]"
+                },
+                {
+                  "name": "Auth__Audience",
+                  "value": "umbral-scoring-monitoring-api"
+                },
+                {
+                  "name": "Persistence__ApplyMigrationsOnStartup",
+                  "value": "true"
+                },
+                {
+                  "name": "RabbitMQ__Host",
+                  "value": "rabbitmq"
+                },
+                {
+                  "name": "RabbitMQ__Port",
+                  "value": "5672"
+                },
+                {
+                  "name": "RabbitMQ__User",
+                  "value": "[variables('rabbitMqUser')]"
+                },
+                {
+                  "name": "RabbitMQ__Password",
+                  "secretRef": "rabbitmq-password"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'keycloak')]",
+        "[resourceId('Microsoft.App/containerApps', 'rabbitmq')]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "web",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            }
+          ],
+          "ingress": {
+            "external": false,
+            "targetPort": 8080,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "web",
+              "image": "[variables('imageNames').web]",
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployContainerApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "edge-proxy",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            }
+          ],
+          "ingress": {
+            "external": true,
+            "targetPort": 8080,
+            "transport": "http",
+            "allowInsecure": false,
+            "traffic": [
+              {
+                "latestRevision": true,
+                "weight": 100
+              }
+            ]
+          }
+        },
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "containers": [
+            {
+              "name": "edge-proxy",
+              "image": "[variables('imageNames').edgeProxy]",
+              "env": [
+                {
+                  "name": "ASPNETCORE_ENVIRONMENT",
+                  "value": "Production"
+                },
+                {
+                  "name": "ASPNETCORE_URLS",
+                  "value": "http://+:8080"
+                },
+                {
+                  "name": "AllowedOrigins__0",
+                  "value": "[parameters('publicBaseUrl')]"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__user-management__Destinations__primary__Address",
+                  "value": "http://user-management-service/"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__mission-management__Destinations__primary__Address",
+                  "value": "http://mission-management-service/"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__session-management__Destinations__primary__Address",
+                  "value": "http://session-management-service/"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__scoring-monitoring__Destinations__primary__Address",
+                  "value": "http://scoring-monitoring-service/"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__keycloak__Destinations__primary__Address",
+                  "value": "http://keycloak/"
+                },
+                {
+                  "name": "ReverseProxy__Clusters__web__Destinations__primary__Address",
+                  "value": "http://web/"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'keycloak')]",
+        "[resourceId('Microsoft.App/containerApps', 'mission-management-service')]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.App/containerApps', 'scoring-monitoring-service')]",
+        "[resourceId('Microsoft.App/containerApps', 'session-management-service')]",
+        "[resourceId('Microsoft.App/containerApps', 'user-management-service')]",
+        "[resourceId('Microsoft.App/containerApps', 'web')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]"
+    },
+    "expectedPublicBaseUrl": {
+      "type": "string",
+      "value": "[parameters('publicBaseUrl')]"
+    }
+  }
+}

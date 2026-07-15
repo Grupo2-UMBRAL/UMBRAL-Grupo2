@@ -6,15 +6,19 @@
 
 ```powershell
 ./scripts/Invoke-RepositoryValidation.ps1 -Scope Web -SkipComposeSmoke
-./scripts/Invoke-RepositoryValidation.ps1 -Scope Mobile -SkipComposeSmoke
-./scripts/Invoke-RepositoryValidation.ps1 -Scope Backend -SkipComposeSmoke
 ```
 
-Runs `Test-VersionedSecrets.ps1` plus only selected area:
+Every scope runs `Test-VersionedSecrets.ps1`, then only the selected area (`-Scope` values from `Invoke-RepositoryValidation.ps1`):
 
 - `Web`: `npm ci`, lint, typecheck, build for `src/apps/web`
 - `Mobile`: `npm ci`, typecheck, build for `src/apps/mobile`
-- `Backend`: `.NET` build, tests, coverage summary
+- `Frontend`: `Web` + `Mobile`, no backend
+- `Backend`: `.NET` build, all tests, coverage summary
+- `BackendUnit`: `.NET` build + only unit test projects
+- `BackendIntegration`: `.NET` only integration test projects
+- `Full` (default): everything, plus compose smoke unless `-SkipComposeSmoke`
+
+Compose smoke runs only under `-Scope Full`.
 
 ### Code validation without compose smoke
 
@@ -70,10 +74,27 @@ Use when default ports collide with another stack or Windows reserved ranges.
 ./scripts/Invoke-ComposeSmokeValidation.ps1 -LeaveRunning
 ```
 
+### Coverage thresholds
+
+```powershell
+./scripts/Invoke-RepositoryValidation.ps1 -SkipComposeSmoke -TemporaryCoverageThreshold 10 -TargetCoverage 90
+```
+
+`Invoke-RepositoryValidation.ps1` defaults: `-TemporaryCoverageThreshold 10`, `-TargetCoverage 90`.
+
+## Coverage gate policy
+
+- Gated metric is **branch** coverage (`OverallBranchCoverage`), not line. Line coverage is reported as secondary reference only.
+- `-TemporaryCoverageThreshold` (default `10`) is what breaks the build today.
+- `-TargetCoverage` (default `90`) is the academic target reported alongside; raising the temporary threshold to `90` is the final step of the ramp-up plan.
+- Aggregate is by totals (`Σ branches-covered / Σ branches-valid`), not per-project average. A project with `branches-valid = 0` counts as vacuous `100%`.
+
 ## Artifact paths
 
 - `temp/validation/backend-coverage-summary.json`
 - `temp/validation/TestResults/`
+- `temp/validation/backend-coverage-report/index.html`
+- `temp/validation/backend-coverage-report/Summary.txt`
 - `temp/validation/compose/compose-config.txt`
 - `temp/validation/compose/compose-up.txt`
 - `temp/validation/compose/compose-ps.txt`

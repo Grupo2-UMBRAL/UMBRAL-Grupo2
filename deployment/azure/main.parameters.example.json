@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "resourcePrefix": {
+      "value": "umbral-demo"
+    },
+    "containerAppsEnvironmentName": {
+      "value": "cae-umbral-demo"
+    },
+    "containerRegistryName": {
+      "value": "REPLACE_WITH_GLOBALLY_UNIQUE_ACR_NAME"
+    },
+    "publicBaseUrl": {
+      "value": "https://REPLACE_WITH_EDGE_FQDN"
+    },
+    "imageTag": {
+      "value": "REPLACE_WITH_GIT_SHA"
+    },
+    "deployContainerApps": {
+      "value": true
+    },
+    "postgresPassword": {
+      "value": "REPLACE_WITH_STRONG_SECRET"
+    },
+    "rabbitMqPassword": {
+      "value": "REPLACE_WITH_STRONG_SECRET"
+    },
+    "keycloakAdminPassword": {
+      "value": "REPLACE_WITH_STRONG_SECRET"
+    },
+    "userManagementKeycloakAdminPassword": {
+      "value": "REPLACE_WITH_STRONG_SECRET"
+    }
+  }
+}

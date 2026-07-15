@@ -98,12 +98,6 @@ function appendBits(value: number, len: number, bits: Bit[]): void {
   }
 }
 
-function bytesToBits(data: number[]): Bit[] {
-  const bits: Bit[] = [];
-  for (const b of data) appendBits(b, 8, bits);
-  return bits;
-}
-
 /**
  * Encodes `text` (UTF-8, byte mode) into a QR module matrix.
  * Returns a square array of booleans (true = dark module).

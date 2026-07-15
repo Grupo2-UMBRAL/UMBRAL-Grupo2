@@ -24,7 +24,7 @@
 - **Mutation Testing**: A task is not `done` until it passes mutation testing constraints and local validation.
 - **Domain Language**: Always use terminology from the affected `src/services/*/CONTEXT.md`. Do not invent names.
 
-## 3. Ponytail Rules (Lazy Senior Dev Mode)
+## 3. Ponytail Rules
 
 Before writing any code, stop at the first rung that holds:
 1. **YAGNI**: Does this need to be built at all? If no, skip it.
@@ -38,5 +38,3 @@ Additional Rules:
 - No abstractions that weren't explicitly requested.
 - No new dependency if it can be avoided.
 - Deletion over addition. Boring over clever. Fewest files possible.
-- Mark intentional simplifications with a `ponytail:` comment.
-

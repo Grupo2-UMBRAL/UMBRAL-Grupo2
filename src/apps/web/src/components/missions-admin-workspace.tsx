@@ -14,7 +14,6 @@ import {
   type MissionItemDraft,
   type MissionSummary,
   type SectionDraft,
-  difficultyOptions,
 } from "./mission-authoring-types";
 import {
   createEmptyChallengeDraft,
@@ -176,7 +175,7 @@ export function MissionsAdminWorkspace({
   );
 
   const loadMissions = useCallback(
-    async (preferredMissionId?: string | null) => {
+    async () => {
       const requestSequence = ++listRequestSequenceRef.current;
       setIsLoadingList(true);
       setErrorMessage(null);
@@ -349,7 +348,7 @@ export function MissionsAdminWorkspace({
       setFeedback(
         editorMode === "create" ? "Misión creada." : "Misión actualizada.",
       );
-      await loadMissions(mission.id);
+      await loadMissions();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "No se pudo guardar la Misión.",
@@ -387,7 +386,7 @@ export function MissionsAdminWorkspace({
       setFeedback(
         action === "activate" ? "Misión activada." : "Misión desactivada.",
       );
-      await loadMissions(mission.id);
+      await loadMissions();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
