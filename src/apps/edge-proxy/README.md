@@ -7,7 +7,25 @@
 - expose a single local base URL for client traffic
 - route requests to bounded-context services and `Keycloak`
 - keep cross-origin setup at the edge for browser clients
-- expose coverage artifacts and simple health metadata for local workflows
+- serve a local **developer hub** at `/` that centralizes links to every runtime resource
+- serve the backend coverage HTML report at `/coverage` when it has been generated
+
+## Developer hub (local only)
+
+Opening `http://localhost:7500/` renders an HTML hub linking to:
+
+- per-service Swagger and health (`/mission-management/swagger`, `/*/health`, ...)
+- Keycloak admin (`/auth/admin/`) and OIDC discovery
+- RabbitMQ management UI (`Hub:RabbitMqManagementUrl`, default `http://localhost:16672`)
+- Aspire dashboard (`Hub:AspireDashboardUrl`, default `http://localhost:19888`)
+- the coverage report (`/coverage/`) — served via static files from `Hub:CoverageReportPath`
+
+The coverage report is produced on the host by `scripts/Publish-BackendCoverageReports.ps1`
+into `temp/validation/backend-coverage-report`, which `docker-compose.dev.yml` mounts read-only
+into the edge container at `/coverage-report`. The card shows as disabled until the report exists.
+Machine-readable edge metadata stays available at `/edge-info`.
+
+These conveniences are for the local development/delivery environment only.
 
 ## Non-goals
 
