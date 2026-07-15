@@ -33,6 +33,26 @@ docker compose --env-file .env.example -f docker-compose.dev.yml up -d edge-prox
 
 The `mobile` service bootstraps missing `node_modules` before starting Expo web on `http://localhost:19006`, so `docker compose up` is enough even after a clean volume.
 
+## Perfiles de entorno
+
+El cliente usa las variables pÃºblicas `EXPO_PUBLIC_*`. Los perfiles versionados no contienen secretos y el comando seleccionado copia el perfil a `.env.local`, que Expo prioriza y que permanece ignorado por Git.
+
+Para usar el stack local (Edge Proxy en `http://localhost:7500`):
+
+```powershell
+cd src/apps/mobile
+npm run start:development
+```
+
+Para probar contra el Edge Proxy pÃºblico de Azure:
+
+```powershell
+cd src/apps/mobile
+npm run start:deployment
+```
+
+Para generar el bundle web con cada perfil, ejecuta `npm run build:development` o `npm run build:deployment`. El script `npm run build` conserva el comportamiento local y equivale a `build:development`.
+
 If you want a native phone preview instead of Expo web, see `README.expo-go.md`.
 
 ## Verification

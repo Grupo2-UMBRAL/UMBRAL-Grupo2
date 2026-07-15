@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,7 +44,8 @@ var app = builder.Build();
 // the report is produced by scripts/Publish-BackendCoverageReports.ps1.
 // Must run BEFORE routing: otherwise the YARP catch-all endpoint is selected first and the
 // static-file middleware short-circuits (skips when an endpoint delegate is already set).
-var coverageReportPath = builder.Configuration["Hub:CoverageReportPath"];
+var developerHubEnabled = !builder.Environment.IsProduction();
+var coverageReportPath = developerHubEnabled ? builder.Configuration["Hub:CoverageReportPath"] : null;
 var coverageAvailable = !string.IsNullOrWhiteSpace(coverageReportPath)
     && Directory.Exists(coverageReportPath);
 if (coverageAvailable)
@@ -63,8 +65,11 @@ app.UseCors("edge");
 // Root of the edge is the local "developer hub": a single page that centralizes links to
 // every runtime resource of the project (service APIs, identity, messaging, observability
 // and the coverage report), matching the delivery goal of one entry point for the stack.
-app.MapGet("/", (IConfiguration config) =>
-    Results.Content(EdgeHubPage.Build(config, coverageAvailable), "text/html; charset=utf-8"));
+if (developerHubEnabled)
+{
+    app.MapGet("/", (IConfiguration config) =>
+        Results.Content(EdgeHubPage.Build(config, coverageAvailable), "text/html; charset=utf-8"));
+}
 
 // Machine-readable edge metadata (kept for programmatic consumers / smoke checks).
 app.MapGet("/edge-info", () => Results.Ok(new

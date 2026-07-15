@@ -21,41 +21,45 @@ import { metrics } from '@opentelemetry/api';
 import './index.css'
 import App from './App.tsx'
 
-const resource = resourceFromAttributes({
-  'service.name': 'umbral-web',
-});
+const otlpEndpoint = import.meta.env.VITE_OTLP_ENDPOINT?.replace(/\/$/, '');
 
-const traceProvider = new WebTracerProvider({
-  resource,
-  spanProcessors: [
-    new BatchSpanProcessor(new OTLPTraceExporter({
-      url: 'http://localhost:4318/v1/traces',
-    }))
-  ]
-});
-traceProvider.register({
-  contextManager: new ZoneContextManager()
-});
+if (otlpEndpoint) {
+  const resource = resourceFromAttributes({
+    'service.name': 'umbral-web',
+  });
 
-const meterProvider = new MeterProvider({
-  resource,
-  readers: [
-    new PeriodicExportingMetricReader({
-      exporter: new OTLPMetricExporter({
-        url: 'http://localhost:4318/v1/metrics',
-      }),
-      exportIntervalMillis: 10000,
-    })
-  ]
-});
-metrics.setGlobalMeterProvider(meterProvider);
+  const traceProvider = new WebTracerProvider({
+    resource,
+    spanProcessors: [
+      new BatchSpanProcessor(new OTLPTraceExporter({
+        url: `${otlpEndpoint}/v1/traces`,
+      }))
+    ]
+  });
+  traceProvider.register({
+    contextManager: new ZoneContextManager()
+  });
 
-registerInstrumentations({
-  instrumentations: [
-    new FetchInstrumentation(),
-    new DocumentLoadInstrumentation(),
-  ],
-});
+  const meterProvider = new MeterProvider({
+    resource,
+    readers: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+          url: `${otlpEndpoint}/v1/metrics`,
+        }),
+        exportIntervalMillis: 10000,
+      })
+    ]
+  });
+  metrics.setGlobalMeterProvider(meterProvider);
+
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation(),
+      new DocumentLoadInstrumentation(),
+    ],
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
