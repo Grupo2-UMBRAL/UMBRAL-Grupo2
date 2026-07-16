@@ -23,8 +23,7 @@ public sealed class CreateMissionCommandHandler(IMissionStore missionStore)
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
             missionStore, mission.Name, excludeMissionId: null, cancellationToken);
 
-        missionStore.Add(mission);
-        await missionStore.SaveChangesAsync(cancellationToken);
+        await missionStore.AddAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }

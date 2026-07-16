@@ -26,7 +26,7 @@ public sealed class ActivateMissionCommandHandlerTests
             handler.Handle(new ActivateMissionCommand(Guid.NewGuid()), CancellationToken.None));
 
         Assert.Equal("mission_not_found", exception.Code);
-        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Equal(0, store.PersistCallCount);
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public sealed class ActivateMissionCommandHandlerTests
         var response = await handler.Handle(new ActivateMissionCommand(mission.Id), CancellationToken.None);
 
         Assert.True(response.IsActive);
-        Assert.Equal(1, store.SaveChangesCallCount);
+        Assert.Equal(1, store.PersistCallCount);
     }
 
     [Fact]
@@ -53,6 +53,6 @@ public sealed class ActivateMissionCommandHandlerTests
             handler.Handle(new ActivateMissionCommand(mission.Id), CancellationToken.None));
 
         Assert.Equal("mission_eligible_play_required", exception.Code);
-        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Equal(0, store.PersistCallCount);
     }
 }

@@ -31,7 +31,7 @@ public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
         if (request.Items is null)
         {
             // Scalar-only update: the tree stays as loaded, so the response reflects it without a reload.
-            await missionStore.SaveChangesAsync(cancellationToken);
+            await missionStore.UpdateAsync(mission, cancellationToken);
             return mission.ToResponse();
         }
 

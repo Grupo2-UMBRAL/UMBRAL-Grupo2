@@ -22,7 +22,7 @@ public sealed class DeactivateMissionCommandHandler(IMissionStore missionStore)
         }
 
         mission.Deactivate();
-        await missionStore.SaveChangesAsync(cancellationToken);
+        await missionStore.UpdateAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }

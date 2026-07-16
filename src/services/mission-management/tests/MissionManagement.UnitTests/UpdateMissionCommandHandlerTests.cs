@@ -28,7 +28,7 @@ public sealed class UpdateMissionCommandHandlerTests
 
         Assert.Equal("mission_not_found", exception.Code);
         Assert.Equal(UmbralFailureCategory.NotFound, exception.Category);
-        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Equal(0, store.PersistCallCount);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public sealed class UpdateMissionCommandHandlerTests
         Assert.Equal("Updated Mission", response.Name);
         Assert.Equal("Updated.", response.Description);
         Assert.Equal(95, response.MaximumDurationMinutes);
-        Assert.Equal(1, store.SaveChangesCallCount);
+        Assert.Equal(1, store.PersistCallCount);
     }
 
     [Fact]
@@ -60,6 +60,6 @@ public sealed class UpdateMissionCommandHandlerTests
             handler.Handle(command, CancellationToken.None));
 
         Assert.Equal("mission_name_duplicate", exception.Code);
-        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Equal(0, store.PersistCallCount);
     }
 }

@@ -21,7 +21,7 @@ public sealed class ActivateMissionCommandHandler(IMissionStore missionStore)
         }
 
         mission.Activate();
-        await missionStore.SaveChangesAsync(cancellationToken);
+        await missionStore.UpdateAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }
