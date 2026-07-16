@@ -170,15 +170,6 @@ export function ReuseItemModal({
       (mission) => mission.id !== currentMissionId,
     );
 
-    if (sources.length === 0) {
-      setEntries([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
     void Promise.allSettled(
       sources.map((mission) => fetchMissionDetail(mission.id)),
     ).then((results) => {

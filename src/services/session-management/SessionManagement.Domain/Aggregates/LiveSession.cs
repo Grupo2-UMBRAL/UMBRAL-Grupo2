@@ -38,7 +38,7 @@ public sealed class LiveSession : AggregateRoot
 
     public string Name { get; private set; } = string.Empty;
 
-    public LiveSessionState State { get; private set; }
+    public LiveSessionState State { get; private set; } = LiveSessionState.Scheduled;
 
     public DateTimeOffset? ScheduledStartAtUtc { get; private set; }
 

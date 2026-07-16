@@ -2,7 +2,6 @@ using UserManagement.Application.Abstractions;
 using MediatR;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common.Dtos;
-using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Commands.DeactivateOperator;
 
