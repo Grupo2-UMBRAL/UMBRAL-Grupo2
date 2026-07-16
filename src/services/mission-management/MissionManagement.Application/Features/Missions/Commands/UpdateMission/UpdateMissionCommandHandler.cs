@@ -50,7 +50,6 @@ public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
         }
 
         await missionStore.ReplaceItemsAsync(updatedView, cancellationToken);
-        await missionStore.SaveChangesAsync(cancellationToken);
 
         return updatedView.ToResponse();
     }

@@ -19,7 +19,7 @@ public interface IMissionStore
     /// <summary>Stages a new mission (scalar row + its path-item tree) for insertion.</summary>
     void Add(Mission mission);
 
-    /// <summary>Replaces the stored path-item tree of a mission with the one carried by <paramref name="mission"/>.</summary>
+    /// <summary>Atomically replaces and persists the stored path-item tree of a mission with the one carried by <paramref name="mission"/>.</summary>
     Task ReplaceItemsAsync(Mission mission, CancellationToken cancellationToken);
 
     /// <summary>True when another mission already uses <paramref name="name"/> (excluding <paramref name="excludeMissionId"/>).</summary>

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Abstractions;
@@ -20,4 +21,7 @@ public interface IMissionManagementDbContext
     DbSet<Hint> Hints { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Opens a transaction so a multi-flush write stays atomic.</summary>
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 }

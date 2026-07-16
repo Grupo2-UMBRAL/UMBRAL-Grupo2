@@ -47,8 +47,17 @@ internal sealed class MissionStore(IMissionManagementDbContext dbContext) : IMis
     {
         ArgumentNullException.ThrowIfNull(mission);
 
+        await using var transaction = await dbContext.BeginTransactionAsync(cancellationToken);
+
+        // The removed rows must reach the database before the replacements are staged: a request that
+        // reuses the stored ids would otherwise collide with the still-tracked Deleted entries.
         await MissionLoader.DeleteItemsAsync(dbContext, mission.Id, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
         MissionLoader.AddItems(dbContext, mission);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task<bool> NameExistsAsync(string name, Guid? excludeMissionId, CancellationToken cancellationToken)
