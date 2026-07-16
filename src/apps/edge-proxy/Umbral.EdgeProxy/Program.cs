@@ -9,7 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 

@@ -5,7 +5,7 @@ using ScoringMonitoring.Infrastructure;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 builder.Services.AddUmbralApiDefaults(
     builder.Configuration,

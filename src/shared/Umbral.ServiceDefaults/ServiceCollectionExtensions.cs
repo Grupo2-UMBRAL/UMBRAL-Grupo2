@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Umbral.ServiceDefaults;
@@ -85,19 +85,36 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddUmbralTelemetry(this IServiceCollection services)
+    /// <summary>
+    /// Wires OTLP logs, metrics and traces for one service.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="serviceName">
+    /// Value for the <c>service.name</c> resource attribute. Pass <c>builder.Environment.ApplicationName</c>
+    /// so it cannot drift from the assembly it describes.
+    /// </param>
+    /// <remarks>
+    /// Naming is not cosmetic. Every container runs <c>dotnet &lt;Service&gt;.Api.dll</c>, so the process
+    /// name is "dotnet" in all of them; with no explicit service.name the SDK falls back to
+    /// <c>unknown_service:dotnet</c> and all five services collapse into a single indistinguishable
+    /// resource in the dashboard, which makes their telemetry useless for debugging.
+    /// All three signals go through the same builder so they share one <c>ConfigureResource</c>. Logs
+    /// registered the old way (<c>ILoggingBuilder.AddOpenTelemetry</c>) do not inherit that resource and
+    /// keep reporting <c>unknown_service:dotnet</c> while traces and metrics report the real name.
+    /// </remarks>
+    public static IServiceCollection AddUmbralTelemetry(this IServiceCollection services, string serviceName)
     {
-        services.AddLogging(logging =>
-        {
-            logging.AddOpenTelemetry(options =>
-            {
-                options.IncludeFormattedMessage = true;
-                options.IncludeScopes = true;
-                options.AddOtlpExporter();
-            });
-        });
+        ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
 
         services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName))
+            .WithLogging(
+                logging => logging.AddOtlpExporter(),
+                options =>
+                {
+                    options.IncludeFormattedMessage = true;
+                    options.IncludeScopes = true;
+                })
             .WithMetrics(metrics =>
             {
                 metrics.AddAspNetCoreInstrumentation()

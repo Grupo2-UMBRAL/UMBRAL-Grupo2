@@ -5,7 +5,7 @@ using UserManagement.Application;
 using UserManagement.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 
 builder.Services.AddControllers();

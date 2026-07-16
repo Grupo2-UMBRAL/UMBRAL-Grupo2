@@ -8,7 +8,7 @@ using SessionManagement.Infrastructure.Realtime;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 builder.Services.AddSignalR();
 builder.Services.AddUmbralApiDefaults(
