@@ -27,6 +27,8 @@ builder.Services.AddUmbralApiDefaults(
             }
         };
     });
+builder.Services.AddOpenApi(options =>
+    options.AddUmbralDefaults("Scoring and Monitoring API", requiresBearerAuthentication: true));
 builder.Services.AddSignalR();
 builder.Services.AddScoringMonitoringApplication();
 builder.Services.AddScoringMonitoringInfrastructure(builder.Configuration);
@@ -47,6 +49,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     Predicate = static registration => !registration.Tags.Contains("masstransit"),
 });
 app.MapControllers();
+app.MapUmbralOpenApi();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {

@@ -10,6 +10,8 @@ builder.Services.AddUmbralTelemetry();
 
 builder.Services.AddControllers();
 builder.Services.AddUmbralApiDefaults(builder.Configuration);
+builder.Services.AddOpenApi(options =>
+    options.AddUmbralDefaults("User Management API", requiresBearerAuthentication: true));
 
 builder.Services.AddUserManagementApplication();
 builder.Services.AddUserManagementInfrastructure(builder.Configuration);
@@ -38,5 +40,6 @@ app.UseRateLimiter();
 
 app.MapHealthChecks("/health");
 app.MapControllers();
+app.MapUmbralOpenApi();
 
 app.Run();

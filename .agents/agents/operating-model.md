@@ -40,7 +40,7 @@ Leer en este orden:
 
 - El codigo compila o, si el repo aun no compila end-to-end, el cambio no introduce una nueva rotura conocida en el alcance tocado.
 - Los tests del alcance tocado pasan, o se deja explicitado por que aun no existen o por que no pudieron ejecutarse.
-- El codigo backend supero la prueba de mutacion antes de ser considerado "done". (El frontend se valida via Playwright).
+- El codigo backend supero la prueba de mutacion antes de ser considerado "done". La auditoria se ejecuta localmente con Stryker.NET, por proyecto y de forma gradual; no se asume como job de GitHub Actions hasta acordar una linea base y un umbral. (El frontend se valida via Playwright).
 - No hay credenciales, secretos ni datos sensibles en codigo, commits ni artefactos de prueba.
 - Los nombres reflejan el lenguaje ubicuo del bounded context afectado.
 - La documentacion afectada queda actualizada cuando cambia una decision, contrato o flujo operativo.
@@ -65,7 +65,7 @@ Leer en este orden:
 - Cuando una regla sea repetible como procedimiento, apoyarse en skills; cuando sea una decision dificil de revertir, apoyarse en ADRs.
 - Cuando haya que elegir o ejecutar validacion local, usar `.agents/skills/local-validation/` para preferir los scripts reproducibles del repo sobre comandos armados ad hoc.
 - Durante el loop de implementacion, correr la validacion mas angosta que pruebe el area tocada; reservar la validacion completa para un solo gate final antes de merge o cierre tecnico.
-- Para el desarrollo backend, operar con TDD estricto (Red-Green-Refactor) un test a la vez. No escribir codigo de produccion sin un test en rojo. Validar la calidad final con pruebas de mutacion.
+- Para el desarrollo backend, operar con TDD estricto (Red-Green-Refactor) un test a la vez. No escribir codigo de produccion sin un test en rojo. Validar la calidad final con una auditoria de mutacion local y acotada al proyecto afectado; consultar `docs/architecture/validation-pipeline.md` para el orden de adopcion y los artefactos.
 - Los agentes ejecutores no deben mezclar cambios no relacionados en un mismo workspace ni en una misma branch.
 - En reviews, priorizar findings sobre testabilidad, fronteras de IO, manejo de errores, coherencia con lenguaje ubicuo y tamano del cambio.
 - Si el trabajo entra en loops de `docker compose`, preferir `ps`, `config`, logs acotados por servicio y archivos en `.worktrees/_runtime/` sobre streams largos en chat; para eso usar `.agents/skills/docker-compose-context-hygiene/`.

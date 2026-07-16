@@ -191,7 +191,8 @@ internal sealed class ScoringApiFactory : WebApplicationFactory<Program>
                 ["Auth:Audience"] = "umbral-scoring-monitoring-api",
                 ["RabbitMQ:Host"] = "localhost",
                 ["Messaging:UseRabbitMq"] = "false",
-                ["Persistence:ApplyMigrationsOnStartup"] = "false"
+                ["Persistence:ApplyMigrationsOnStartup"] = "false",
+                ["Logging:EventLog:LogLevel:Default"] = "None"
             });
         });
 

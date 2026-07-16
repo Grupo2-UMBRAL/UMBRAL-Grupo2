@@ -84,6 +84,17 @@ app.MapGet("/edge-info", () => Results.Ok(new
 }));
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "edge-proxy" }));
+
+// One reference page for the four services, served from the edge so the deployed demo has a single
+// URL. The edge publishes no document of its own: its only endpoints are "/", "/edge-info" and
+// "/health", and the proxied routes never reach ApiExplorer. Each document is fetched back through
+// this same host, which keeps it same-origin and sidesteps CORS.
+app.MapUmbralApiReferenceHub(
+    ("user-management", "User Management"),
+    ("mission-management", "Mission Management"),
+    ("session-management", "Session Management"),
+    ("scoring-monitoring", "Scoring & Monitoring"));
+
 app.MapReverseProxy();
 
 app.Run();
@@ -136,12 +147,9 @@ internal static class EdgeHubPage
 <main>
 """);
 
-        Section(sb, "APIs de servicio (Swagger vía edge)", new[]
+        Section(sb, "APIs de servicio", new[]
         {
-            Link("/user-management/swagger", "User Management", "Identidad / operadores / participantes", true),
-            Link("/mission-management/swagger", "Mission Management", "Autoría de misiones y etapas", true),
-            Link("/session-management/swagger", "Session Management", "Sesión en vivo y evidencias", true),
-            Link("/scoring-monitoring/swagger", "Scoring & Monitoring", "Puntaje, ranking y auditoría", true),
+            Link("/swagger", "Swagger · las 4 APIs", "Referencia unificada; elegí el servicio en el selector", true),
         });
 
         Section(sb, "Salud", new[]

@@ -1,7 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!-- Required by the OpenApi XML source generator; without it the generated interceptor fails
+         to compile with CS9137. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MediatR" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- Direct reference on purpose: the package reaches us transitively through ServiceDefaults,
+         but its build targets do not, and those are what feed the XML files to the generator. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SessionManagement.Application\SessionManagement.Application.csproj" />

@@ -4,6 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseArtifactsOutput>true</UseArtifactsOutput>
+    <!-- Feeds the OpenAPI documents: Microsoft.AspNetCore.OpenApi's source generator turns XML doc
+         comments into schema descriptions, and it only reads projects that emit this file. CS1591
+         (missing comment on a public member) stays off: we document API contracts, not everything. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>
 
