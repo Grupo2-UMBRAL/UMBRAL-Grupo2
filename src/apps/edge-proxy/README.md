@@ -1,31 +1,48 @@
 # Edge Proxy
 
-`edge-proxy` is the preferred public entry for local web and mobile clients.
+`edge-proxy` is the preferred public entry for web and mobile clients, and the only container app
+with public ingress in the Azure deployment.
 
 ## Responsibilities
 
-- expose a single local base URL for client traffic
+- expose a single base URL for client traffic
 - route requests to bounded-context services and `Keycloak`
 - keep cross-origin setup at the edge for browser clients
-- serve a local **developer hub** at `/` that centralizes links to every runtime resource
+- serve the unified API reference at `/swagger`, the directory of the stack
 - serve the backend coverage HTML report at `/coverage` when it has been generated
 
-## Developer hub (local only)
+## API reference (`/swagger`)
 
-Opening `http://localhost:7500/` renders an HTML hub linking to:
+`/` redirects to `/swagger`, one Scalar page listing the four service documents. Each document is
+fetched back through this same host, which keeps it same-origin. This is the entry point in both
+environments: the code path does not branch on `ASPNETCORE_ENVIRONMENT`, so the deployed demo
+behaves like the local stack.
 
-- per-service Swagger and health (`/mission-management/swagger`, `/*/health`, ...)
-- Keycloak admin (`/auth/admin/`) and OIDC discovery
-- RabbitMQ management UI (`Hub:RabbitMqManagementUrl`, default `http://localhost:16672`)
-- Aspire dashboard (`Hub:AspireDashboardUrl`, default `http://localhost:19888`)
-- the coverage report (`/coverage/`) — served via static files from `Hub:CoverageReportPath`
+## Forwarded headers
 
-The coverage report is produced on the host by `scripts/Publish-BackendCoverageReports.ps1`
-into `temp/validation/backend-coverage-report`, which `docker-compose.dev.yml` mounts read-only
-into the edge container at `/coverage-report`. The card shows as disabled until the report exists.
+The edge calls `UseForwardedHeaders` before anything reads the request scheme. The Azure Container
+Apps ingress terminates TLS and forwards plain http, so without it the edge would see
+`Request.Scheme == "http"` and YARP's `"X-Forwarded": "Set"` transform would overwrite the
+ingress's `X-Forwarded-Proto: https`. Services build their OpenAPI `servers[]` from that header, so
+the deployed reference would advertise `http://` URLs and the browser would block them as mixed
+content.
+
+## Coverage report (local only)
+
+`scripts/Publish-BackendCoverageReports.ps1` produces the report on the host into
+`temp/validation/backend-coverage-report`, which `docker-compose.dev.yml` mounts read-only into the
+edge container at `/coverage-report`. This needs no environment check: `Hub:CoverageReportPath` is
+only set by compose, so a deployed edge falls back to the empty default and serves nothing.
+
 Machine-readable edge metadata stays available at `/edge-info`.
 
-These conveniences are for the local development/delivery environment only.
+## Observability
+
+Locally, services export OTLP to the Aspire dashboard (`http://localhost:19888`). It is **not**
+deployed and must not be routed through the edge: it runs with
+`DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS`, and the edge is the only public door. In Azure,
+Container Apps ships container logs to the Log Analytics workspace declared in
+`deployment/azure/main.bicep`.
 
 ## Non-goals
 

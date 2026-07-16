@@ -226,14 +226,12 @@ services:
       ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080/
       ReverseProxy__Clusters__mobile__Destinations__primary__Address: http://mobile:19006/
       ReverseProxy__Clusters__web__Destinations__primary__Address: http://web:3000/
-      Hub__RabbitMqManagementUrl: http://localhost:${RABBITMQ_MANAGEMENT_PORT}
-      Hub__AspireDashboardUrl: http://localhost:19888
-      Hub__WebConsoleUrl: http://localhost:${WEB_PORT}
       Hub__CoverageReportPath: /coverage-report
     ports:
       - "${EDGE_PROXY_PORT}:8080"
     volumes:
-      # Local dev hub: expose the coverlet/ReportGenerator HTML report through the edge at /coverage.
+      # Expose the coverlet/ReportGenerator HTML report through the edge at /coverage. Mounting it
+      # is what enables the route: a deployed edge sets no Hub__CoverageReportPath and serves none.
       # Produced on the host by scripts/Publish-BackendCoverageReports.ps1 (empty until first run).
       - ./temp/validation/backend-coverage-report:/coverage-report:ro
     depends_on:

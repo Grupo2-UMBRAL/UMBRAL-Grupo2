@@ -35,6 +35,29 @@ así que su documento solo contendría ruido. El edge sirve **una** página de r
 (`MapUmbralApiReferenceHub`) que lista los cuatro documentos, cada uno pedido **a través del propio edge**
 — lo que los mantiene same-origin y evita CORS. La demo tiene una URL, no cuatro.
 
+### `/swagger` es el directorio del stack, y el edge no bifurca por entorno
+
+`/` redirige a `/swagger`. Antes servía un "developer hub" HTML con links a cada recurso del stack, apagado
+en Producción vía `IsProduction()`. Se eliminó, por dos razones que se refuerzan:
+
+- **Nunca funcionó desplegado.** Sus links estaban hardcodeados a `localhost:16672`, `localhost:19888` y
+  `localhost:3000`: al visitante le renderizaba links a *su propia* máquina. El gate tapaba una página rota.
+- **El gate contradecía el objetivo del despliegue.** La demo corre con `ASPNETCORE_ENVIRONMENT=Production`
+  justamente para parecerse a producción; ramificar por ese nombre hacía que dev y demo ejecutaran caminos
+  distintos, que es lo contrario de lo buscado.
+
+Con el hub fuera, **`IsProduction()` desaparece de todo `src/`**: dev y demo ejecutan el mismo código. La
+demo no es producción — es un artefacto **inspeccionable**, y sus afordancias (referencia navegable, una
+URL pública) valen en los dos entornos.
+
+El reporte de coverage (`/coverage`) no necesita gate: `Hub:CoverageReportPath` solo lo setea
+`docker-compose.dev.yml`, así que un edge desplegado cae al default vacío y no sirve nada. La condición ya
+era por existencia, no por entorno.
+
+El dashboard de Aspire **no se despliega ni se rutea por el edge**: corre con
+`DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS` y el edge es la única puerta pública. En Azure, el logging
+centralizado lo da el workspace de Log Analytics que ya declara `deployment/azure/main.bicep`.
+
 ### `servers[]` se deriva de los `X-Forwarded-*`
 
 El transformer de `AddUmbralDefaults` reescribe `servers[]` cuando llega `X-Forwarded-Prefix`; si no llega,
@@ -47,6 +70,26 @@ el server (`http://host/user-management` + `/api/operators`). Duplicarlo en ambo
 El edge setea `X-Forwarded-Prefix` **explícitamente por ruta**, junto a `{"X-Forwarded": "Set", "Prefix": "Off"}`.
 Ese `"Prefix": "Off"` no es opcional: el transform `X-Forwarded` que YARP aplica por defecto toma el valor
 del PathBase y, al no encontrarlo, **borra el header como medida anti-spoofing**, pisando el nuestro.
+
+### El edge llama `UseForwardedHeaders` antes de leer el scheme
+
+El ingress de Azure Container Apps **termina TLS y habla http** con el contenedor. Sin
+`UseForwardedHeaders`, el edge ve `Request.Scheme == "http"`, y la acción `Set` del transform `X-Forwarded`
+**pisa** con ese valor el `X-Forwarded-Proto: https` que mandó el ingress. Como los services derivan
+`servers[]` de ese header, la referencia desplegada anunciaría `http://<fqdn>/...` sobre una página `https`
+y el navegador la bloquearía por mixed content: el mismo bug que este ADR resuelve, reaparecido en la nube.
+
+El allowlist de proxies por defecto es loopback, y el ingress no lo es, así que hay que limpiarlo
+(`KnownIPNetworks` / `KnownProxies`) o el header se ignora.
+
+**El stack local no puede detectar esto**: es http de punta a punta, así que ahí `scheme == "http"` es la
+respuesta *correcta* y todo pasa en verde. Se verifica simulando el ingress:
+
+```bash
+curl -H "X-Forwarded-Proto: https" -H "X-Forwarded-Host: ejemplo.azurecontainerapps.io" \
+     http://localhost:7500/user-management/openapi/v1.json | grep '"url"'
+# -> "url": "https://ejemplo.azurecontainerapps.io/user-management"
+```
 
 ### `AddOpenApi` se llama desde cada `.Api`, no desde ServiceDefaults
 
@@ -94,6 +137,13 @@ Coste / notas:
 
 - El edge nunca publica documento propio ni duplica las rutas de los services.
 - El prefijo viaja en `servers[]`, nunca en los `paths`.
+- **El edge no ramifica por `ASPNETCORE_ENVIRONMENT`.** Lo que deba existir solo en local se auto-gatea por
+  presencia del recurso o de su config (como `/coverage`), no por el nombre del entorno. Un `IsProduction()`
+  nuevo en el edge significa que dev y demo dejaron de ejecutar el mismo código.
+- `UseForwardedHeaders` va antes de cualquier middleware que lea el scheme. Si alguien lo mueve después de
+  `MapReverseProxy` o lo borra, el swagger desplegado vuelve a romperse por mixed content y el CI local
+  seguirá en verde.
+- Nada que corra sin autenticar se rutea por el edge: es la única puerta pública del despliegue.
 - Toda ruta de API nueva en el edge lleva los dos transforms: `X-Forwarded`/`Prefix: Off` y el
   `RequestHeader` con su prefijo. Los hubs SignalR no los llevan: no tienen documento.
 - `AddOpenApi` se llama desde el `.Api`. Si alguien lo mueve a ServiceDefaults "para no repetir", las
