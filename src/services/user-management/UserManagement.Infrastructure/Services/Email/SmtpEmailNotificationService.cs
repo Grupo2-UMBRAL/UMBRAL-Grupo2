@@ -23,7 +23,7 @@ public sealed class SmtpEmailNotificationService(
             headline: "Tu cuenta de operador ha sido creada",
             bodyParagraph: "Un administrador te ha dado acceso a la plataforma <strong style=\"color:#e8a84c;\">UMBRAL</strong>. A continuación encontrarás tus credenciales para iniciar sesión:",
             credentials: new[] { ("Usuario", username), ("Contraseña", rawPassword) },
-            footerNote: "Te recomendamos cambiar tu contraseña después del primer inicio de sesión.");
+            footerNote: "Por favor, guarda estas credenciales en un lugar seguro.");
 
         await SendAsync(email, subject, htmlBody, cancellationToken);
     }
