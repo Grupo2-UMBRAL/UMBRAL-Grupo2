@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -86,7 +87,7 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Wires OTLP logs, metrics and traces for one service.
+    /// Wires OTLP logs, metrics and traces for one service, and formats its console logs as JSON.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="serviceName">
@@ -101,10 +102,16 @@ public static class ServiceCollectionExtensions
     /// All three signals go through the same builder so they share one <c>ConfigureResource</c>. Logs
     /// registered the old way (<c>ILoggingBuilder.AddOpenTelemetry</c>) do not inherit that resource and
     /// keep reporting <c>unknown_service:dotnet</c> while traces and metrics report the real name.
+    /// The console stays the deployed log path: Container Apps ships stdout to Log Analytics. It is
+    /// formatted as JSON because the default formatter writes a multi-line payload for multi-line
+    /// messages (EF Core SQL above all), and the runtime captures stdout one line at a time, so a
+    /// single entry lands as several unrelated records that no query can stitch back together.
     /// </remarks>
     public static IServiceCollection AddUmbralTelemetry(this IServiceCollection services, string serviceName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+
+        services.AddLogging(logging => logging.AddJsonConsole(options => options.IncludeScopes = true));
 
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(serviceName))
