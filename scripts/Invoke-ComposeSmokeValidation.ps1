@@ -118,6 +118,7 @@ function Get-HttpStatusCode {
                 --silent `
                 --show-error `
                 --location `
+                --noproxy "*" `
                 --max-time $TimeoutSeconds `
                 --output $temporaryOutputFile `
                 --write-out "%{http_code}" `
@@ -135,6 +136,7 @@ function Get-HttpStatusCode {
     }
 
     $handler = [System.Net.Http.HttpClientHandler]::new()
+    $handler.UseProxy = $false
     $client = [System.Net.Http.HttpClient]::new($handler)
     $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
 
@@ -278,12 +280,12 @@ try {
     Wait-ContainerHealthy -ContainerName "umbral-user-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
-    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health" -ContainerName "umbral-edge-proxy"
-    Wait-HttpOk -Uri "http://localhost:$userManagementPort/health" -Name "user-management health" -ContainerName "umbral-user-management-service"
-    Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health" -ContainerName "umbral-mission-management-service"
-    Wait-HttpOk -Uri "http://localhost:$SessionManagementPort/health" -Name "session-management health" -ContainerName "umbral-session-management-service"
-    Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-monitoring health" -ContainerName "umbral-scoring-monitoring-service"
-    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery" -ContainerName "umbral-keycloak"
+    Wait-HttpOk -Uri "http://127.0.0.1:$edgeProxyPort/health" -Name "edge-proxy health" -ContainerName "umbral-edge-proxy"
+    Wait-HttpOk -Uri "http://127.0.0.1:$userManagementPort/health" -Name "user-management health" -ContainerName "umbral-user-management-service"
+    Wait-HttpOk -Uri "http://127.0.0.1:$missionManagementPort/health" -Name "mission-management health" -ContainerName "umbral-mission-management-service"
+    Wait-HttpOk -Uri "http://127.0.0.1:$SessionManagementPort/health" -Name "session-management health" -ContainerName "umbral-session-management-service"
+    Wait-HttpOk -Uri "http://127.0.0.1:$scoringAuditPort/health" -Name "scoring-monitoring health" -ContainerName "umbral-scoring-monitoring-service"
+    Wait-HttpOk -Uri "http://127.0.0.1:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery" -ContainerName "umbral-keycloak"
 
     Invoke-ComposeCommand -Files $composeWithUtils -Arguments @("run", "--rm", "auth-smoke-tests") | Out-File -FilePath $authSmokeLog -Encoding utf8
 
