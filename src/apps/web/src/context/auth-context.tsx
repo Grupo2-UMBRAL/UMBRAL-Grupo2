@@ -61,16 +61,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Keycloak initialization failed:", err);
         setLoading(false);
       });
+  }, []);
 
-    // Handle token refresh automatically
+  // Kept apart from the init effect on purpose: that one is guarded by a ref and
+  // returns early on a StrictMode remount, so an interval created there would be
+  // cleared by the first cleanup and never recreated.
+  useEffect(() => {
+    if (!keycloak) return;
+
     const interval = setInterval(() => {
-      if (kc.token) {
-        kc.updateToken(70)
+      if (keycloak.token) {
+        keycloak.updateToken(70)
           .then((refreshed) => {
-            if (refreshed && kc.token) {
-              setToken(kc.token);
-              setRoles(extractUmbralRoles(kc.token));
-              setUser(readTokenIdentity(kc.token));
+            if (refreshed && keycloak.token) {
+              setToken(keycloak.token);
+              setRoles(extractUmbralRoles(keycloak.token));
+              setUser(readTokenIdentity(keycloak.token));
             }
           })
           .catch((err) => {
@@ -80,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [keycloak]);
 
   const login = async () => {
     if (keycloak) {
