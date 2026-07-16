@@ -159,34 +159,111 @@ function normalizeOperatorUsers(payload: unknown) {
   return singleRecord ? [singleRecord] : [];
 }
 
+type ErrorTranslationRule = {
+  match: (text: string) => boolean;
+  message: string;
+};
+
+const ERROR_TRANSLATIONS: ErrorTranslationRule[] = [
+  {
+    match: (text) => text.includes("username only admits") || text.includes("username cannot contain spaces"),
+    message: "El nombre de usuario solo admite letras, números, puntos, guiones bajos o guiones."
+  },
+  {
+    match: (text) => text.includes("already exists"),
+    message: "El usuario ya existe o el nombre de usuario/correo ya está en uso."
+  },
+  {
+    match: (text) => text.includes("invalid email"),
+    message: "El formato del correo electrónico no es válido."
+  },
+  {
+    match: (text) => text.includes("password") && text.includes("at least"),
+    message: "La contraseña es demasiado corta o no cumple con los requisitos mínimos."
+  },
+  {
+    match: (text) => text.includes("password") && text.includes("uppercase"),
+    message: "La contraseña debe contener al menos una letra mayúscula."
+  },
+  {
+    match: (text) => text.includes("password") && text.includes("non-alphanumeric"),
+    message: "La contraseña debe contener al menos un carácter especial."
+  },
+  {
+    match: (text) => text === "bad request" || text === "400 bad request",
+    message: "Solicitud incorrecta. Verifique que los datos ingresados sean válidos."
+  },
+  {
+    match: (text) => text === "unauthorized" || text === "401 unauthorized",
+    message: "No autorizado. Su sesión podría haber expirado."
+  },
+  {
+    match: (text) => text === "forbidden" || text === "403 forbidden",
+    message: "No tiene permisos suficientes para realizar esta acción."
+  },
+  {
+    match: (text) => text === "not found" || text === "404 not found",
+    message: "El recurso solicitado no fue encontrado."
+  },
+  {
+    match: (text) => text === "conflict" || text === "409 conflict",
+    message: "Hay un conflicto con los datos proporcionados."
+  },
+  {
+    match: (text) => text === "internal server error" || text === "500 internal server error",
+    message: "Error interno del servidor. Por favor, intente nuevamente más tarde."
+  }
+];
+
+function translateError(errorText: string, status: number): string {
+  const text = errorText.toLowerCase().trim();
+  
+  const matchedRule = ERROR_TRANSLATIONS.find(rule => rule.match(text));
+  if (matchedRule) {
+    return matchedRule.message;
+  }
+
+  let cleanError = errorText;
+  if (cleanError.startsWith(`${status} `)) {
+    cleanError = cleanError.substring(status.toString().length + 1).trim();
+  }
+  if (cleanError.toLowerCase().startsWith("bad request: ")) {
+    cleanError = cleanError.substring("bad request: ".length).trim();
+  }
+
+  if (!cleanError) {
+    return `Ocurrió un error inesperado (Código: ${status}).`;
+  }
+
+  return cleanError;
+}
+
 async function readFailureDetail(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
+  let errorMessage = `${response.status} ${response.statusText}`;
 
   try {
     if (contentType.includes("application/json")) {
       const payload = await response.json();
 
       if (typeof payload === "string" && payload.trim()) {
-        return payload;
-      }
-
-      if (isRecord(payload)) {
-        const detail =
+        errorMessage = payload.trim();
+      } else if (isRecord(payload)) {
+        errorMessage =
           readFirstString(payload, ["detail", "title", "message", "error"]) ??
-          `${response.status} ${response.statusText}`;
-        return detail;
+          errorMessage;
       }
-    }
-
-    const text = await response.text();
-    if (text.trim()) {
-      return text.trim();
+    } else {
+      const text = await response.text();
+      if (text.trim()) {
+        errorMessage = text.trim();
+      }
     }
   } catch {
-    return `${response.status} ${response.statusText}`;
+    // Ignorar errores de parseo y mantener el mensaje por defecto
   }
 
-  return `${response.status} ${response.statusText}`;
+  return translateError(errorMessage, response.status);
 }
 
 function formatTimestamp(value: string | null) {

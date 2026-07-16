@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import Keycloak from "keycloak-js";
 import { getClientConfig } from "@/lib/config";
 import { extractUmbralRoles, readTokenIdentity } from "@/lib/jwt";
@@ -24,8 +24,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [roles, setRoles] = useState<UmbralRole[]>([]);
   const [user, setUser] = useState<{ username: string; displayName: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const isInitialized = useRef(false);
 
   useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
     const config = getClientConfig();
     
     // Initialize Keycloak instance
@@ -39,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Without check-sso the tokens, which live only in memory, are gone after a
       // page refresh and the user looks logged out despite a live Keycloak session.
       onLoad: "check-sso",
+      silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
       pkceMethod: "S256",
       checkLoginIframe: false,
     })

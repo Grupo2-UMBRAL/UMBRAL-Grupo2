@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
 using SessionManagement.Domain.Abstractions;
 using Umbral.ServiceDefaults;
 
@@ -66,7 +65,6 @@ public sealed class LiveSession : AggregateRoot
 
     public IReadOnlyList<LiveSessionStage> SessionStageFlow { get; private set; } = Array.Empty<LiveSessionStage>();
 
-    [NotMapped]
     public EnrollmentWindow EnrollmentWindow => new(EnrollmentWindowOpenedAtUtc, EnrollmentWindowClosedAtUtc);
 
     public static LiveSession Create(
