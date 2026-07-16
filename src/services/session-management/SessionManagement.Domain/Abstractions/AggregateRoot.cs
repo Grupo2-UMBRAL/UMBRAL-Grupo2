@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace SessionManagement.Domain.Abstractions;
 
 /// <summary>
@@ -11,7 +9,6 @@ public abstract class AggregateRoot
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 
-    [NotMapped]
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents;
 
     protected void RaiseDomainEvent(IDomainEvent domainEvent)
