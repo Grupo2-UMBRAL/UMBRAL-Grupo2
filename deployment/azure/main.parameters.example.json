@@ -5,6 +5,15 @@
     "location": {
       "value": "eastus"
     },
+    "postgresHost": {
+      "value": "REPLACE_WITH_NEON_HOST"
+    },
+    "postgresDatabase": {
+      "value": "umbral"
+    },
+    "postgresUser": {
+      "value": "REPLACE_WITH_NEON_USER"
+    },
     "resourcePrefix": {
       "value": "umbral-demo"
     },

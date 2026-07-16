@@ -9,7 +9,8 @@ This directory contains the deployment contract for the academic demo. It is sep
 - Web is served behind the Edge Proxy fallback route.
 - Keycloak is internal but is presented to browsers at `${DEMO_PUBLIC_BASE_URL}/auth`.
 - APIs and RabbitMQ have no public ingress.
-- Neon hosts PostgreSQL externally over TLS; RabbitMQ uses a persistent volume for the duration of the demo.
+- Neon hosts PostgreSQL externally over TLS; RabbitMQ state is ephemeral, and the services
+  redeclare their exchanges and queues on connect.
 - The mobile application remains local and points at `DEMO_PUBLIC_BASE_URL`.
 
 ## Files
@@ -27,8 +28,17 @@ locally reachable HTTPS hostname for `DEMO_PUBLIC_BASE_URL`. A plain `localhost`
 intentionally not part of the demo template because it would not exercise the production
 issuer and redirect contract.
 
-The rehearsal command will be documented once the Keycloak demo realm and production images
-are in place.
+From the repository root, run the rehearsal with:
+
+```powershell
+docker compose --env-file deployment/.env.demo -f deployment/docker-compose.demo.yml up --build
+```
+
+Stop it and remove the local rehearsal volumes with:
+
+```powershell
+docker compose --env-file deployment/.env.demo -f deployment/docker-compose.demo.yml down --volumes
+```
 
 ## Azure deployment
 
