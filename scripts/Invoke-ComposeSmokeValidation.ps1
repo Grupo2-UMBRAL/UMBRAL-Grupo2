@@ -73,11 +73,19 @@ function Wait-HttpOk {
     param(
         [string]$Uri,
         [string]$Name,
+        [string]$ContainerName,
         [int]$TimeoutSeconds = 180
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
+        if (-not [string]::IsNullOrWhiteSpace($ContainerName)) {
+            $containerState = (& docker inspect --format "{{.State.Status}}" $ContainerName 2>$null).Trim()
+            if ($containerState -in @("exited", "dead")) {
+                throw "$Name container entered '$containerState' state while waiting for HTTP 200: $ContainerName"
+            }
+        }
+
         try {
             if ((Get-HttpStatusCode -Uri $Uri -TimeoutSeconds 15) -eq 200) {
                 return
@@ -230,6 +238,7 @@ $realm = $environmentValues["KEYCLOAK_REALM"]
 $composeConfigLog = Join-Path $artifactRoot "compose-config.txt"
 $composeUpLog = Join-Path $artifactRoot "compose-up.txt"
 $composePsLog = Join-Path $artifactRoot "compose-ps.txt"
+$composeLogsLog = Join-Path $artifactRoot "compose-logs.txt"
 $authSmokeLog = Join-Path $artifactRoot "auth-smoke-tests.txt"
 $reservedContainerNames = @(
     "umbral-postgres",
@@ -256,7 +265,7 @@ $requiredHostPorts = @(
 try {
     Assert-ContainerNamesAvailable -ContainerNames $reservedContainerNames
     Assert-HostPortsAvailable -Ports $requiredHostPorts
-    Invoke-ComposeCommand -Arguments @("config") | Out-File -FilePath $composeConfigLog -Encoding utf8
+    Invoke-ComposeCommand -Arguments @("config", "--no-interpolate") | Out-File -FilePath $composeConfigLog -Encoding utf8
     Invoke-ComposeCommand -Arguments @("up", "-d", "--build", "postgres", "rabbitmq", "keycloak", "mission-management-service", "session-management-service", "scoring-monitoring-service", "user-management-service", "edge-proxy") | Out-File -FilePath $composeUpLog -Encoding utf8
     Invoke-ComposeCommand -Arguments @("ps") | Out-File -FilePath $composePsLog -Encoding utf8
 
@@ -269,12 +278,12 @@ try {
     Wait-ContainerHealthy -ContainerName "umbral-user-management-service"
     Wait-ContainerHealthy -ContainerName "umbral-edge-proxy"
 
-    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health"
-    Wait-HttpOk -Uri "http://localhost:$userManagementPort/health" -Name "user-management health"
-    Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health"
-    Wait-HttpOk -Uri "http://localhost:$SessionManagementPort/health" -Name "session-management health"
-    Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-monitoring health"
-    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery"
+    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/health" -Name "edge-proxy health" -ContainerName "umbral-edge-proxy"
+    Wait-HttpOk -Uri "http://localhost:$userManagementPort/health" -Name "user-management health" -ContainerName "umbral-user-management-service"
+    Wait-HttpOk -Uri "http://localhost:$missionManagementPort/health" -Name "mission-management health" -ContainerName "umbral-mission-management-service"
+    Wait-HttpOk -Uri "http://localhost:$SessionManagementPort/health" -Name "session-management health" -ContainerName "umbral-session-management-service"
+    Wait-HttpOk -Uri "http://localhost:$scoringAuditPort/health" -Name "scoring-monitoring health" -ContainerName "umbral-scoring-monitoring-service"
+    Wait-HttpOk -Uri "http://localhost:$edgeProxyPort/auth/realms/$realm/.well-known/openid-configuration" -Name "Keycloak discovery" -ContainerName "umbral-keycloak"
 
     Invoke-ComposeCommand -Files $composeWithUtils -Arguments @("run", "--rm", "auth-smoke-tests") | Out-File -FilePath $authSmokeLog -Encoding utf8
 
@@ -283,6 +292,12 @@ try {
 catch {
     try {
         Invoke-ComposeCommand -Arguments @("ps") | Out-File -FilePath $composePsLog -Encoding utf8
+    }
+    catch {
+    }
+
+    try {
+        Invoke-ComposeCommand -Arguments @("logs", "--no-color") | Out-File -FilePath $composeLogsLog -Encoding utf8
     }
     catch {
     }

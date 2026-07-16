@@ -60,6 +60,7 @@ id_rsa.pub
 ## etc
 exampleharness
 teach
+.opencode/
 src/old services copy/
 ##claude
 .claude/skills
