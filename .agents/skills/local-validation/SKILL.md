@@ -26,6 +26,7 @@ The GitHub Actions workflow wraps these same scripts — not a separate source o
 - Claim pass only when the script exited pass. Read evidence from `temp/validation/` artifacts instead of pasting raw output.
 - Compose smoke blocked by occupied ports or existing `umbral-*` containers: copy an env file, adjust ports, rerun with `-EnvironmentFilePath`. Report the block — never drop the smoke silently.
 - No host `dotnet`: let the script use its container fallback.
+- Mutation audit is a separate local tool, never part of these scripts nor a blocking CI threshold. See REFERENCE.md.
 
 ## Report
 

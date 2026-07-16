@@ -8,7 +8,7 @@ using SessionManagement.Infrastructure.Realtime;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 builder.Services.AddSignalR();
 builder.Services.AddUmbralApiDefaults(
@@ -31,6 +31,8 @@ builder.Services.AddUmbralApiDefaults(
             }
         };
     });
+builder.Services.AddOpenApi(options =>
+    options.AddUmbralDefaults("Session Management API", requiresBearerAuthentication: true));
 builder.Services.AddSessionManagementApplication();
 builder.Services.AddSessionManagementInfrastructure(builder.Configuration);
 
@@ -48,6 +50,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     Predicate = static registration => !registration.Tags.Contains("masstransit"),
 });
 app.MapControllers();
+app.MapUmbralOpenApi();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {

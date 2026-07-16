@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MissionManagement.Application.Features.Missions.Commands.ActivateMission;
 using MissionManagement.Application.Features.Missions.Commands.CreateMission;
@@ -14,9 +15,15 @@ namespace MissionManagement.Api.Controllers;
 [ApiController]
 [Route("api/mission-management/missions")]
 [Authorize(Roles = UmbralRoles.Administrator)]
+[Tags("Missions")]
 public sealed class MissionsController(ISender sender) : ControllerBase
 {
     [HttpGet]
+    [EndpointSummary("List reusable missions")]
+    [EndpointDescription("Returns the reusable Mission templates available for administration.")]
+    [ProducesResponseType(typeof(IReadOnlyList<MissionSummaryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IReadOnlyList<MissionSummaryResponse>>> List(CancellationToken cancellationToken)
     {
         var missions = await sender.Send(new ListMissionsQuery(), cancellationToken);
@@ -24,6 +31,12 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{missionId:guid}")]
+    [EndpointSummary("Get a reusable mission")]
+    [EndpointDescription("Returns a Mission template with its ordered Path Items and playable Challenges.")]
+    [ProducesResponseType(typeof(MissionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MissionResponse>> GetById(Guid missionId, CancellationToken cancellationToken)
     {
         var mission = await sender.Send(new GetMissionByIdQuery(missionId), cancellationToken);
@@ -31,6 +44,13 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Create a reusable mission")]
+    [EndpointDescription("Creates a Mission template with its ordered Sections and Challenges.")]
+    [ProducesResponseType(typeof(MissionResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<MissionResponse>> Create(
         [FromBody] CreateMissionRequest request,
         CancellationToken cancellationToken)
@@ -47,6 +67,14 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{missionId:guid}")]
+    [EndpointSummary("Update a reusable mission")]
+    [EndpointDescription("Replaces the editable definition and ordered Path Items of a Mission template.")]
+    [ProducesResponseType(typeof(MissionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<MissionResponse>> Update(
         Guid missionId,
         [FromBody] UpdateMissionRequest request,
@@ -65,6 +93,13 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{missionId:guid}/activate")]
+    [EndpointSummary("Activate a reusable mission")]
+    [EndpointDescription("Makes a Mission available for creating a LiveSession.")]
+    [ProducesResponseType(typeof(MissionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<MissionResponse>> Activate(Guid missionId, CancellationToken cancellationToken)
     {
         var mission = await sender.Send(new ActivateMissionCommand(missionId), cancellationToken);
@@ -72,6 +107,12 @@ public sealed class MissionsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{missionId:guid}/deactivate")]
+    [EndpointSummary("Deactivate a reusable mission")]
+    [EndpointDescription("Prevents a Mission from being selected for new LiveSessions without deleting it.")]
+    [ProducesResponseType(typeof(MissionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MissionResponse>> Deactivate(Guid missionId, CancellationToken cancellationToken)
     {
         var mission = await sender.Send(new DeactivateMissionCommand(missionId), cancellationToken);

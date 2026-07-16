@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Participants.Commands.CreateParticipant;
 
 namespace UserManagement.Api.Controllers;
@@ -15,10 +17,17 @@ namespace UserManagement.Api.Controllers;
 [Route("api/participants")]
 [AllowAnonymous]
 [EnableRateLimiting(ParticipantSignupRateLimiter.PolicyName)]
+[Tags("Participants")]
 public sealed class ParticipantsController(ISender sender) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> CreateParticipant(
+    [EndpointSummary("Register a participant")]
+    [EndpointDescription("Creates a Participant in Keycloak through the public, rate-limited registration flow.")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<ParticipantDto>> CreateParticipant(
         [FromBody] CreateParticipantCommand request,
         CancellationToken cancellationToken)
     {
@@ -26,7 +35,7 @@ public sealed class ParticipantsController(ISender sender) : ControllerBase
 
         return Created(
             $"/api/participants/{Uri.EscapeDataString(participant.UserId)}",
-            new { userId = participant.UserId, username = participant.Username });
+            participant);
     }
 }
 

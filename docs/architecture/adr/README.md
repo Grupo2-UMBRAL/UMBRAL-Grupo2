@@ -29,6 +29,7 @@ Crear un ADR cuando una decisión sea:
 | [015](ADR-015-framework-free-shared-kernel.md) | Kernel compartido sin framework (`Umbral.Kernel`) | Accepted (supersede en parte a 012) |
 | [016](ADR-016-mobile-participant-web-console.md) | Móvil = cliente del `Participant`; web = consola Admin/Operator | Accepted |
 | [017](ADR-017-aggregate-stores-as-contract-repositories.md) | Stores por agregado como "repositorios por contratos" | Accepted (complementa 006) |
+| [018](ADR-018-openapi-documents-behind-the-edge.md) | Documentos OpenAPI detrás del edge proxy | Accepted (complementa 015) |
 
 ### ADRs de estándares (sin numeración correlativa)
 

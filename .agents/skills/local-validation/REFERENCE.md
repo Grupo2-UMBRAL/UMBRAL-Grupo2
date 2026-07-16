@@ -57,6 +57,16 @@ Covers:
 - Keycloak discovery
 - auth smoke tests
 
+### Mutation audit (local only)
+
+Stryker.NET is an additional quality audit, not part of `Invoke-RepositoryValidation.ps1` and not a GitHub
+Actions job initially. Restore the versioned local tool, then execute the configured audit for one production
+project at a time. Consult `docs/architecture/validation-pipeline.md` for the required adoption order, scope and
+report location.
+
+Do not turn a mutation score into a blocking CI threshold before recording a baseline for the project being
+audited.
+
 ## Useful flags
 
 ### Alternate env file for compose smoke
@@ -95,6 +105,7 @@ Use when default ports collide with another stack or Windows reserved ranges.
 - `temp/validation/TestResults/`
 - `temp/validation/backend-coverage-report/index.html`
 - `temp/validation/backend-coverage-report/Summary.txt`
+- `temp/validation/mutation/<alcance>/`
 - `temp/validation/compose/compose-config.txt`
 - `temp/validation/compose/compose-up.txt`
 - `temp/validation/compose/compose-ps.txt`

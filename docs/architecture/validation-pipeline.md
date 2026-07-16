@@ -10,6 +10,7 @@ Repositorio ahora tiene validacion reproducible para codigo, cobertura backend y
 - build y tests `.NET` para `shared`, `user-management`, `mission-management`, `session-management` y `scoring-monitoring`
 - cobertura backend con `Coverlet`
 - reportes agregados de cobertura con `ReportGenerator`
+- plan de adopcion de auditorias locales de mutacion con Stryker.NET, incorporadas gradualmente por servicio
 - smoke tests de `docker compose` para `edge-proxy`, servicios backend, `Keycloak`, `PostgreSQL` y `RabbitMQ`
 - scan basico para detectar secretos versionados fuera de archivos seed aprobados
 
@@ -102,6 +103,32 @@ Detalles:
   `90%` sigue reportandose como "Academic target"; el paso final del plan de subida es enforcar `90%` branch
   subiendo el umbral (`-TemporaryCoverageThreshold` / `TargetCoverage` en `Invoke-RepositoryValidation.ps1`).
 
+## Auditoria de mutacion local
+
+Stryker.NET complementara la cobertura de ramas: introduce mutaciones temporales en el codigo bajo prueba y
+confirma que la suite las detecte. Una mutacion que sobrevive no cambia el producto, pero indica una asercion
+o caso de prueba insuficiente.
+
+- Una vez configurada, la auditoria se ejecuta **localmente**, por alcance, y queda fuera de `Invoke-RepositoryValidation.ps1`.
+- No se ejecuta en GitHub Actions por ahora. Se evaluara incorporarla a CI solo despues de tener una linea
+  base, tiempos medidos y un umbral acordado.
+- La herramienta debe versionarse como herramienta local de .NET; cada clon la restaura con `dotnet tool restore`.
+- Los informes deben guardarse bajo `temp/validation/mutation/<alcance>/` y no se versionan.
+- La cobertura de ramas sigue siendo la metrica de cobertura del gate. El resultado de mutacion se usa para
+  priorizar nuevos casos de prueba que eleven tanto el score de mutacion como la cobertura de ramas.
+
+Orden de adopcion deliberado:
+
+1. `Umbral.ServiceDefaults`, empezando por `OpenApiExtensions` y sus pruebas directas.
+2. Mission Management.
+3. Session Management.
+4. Scoring and Monitoring.
+5. User Management.
+
+Cada auditoria debe mutar un solo proyecto de produccion, ejecutar la suite de pruebas que lo cubre y registrar
+el score, los mutantes sobrevivientes y los casos nuevos que se agregaron. No se establece un umbral bloqueante
+hasta que exista una linea base para ese alcance.
+
 ## CI
 
 Workflow: `.github/workflows/validation.yml`
@@ -110,6 +137,8 @@ Jobs:
 
 - `code-validation`: secretos, frontend checks, build/test backend, cobertura
 - `compose-smoke`: `docker compose config`, `up -d --build`, health checks, discovery de `Keycloak`, auth smokes
+
+Stryker.NET no forma parte de estos jobs inicialmente; la politica de auditoria local se define arriba.
 
 ## Known gaps
 

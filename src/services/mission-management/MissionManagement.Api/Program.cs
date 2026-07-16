@@ -3,9 +3,11 @@ using MissionManagement.Application;
 using Umbral.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddUmbralTelemetry();
+builder.Services.AddUmbralTelemetry(builder.Environment.ApplicationName);
 
 builder.Services.AddUmbralApiDefaults(builder.Configuration);
+builder.Services.AddOpenApi(options =>
+    options.AddUmbralDefaults("Mission Management API", requiresBearerAuthentication: true));
 builder.Services.AddMissionManagementApplication();
 builder.Services.AddMissionManagementInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IMissionManagementDbContext>(serviceProvider => serviceProvider.GetRequiredService<MissionManagementDbContext>());
@@ -18,6 +20,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapControllers();
+app.MapUmbralOpenApi();
 
 if (builder.Configuration.GetValue("Persistence:ApplyMigrationsOnStartup", false))
 {
