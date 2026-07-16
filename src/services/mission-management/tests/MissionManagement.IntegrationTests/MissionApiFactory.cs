@@ -4,6 +4,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -47,22 +48,19 @@ internal sealed class MissionApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<MissionManagementDbContext>>();
             services.RemoveAll<MissionManagementDbContext>();
 
-            services.AddScoped<MissionManagementDbContext>(sp =>
-            {
-                var options = new DbContextOptionsBuilder<MissionManagementDbContext>()
-                    .UseInMemoryDatabase(databaseName)
-                    .Options;
-                return new MissionManagementDbContext(options);
-            });
+            services.AddScoped<MissionManagementDbContext>(sp => new MissionManagementDbContext(BuildOptions()));
 
-            services.AddScoped<DbContextOptions<MissionManagementDbContext>>(sp =>
-            {
-                return new DbContextOptionsBuilder<MissionManagementDbContext>()
-                    .UseInMemoryDatabase(databaseName)
-                    .Options;
-            });
+            services.AddScoped<DbContextOptions<MissionManagementDbContext>>(sp => BuildOptions());
         });
     }
+
+    // The in-memory provider has no transactions and escalates TransactionIgnoredWarning to an error,
+    // so ignoring it is what lets the store's real transactional writes run against this fake.
+    private DbContextOptions<MissionManagementDbContext> BuildOptions() =>
+        new DbContextOptionsBuilder<MissionManagementDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
 
     public HttpClient CreateAuthorizedClient() => CreateClientForRole(UmbralRoles.Administrator);
 

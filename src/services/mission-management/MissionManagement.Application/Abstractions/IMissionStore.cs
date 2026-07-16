@@ -7,6 +7,11 @@ namespace MissionManagement.Application.Abstractions;
 /// out of the command handlers (they mock this), and the two get flavors let a handler fetch only what
 /// it needs: the scalar row when a state flag is all that changes, the full path-item tree when
 /// eligibility or the response body needs it.
+///
+/// Every mutator persists its own work before returning: one command touches one Mission, so there is
+/// nothing for a handler to batch, and <see cref="ReplaceItemsAsync"/> has to own its transaction
+/// anyway (it flushes twice). A handler-driven commit would have to know that, which is exactly the
+/// EF detail this seam exists to hide.
 /// </summary>
 public interface IMissionStore
 {
@@ -16,14 +21,15 @@ public interface IMissionStore
     /// <summary>Tracked scalar aggregate with its path-item tree hydrated (for eligibility / full response).</summary>
     Task<Mission?> GetWithItemsAsync(Guid missionId, CancellationToken cancellationToken);
 
-    /// <summary>Stages a new mission (scalar row + its path-item tree) for insertion.</summary>
-    void Add(Mission mission);
+    /// <summary>Persists a new mission (scalar row + its path-item tree).</summary>
+    Task AddAsync(Mission mission, CancellationToken cancellationToken);
 
-    /// <summary>Replaces the stored path-item tree of a mission with the one carried by <paramref name="mission"/>.</summary>
+    /// <summary>Persists pending scalar changes applied to a mission returned by one of the get flavors.</summary>
+    Task UpdateAsync(Mission mission, CancellationToken cancellationToken);
+
+    /// <summary>Atomically replaces and persists the stored path-item tree of a mission with the one carried by <paramref name="mission"/>.</summary>
     Task ReplaceItemsAsync(Mission mission, CancellationToken cancellationToken);
 
     /// <summary>True when another mission already uses <paramref name="name"/> (excluding <paramref name="excludeMissionId"/>).</summary>
     Task<bool> NameExistsAsync(string name, Guid? excludeMissionId, CancellationToken cancellationToken);
-
-    Task SaveChangesAsync(CancellationToken cancellationToken);
 }

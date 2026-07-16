@@ -7,7 +7,7 @@ namespace MissionManagement.Infrastructure.Persistence;
 
 /// <summary>
 /// Command-side implementation of <see cref="IMissionStore"/>. The scalar row is loaded tracked so
-/// domain mutations persist on <see cref="SaveChangesAsync"/>; the path-item tree is rebuilt from the
+/// domain mutations persist on <see cref="UpdateAsync"/>; the path-item tree is rebuilt from the
 /// flat rows via <see cref="MissionLoader"/> and attached in memory (the Mission has no EF navigation
 /// to its items, so a hydrated tree never dirties the change tracker on its own).
 /// </summary>
@@ -35,20 +35,38 @@ internal sealed class MissionStore(IMissionManagementDbContext dbContext) : IMis
         return mission;
     }
 
-    public void Add(Mission mission)
+    public async Task AddAsync(Mission mission, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(mission);
 
         dbContext.Missions.Add(mission);
         MissionLoader.AddItems(dbContext, mission);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Mission mission, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(mission);
+
+        // The aggregate came back tracked from a get flavor, so its mutations are already staged.
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ReplaceItemsAsync(Mission mission, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(mission);
 
+        await using var transaction = await dbContext.BeginTransactionAsync(cancellationToken);
+
+        // The removed rows must reach the database before the replacements are staged: a request that
+        // reuses the stored ids would otherwise collide with the still-tracked Deleted entries.
         await MissionLoader.DeleteItemsAsync(dbContext, mission.Id, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
         MissionLoader.AddItems(dbContext, mission);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task<bool> NameExistsAsync(string name, Guid? excludeMissionId, CancellationToken cancellationToken)
@@ -59,10 +77,5 @@ internal sealed class MissionStore(IMissionManagementDbContext dbContext) : IMis
                 .AnyAsync(mission => mission.Id != id && mission.Name == name, cancellationToken)
             : await dbContext.Missions.AsNoTracking()
                 .AnyAsync(mission => mission.Name == name, cancellationToken);
-    }
-
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        return dbContext.SaveChangesAsync(cancellationToken);
     }
 }

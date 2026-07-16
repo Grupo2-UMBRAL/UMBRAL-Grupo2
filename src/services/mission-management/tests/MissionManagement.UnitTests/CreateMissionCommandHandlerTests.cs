@@ -28,7 +28,7 @@ public sealed class CreateMissionCommandHandlerTests
         Assert.Equal("City Circuit", response.Name);
         Assert.False(response.IsActive);
         Assert.Empty(response.Items);
-        Assert.Equal(1, store.SaveChangesCallCount);
+        Assert.Equal(1, store.PersistCallCount);
         Assert.Single(store.Missions);
     }
 
@@ -44,6 +44,6 @@ public sealed class CreateMissionCommandHandlerTests
 
         Assert.Equal("mission_name_duplicate", exception.Code);
         Assert.Equal(UmbralFailureCategory.Conflict, exception.Category);
-        Assert.Equal(0, store.SaveChangesCallCount);
+        Assert.Equal(0, store.PersistCallCount);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Infrastructure.Persistence;
@@ -19,6 +20,11 @@ public sealed class MissionManagementDbContext(DbContextOptions<MissionManagemen
     public DbSet<Choice> Choices => Set<Choice>();
 
     public DbSet<Hint> Hints => Set<Hint>();
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        return Database.BeginTransactionAsync(cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

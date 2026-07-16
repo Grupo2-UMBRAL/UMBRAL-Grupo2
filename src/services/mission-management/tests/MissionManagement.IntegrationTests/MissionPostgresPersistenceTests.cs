@@ -130,6 +130,83 @@ public sealed class MissionPostgresPersistenceTests : IAsyncLifetime
         Assert.Equal("Near the plaza", Assert.Single(search.Hints).Content);
     }
 
+    /// <summary>
+    /// The editor sends back the ids it was given, so a replacement re-inserts the very rows it just
+    /// deleted. Only real Postgres proves this: the delete must reach the database (and cascade to the
+    /// plays) before the new tree is staged, or the re-inserted key collides.
+    /// </summary>
+    [Fact]
+    public async Task UpdateMission_ReplacesTree_WhenRequestReusesStoredIdentifiers_AgainstRealPostgres()
+    {
+        if (!dockerAvailable)
+        {
+            return;
+        }
+
+        var client = factory!.CreateAdminClient();
+
+        var createRequest = new CreateMissionRequest(
+            "Reused Identifiers",
+            "Replaced with its own ids.",
+            30,
+            new[]
+            {
+                new MissionItemRequest(
+                    Kind: MissionItemKind.Challenge,
+                    Order: 1,
+                    Title: "Gate Hunt",
+                    GameType: MissionGameType.TreasureHunt,
+                    Difficulty: Difficulty.Easy,
+                    TimeLimitMinutes: 20,
+                    Searches: new[]
+                    {
+                        new SearchRequest(null, 1, "Scan the gate", "qr-gate", null, null,
+                            new[] { new HintRequest(null, 1, "By the entrance", false, null, null) })
+                    })
+            });
+
+        var created = await (await client.PostAsJsonAsync("/api/mission-management/missions", createRequest))
+            .Content.ReadFromJsonAsync<MissionResponse>(JsonOptions);
+        var createdChallenge = Assert.Single(created!.Items);
+        var createdSearch = Assert.Single(createdChallenge.Searches!);
+
+        var updateRequest = new UpdateMissionRequest(
+            "Reused Identifiers",
+            "Replaced with its own ids.",
+            30,
+            new[]
+            {
+                new MissionItemRequest(
+                    Kind: MissionItemKind.Challenge,
+                    Id: createdChallenge.Id,
+                    Order: 1,
+                    Title: "Gate Hunt Revised",
+                    GameType: MissionGameType.TreasureHunt,
+                    Difficulty: Difficulty.Medium,
+                    TimeLimitMinutes: 25,
+                    Searches: new[]
+                    {
+                        new SearchRequest(createdSearch.Id, 1, "Scan the updated gate", "qr-gate-2", null, null, null)
+                    })
+            });
+
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/mission-management/missions/{created.Id}", updateRequest);
+        Assert.True(updateResponse.IsSuccessStatusCode, await updateResponse.Content.ReadAsStringAsync());
+
+        // Fresh GET -> the replacement really landed in Postgres, cascade included.
+        var detail = await client.GetFromJsonAsync<MissionResponse>(
+            $"/api/mission-management/missions/{created.Id}", JsonOptions);
+
+        var challenge = Assert.Single(detail!.Items);
+        Assert.Equal(createdChallenge.Id, challenge.Id);
+        Assert.Equal("Gate Hunt Revised", challenge.Title);
+        var search = Assert.Single(challenge.Searches!);
+        Assert.Equal(createdSearch.Id, search.Id);
+        Assert.Equal("Scan the updated gate", search.Clue);
+        Assert.Empty(search.Hints);
+    }
+
     [Fact]
     public async Task ActivateMission_PersistsActiveState_AgainstRealPostgres()
     {
