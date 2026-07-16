@@ -217,25 +217,16 @@ const ERROR_TRANSLATIONS: ErrorTranslationRule[] = [
 
 function translateError(errorText: string, status: number): string {
   const text = errorText.toLowerCase().trim();
-  
+
   const matchedRule = ERROR_TRANSLATIONS.find(rule => rule.match(text));
   if (matchedRule) {
     return matchedRule.message;
   }
 
-  let cleanError = errorText;
-  if (cleanError.startsWith(`${status} `)) {
-    cleanError = cleanError.substring(status.toString().length + 1).trim();
-  }
-  if (cleanError.toLowerCase().startsWith("bad request: ")) {
-    cleanError = cleanError.substring("bad request: ".length).trim();
-  }
-
-  if (!cleanError) {
-    return `Ocurrió un error inesperado (Código: ${status}).`;
-  }
-
-  return cleanError;
+  // Anything the rules miss is raw backend text, and the backend speaks English.
+  // Keep it in the console for debugging rather than in a Spanish-only UI.
+  console.error("Error del backend sin traducción:", errorText);
+  return `Ocurrió un error inesperado (Código: ${status}).`;
 }
 
 async function readFailureDetail(response: Response) {
