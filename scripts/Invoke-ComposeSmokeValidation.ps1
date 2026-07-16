@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 param(
     [string]$ArtifactDirectory = (Join-Path (Join-Path $PSScriptRoot "..") "temp/validation/compose"),
     [string]$EnvironmentFilePath,
@@ -78,6 +80,8 @@ function Wait-HttpOk {
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $attempts = 0
+    $lastOutcome = "no attempt completed"
     do {
         if (-not [string]::IsNullOrWhiteSpace($ContainerName)) {
             $containerState = (& docker inspect --format "{{.State.Status}}" $ContainerName 2>$null).Trim()
@@ -86,18 +90,23 @@ function Wait-HttpOk {
             }
         }
 
+        $attempts++
         try {
-            if ((Get-HttpStatusCode -Uri $Uri -TimeoutSeconds 15) -eq 200) {
+            $statusCode = Get-HttpStatusCode -Uri $Uri -TimeoutSeconds 15
+            if ($statusCode -eq 200) {
                 return
             }
+
+            $lastOutcome = "last response was HTTP $statusCode"
         }
         catch {
+            $lastOutcome = "last probe threw: $($_.Exception.Message)"
         }
 
         Start-Sleep -Seconds 3
     } while ((Get-Date) -lt $deadline)
 
-    throw "$Name did not return HTTP 200 within $TimeoutSeconds seconds: $Uri"
+    throw "$Name did not return HTTP 200 within $TimeoutSeconds seconds: $Uri ($attempts attempts, $lastOutcome)"
 }
 
 function Get-HttpStatusCode {
@@ -106,48 +115,19 @@ function Get-HttpStatusCode {
         [int]$TimeoutSeconds = 15
     )
 
-    $curlCommand = Get-Command curl.exe -ErrorAction SilentlyContinue
-    if ($null -eq $curlCommand) {
-        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue
-    }
+    # -SkipHttpErrorCheck returns the status instead of throwing on 4xx/5xx, so the caller can
+    # tell "the app answered 503" apart from "nothing answered". -NoProxy keeps the loopback
+    # probe off any proxy the runner exports via http_proxy/HTTP_PROXY.
+    $response = Invoke-WebRequest `
+        -Uri $Uri `
+        -Method Get `
+        -TimeoutSec $TimeoutSeconds `
+        -MaximumRedirection 5 `
+        -SkipHttpErrorCheck `
+        -NoProxy `
+        -ErrorAction Stop
 
-    if ($null -ne $curlCommand) {
-        $temporaryOutputFile = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), [System.IO.Path]::GetRandomFileName())
-        try {
-            $statusCode = & $curlCommand.Source `
-                --silent `
-                --show-error `
-                --location `
-                --noproxy "*" `
-                --max-time $TimeoutSeconds `
-                --output $temporaryOutputFile `
-                --write-out "%{http_code}" `
-                $Uri
-
-            if ($LASTEXITCODE -ne 0) {
-                throw "curl failed for $Uri with exit code $LASTEXITCODE"
-            }
-
-            return [int]$statusCode
-        }
-        finally {
-            Remove-Item -LiteralPath $temporaryOutputFile -ErrorAction SilentlyContinue
-        }
-    }
-
-    $handler = [System.Net.Http.HttpClientHandler]::new()
-    $handler.UseProxy = $false
-    $client = [System.Net.Http.HttpClient]::new($handler)
-    $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSeconds)
-
-    try {
-        $response = $client.GetAsync($Uri).GetAwaiter().GetResult()
-        return [int]$response.StatusCode
-    }
-    finally {
-        $client.Dispose()
-        $handler.Dispose()
-    }
+    return [int]$response.StatusCode
 }
 
 function Wait-ContainerHealthy {
