@@ -11,7 +11,14 @@ export default function AdministratorPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || !roles.includes("Administrator"))) {
+    if (loading) return;
+
+    if (!isAuthenticated) {
+      navigate("/");
+      return;
+    }
+
+    if (!roles.includes("Administrator")) {
       navigate("/forbidden");
     }
   }, [isAuthenticated, roles, loading, navigate]);

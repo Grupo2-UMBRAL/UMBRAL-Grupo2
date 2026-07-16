@@ -36,6 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     kc.init({
+      // Without check-sso the tokens, which live only in memory, are gone after a
+      // page refresh and the user looks logged out despite a live Keycloak session.
+      onLoad: "check-sso",
       pkceMethod: "S256",
       checkLoginIframe: false,
     })

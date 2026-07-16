@@ -1,7 +1,7 @@
-import { useAuth } from "@/context/auth-context";
+import { useNavigate } from "react-router-dom";
 
 export default function ForbiddenPage() {
-  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <main className="forbidden-page page-enter">
@@ -13,10 +13,7 @@ export default function ForbiddenPage() {
           Administrador u Operador. Contacta al administrador si crees que esto
           es un error.
         </p>
-        <button
-          className="btn btn-primary btn-block"
-          onClick={() => void logout()}
-        >
+        <button className="btn btn-primary btn-block" onClick={() => navigate("/")}>
           Volver al inicio
         </button>
       </div>
