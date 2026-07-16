@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "2315923682583051878"
+      "templateHash": "9564476952567952533"
     }
   },
   "parameters": {
@@ -109,7 +109,6 @@
     "authAuthority": "[format('{0}/auth/realms/{1}', parameters('publicBaseUrl'), variables('keycloakRealm'))]",
     "requireHttpsMetadata": "true",
     "registryLoginServer": "[format('{0}.azurecr.io', parameters('containerRegistryName'))]",
-    "storageName": "[take(replace(toLower(format('{0}{1}', parameters('resourcePrefix'), uniqueString(resourceGroup().id))), '-', ''), 24)]",
     "imageNames": {
       "rabbitmq": "rabbitmq:3.13-management-alpine",
       "keycloak": "[format('{0}/umbral/keycloak:{1}', variables('registryLoginServer'), parameters('imageTag'))]",
@@ -167,41 +166,6 @@
       }
     },
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2023-05-01",
-      "name": "[variables('storageName')]",
-      "location": "[parameters('location')]",
-      "tags": "[variables('tags')]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "kind": "StorageV2",
-      "properties": {
-        "allowBlobPublicAccess": false,
-        "minimumTlsVersion": "TLS1_2"
-      }
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts/fileServices",
-      "apiVersion": "2023-05-01",
-      "name": "[format('{0}/{1}', variables('storageName'), 'default')]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
-      "apiVersion": "2023-05-01",
-      "name": "[format('{0}/{1}/{2}', variables('storageName'), 'default', 'rabbitmq-data')]",
-      "properties": {
-        "shareQuota": 4,
-        "enabledProtocols": "SMB"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', variables('storageName'), 'default')]"
-      ]
-    },
-    {
       "type": "Microsoft.App/managedEnvironments",
       "apiVersion": "2024-03-01",
       "name": "[parameters('containerAppsEnvironmentName')]",
@@ -218,24 +182,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('resourcePrefix')))]"
-      ]
-    },
-    {
-      "type": "Microsoft.App/managedEnvironments/storages",
-      "apiVersion": "2024-03-01",
-      "name": "[format('{0}/{1}', parameters('containerAppsEnvironmentName'), 'rabbitmq-data')]",
-      "properties": {
-        "azureFile": {
-          "accountName": "[variables('storageName')]",
-          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2023-05-01').keys[0].value]",
-          "shareName": "rabbitmq-data",
-          "accessMode": "ReadWrite"
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageName'), 'default', 'rabbitmq-data')]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]"
       ]
     },
     {
@@ -258,6 +204,7 @@
           "ingress": {
             "external": false,
             "targetPort": 5672,
+            "exposedPort": 5672,
             "transport": "tcp"
           }
         },
@@ -266,13 +213,6 @@
             "minReplicas": 1,
             "maxReplicas": 1
           },
-          "volumes": [
-            {
-              "name": "rabbitmq-data",
-              "storageType": "AzureFile",
-              "storageName": "rabbitmq-data"
-            }
-          ],
           "containers": [
             {
               "name": "rabbitmq",
@@ -285,12 +225,10 @@
                 {
                   "name": "RABBITMQ_DEFAULT_PASS",
                   "secretRef": "rabbitmq-password"
-                }
-              ],
-              "volumeMounts": [
+                },
                 {
-                  "volumeName": "rabbitmq-data",
-                  "mountPath": "/var/lib/rabbitmq"
+                  "name": "RABBITMQ_NODENAME",
+                  "value": "rabbit@localhost"
                 }
               ],
               "resources": {
@@ -302,8 +240,7 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
-        "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('containerAppsEnvironmentName'), 'rabbitmq-data')]"
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]"
       ]
     },
     {

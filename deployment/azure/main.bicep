@@ -57,7 +57,6 @@ var keycloakAdminUser = 'admin'
 var authAuthority = '${publicBaseUrl}/auth/realms/${keycloakRealm}'
 var requireHttpsMetadata = 'true'
 var registryLoginServer = '${containerRegistryName}.azurecr.io'
-var storageName = take(replace(toLower('${resourcePrefix}${uniqueString(resourceGroup().id)}'), '-', ''), 24)
 
 var imageNames = {
   rabbitmq: 'rabbitmq:3.13-management-alpine'
@@ -94,34 +93,6 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
 }
 
-resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageName
-  location: location
-  tags: tags
-  sku: {
-    name: 'Standard_LRS'
-  }
-  kind: 'StorageV2'
-  properties: {
-    allowBlobPublicAccess: false
-    minimumTlsVersion: 'TLS1_2'
-  }
-}
-
-resource fileService 'Microsoft.Storage/storageAccounts/fileServices@2023-05-01' = {
-  parent: storage
-  name: 'default'
-}
-
-resource rabbitmqShare 'Microsoft.Storage/storageAccounts/fileServices/shares@2023-05-01' = {
-  parent: fileService
-  name: 'rabbitmq-data'
-  properties: {
-    shareQuota: 4
-    enabledProtocols: 'SMB'
-  }
-}
-
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: containerAppsEnvironmentName
   location: location
@@ -133,19 +104,6 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
         customerId: logs.properties.customerId
         sharedKey: logs.listKeys().primarySharedKey
       }
-    }
-  }
-}
-
-resource rabbitmqStorage 'Microsoft.App/managedEnvironments/storages@2024-03-01' = {
-  parent: environment
-  name: 'rabbitmq-data'
-  properties: {
-    azureFile: {
-      accountName: storage.name
-      accountKey: storage.listKeys().keys[0].value
-      shareName: rabbitmqShare.name
-      accessMode: 'ReadWrite'
     }
   }
 }
@@ -179,6 +137,7 @@ resource rabbitmq 'Microsoft.App/containerApps@2024-03-01' = if (deployContainer
       ingress: {
         external: false
         targetPort: 5672
+        exposedPort: 5672
         transport: 'tcp'
       }
     }
@@ -187,13 +146,6 @@ resource rabbitmq 'Microsoft.App/containerApps@2024-03-01' = if (deployContainer
         minReplicas: 1
         maxReplicas: 1
       }
-      volumes: [
-        {
-          name: 'rabbitmq-data'
-          storageType: 'AzureFile'
-          storageName: rabbitmqStorage.name
-        }
-      ]
       containers: [
         {
           name: 'rabbitmq'
@@ -207,11 +159,10 @@ resource rabbitmq 'Microsoft.App/containerApps@2024-03-01' = if (deployContainer
               name: 'RABBITMQ_DEFAULT_PASS'
               secretRef: 'rabbitmq-password'
             }
-          ]
-          volumeMounts: [
             {
-              volumeName: 'rabbitmq-data'
-              mountPath: '/var/lib/rabbitmq'
+              // Pinned so the node name survives revision changes, which rotate the hostname.
+              name: 'RABBITMQ_NODENAME'
+              value: 'rabbit@localhost'
             }
           ]
           resources: {
