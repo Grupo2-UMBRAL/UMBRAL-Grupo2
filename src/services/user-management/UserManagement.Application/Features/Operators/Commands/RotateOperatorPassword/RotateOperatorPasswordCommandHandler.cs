@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common;
 using UserManagement.Application.Common.Dtos;
-using UserManagement.Application.Common.Dtos;
 
 namespace UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
 

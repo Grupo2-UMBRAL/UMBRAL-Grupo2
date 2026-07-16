@@ -8,7 +8,8 @@ import {
   createEmptySearchDraft,
 } from "./mission-authoring-model";
 import { HintEditor } from "./hint-editor";
-import { QrCode, printQrCode } from "./qr-code";
+import { printQrCode } from "../lib/qr-code-svg";
+import { QrCode } from "./qr-code";
 
 type TreasureHuntChallengeEditorProps = {
   searches: SearchDraft[];
