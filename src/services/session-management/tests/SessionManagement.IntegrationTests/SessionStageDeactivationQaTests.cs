@@ -150,7 +150,7 @@ public sealed class SessionStageDeactivationQaTests
     public void DeactivateStage_Throws_WhenLiveSessionStateDoesNotAllowOperationalDeactivation(string state)
     {
         var liveSession = CreateLiveSessionWithTeams(stageCount: 2);
-        ForceState(liveSession, state);
+        liveSession.ForceState(state);
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
             liveSession.DeactivateStage(StageOneId, NowUtc));
@@ -234,15 +234,6 @@ public sealed class SessionStageDeactivationQaTests
                 expectedQrHash: $"qr-stage-{stageOrder}"))
             .ToArray();
     }
-
-    private static void ForceState(LiveSession liveSession, string state)
-    {
-        var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
-
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
-    }
-
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;

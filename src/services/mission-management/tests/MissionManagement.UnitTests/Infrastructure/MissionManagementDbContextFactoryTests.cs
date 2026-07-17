@@ -6,6 +6,7 @@ using Xunit;
 
 namespace MissionManagement.UnitTests.Infrastructure;
 
+[Collection("SequentialEnvironment")]
 public class MissionManagementDbContextFactoryTests
 {
     [Fact]
@@ -37,7 +38,7 @@ public class MissionManagementDbContextFactoryTests
     public void CreateDbContext_WithoutConnectionString_ThrowsInvalidOperationException()
     {
         // Arrange — ensure no connection string is available
-        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", null);
+        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", "");
         try
         {
             var factory = new MissionManagementDbContextFactory();

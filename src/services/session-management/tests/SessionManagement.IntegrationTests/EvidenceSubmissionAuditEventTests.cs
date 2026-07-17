@@ -103,15 +103,7 @@ public sealed class EvidenceSubmissionAuditEventTests
         liveSession.OpenEnrollmentWindow(NowUtc.AddMinutes(-20));
         var team = liveSession.RegisterTeam(TeamId, "Alpha Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-10));
         liveSession.EnrollParticipantInTeam(team.Id, "participant-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-10));
-        ForceState(liveSession, "Active");
+        liveSession.ForceState("Active");
         return liveSession;
-    }
-
-    private static void ForceState(LiveSession liveSession, string state)
-    {
-        var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
-
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 }

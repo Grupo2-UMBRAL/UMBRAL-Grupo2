@@ -6,6 +6,7 @@ using Xunit;
 
 namespace ScoringMonitoring.UnitTests.Infrastructure;
 
+[Collection("SequentialEnvironment")]
 public class ScoringMonitoringDbContextFactoryTests
 {
     [Fact]
@@ -36,7 +37,7 @@ public class ScoringMonitoringDbContextFactoryTests
     public void CreateDbContext_WithoutConnectionString_ThrowsInvalidOperationException()
     {
         // Arrange — ensure no connection string is available
-        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", null);
+        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", "");
         try
         {
             var factory = new ScoringMonitoringDbContextFactory();

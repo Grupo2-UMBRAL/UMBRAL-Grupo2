@@ -345,17 +345,9 @@ public sealed class HintReleaseQaTests
         liveSession.EnrollParticipantInTeam(alphaTeam.Id, "creator-alpha", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-19));
         var betaTeam = liveSession.RegisterTeam(BetaTeamId, "Beta Team", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
         liveSession.EnrollParticipantInTeam(betaTeam.Id, "creator-beta", JoinCode.Parse("ABC234"), NowUtc.AddMinutes(-18));
-        ForceState(liveSession, "Active");
+        liveSession.ForceState("Active");
 
         return liveSession;
-    }
-
-    private static void ForceState(LiveSession liveSession, string state)
-    {
-        var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
-
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
