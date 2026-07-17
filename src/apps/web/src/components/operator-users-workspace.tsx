@@ -17,18 +17,11 @@ type OperatorUserSummary = {
 
 type OperatorUserDraft = {
   username: string;
-  firstName: string;
-  lastName: string;
   email: string;
-  password: string;
 };
 
 type OperatorUsersWorkspaceProps = {
   accessToken: string;
-};
-
-type PasswordRotationDraft = {
-  password: string;
 };
 
 function createAuthorizedHeaders(accessToken: string) {
@@ -40,16 +33,7 @@ function createAuthorizedHeaders(accessToken: string) {
 function createEmptyDraft(): OperatorUserDraft {
   return {
     username: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: ""
-  };
-}
-
-function createEmptyPasswordRotationDraft(): PasswordRotationDraft {
-  return {
-    password: ""
+    email: ""
   };
 }
 
@@ -274,17 +258,28 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
   const [operators, setOperators] = useState<OperatorUserSummary[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<OperatorUserDraft>(createEmptyDraft);
-  const [passwordRotationDraft, setPasswordRotationDraft] = useState<PasswordRotationDraft>(
-    createEmptyPasswordRotationDraft
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
-  const [isRotatingPassword, setIsRotatingPassword] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
+  const [isResendingInvitation, setIsResendingInvitation] = useState(false);
+  const [isSendingPasswordResetLink, setIsSendingPasswordResetLink] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  useEffect(() => {
+    if (!errorMessage && !feedback) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setErrorMessage(null);
+      setFeedback(null);
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [errorMessage, feedback]);
 
   const operatorsUrl = useMemo(
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/user-management/api/operators`,
@@ -379,13 +374,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     setErrorMessage(null);
 
     const username = draft.username.trim();
-    const firstName = draft.firstName.trim();
-    const lastName = draft.lastName.trim();
     const email = draft.email.trim();
-    const password = draft.password.trim();
 
-    if (!username || !firstName || !lastName || !email || !password) {
-      setErrorMessage("El nombre de usuario, nombre, apellido, correo electrónico y contraseña son obligatorios.");
+    if (!username || !email) {
+      setErrorMessage("El nombre de usuario y el correo electrónico son obligatorios.");
       setIsSubmitting(false);
       return;
     }
@@ -399,10 +391,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
         },
         body: JSON.stringify({
           username,
-          firstName,
-          lastName,
-          email,
-          password
+          email
         })
       });
 
@@ -421,7 +410,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
       setIsLoading(true);
       setDraft(createEmptyDraft());
       setShowCreateModal(false);
-      setFeedback("Usuario Operador creado a través de la fachada user-management.");
+      setFeedback("Operador creado. Verifica o reenvía la invitación de configuración.");
       await syncOperators(createdOperatorId);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo crear el Usuario Operador.");
@@ -459,48 +448,90 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
     }
   }
 
-  async function handleRotateSelectedOperatorPassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!selectedOperator) {
+  async function handleActivateSelectedOperator() {
+    if (!selectedOperator || selectedOperator.isActive) {
       return;
     }
 
-    const password = passwordRotationDraft.password.trim();
-
-    if (!password) {
-      setErrorMessage("Se requiere la nueva contraseña.");
-      return;
-    }
-
-    setIsRotatingPassword(true);
+    setIsActivating(true);
     setFeedback(null);
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`${operatorsUrl}/${encodeURIComponent(selectedOperator.id)}/reset-password`, {
+      const response = await fetch(`${operatorsUrl}/${encodeURIComponent(selectedOperator.id)}/activate`, {
         method: "POST",
-        headers: {
-          ...createAuthorizedHeaders(accessToken),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          password
-        })
+        headers: createAuthorizedHeaders(accessToken)
       });
 
       if (!response.ok) {
         throw new Error(await readFailureDetail(response));
       }
 
-      setPasswordRotationDraft(createEmptyPasswordRotationDraft());
-      setShowPasswordModal(false);
-      setFeedback(`Contraseña rotada para el Usuario Operador ${selectedOperator.username}.`);
+      setIsLoading(true);
+      setFeedback(`Usuario Operador ${selectedOperator.username} reactivado.`);
       await syncOperators(selectedOperator.id);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo rotar la contraseña del Usuario Operador.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo reactivar el Usuario Operador.");
     } finally {
-      setIsRotatingPassword(false);
+      setIsActivating(false);
+    }
+  }
+
+  async function handleResendInvitation() {
+    if (!selectedOperator) {
+      return;
+    }
+
+    setIsResendingInvitation(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        `${operatorsUrl}/${encodeURIComponent(selectedOperator.id)}/resend-onboarding-invitation`,
+        {
+          method: "POST",
+          headers: createAuthorizedHeaders(accessToken)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setFeedback(`Se reenvió la invitación de configuración a ${selectedOperator.username}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo reenviar la invitación.");
+    } finally {
+      setIsResendingInvitation(false);
+    }
+  }
+
+  async function handleSendPasswordResetLink() {
+
+    if (!selectedOperator) {
+      return;
+    }
+
+    setIsSendingPasswordResetLink(true);
+    setFeedback(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(`${operatorsUrl}/${encodeURIComponent(selectedOperator.id)}/send-password-reset-link`, {
+        method: "POST",
+        headers: createAuthorizedHeaders(accessToken)
+      });
+
+      if (!response.ok) {
+        throw new Error(await readFailureDetail(response));
+      }
+
+      setFeedback(`Se envió un enlace de restablecimiento a ${selectedOperator.username}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo enviar el enlace de restablecimiento.");
+    } finally {
+      setIsSendingPasswordResetLink(false);
     }
   }
 
@@ -548,8 +579,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
           </div>
         </div>
 
-        {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
-        {feedback ? <div className="success-banner">{feedback}</div> : null}
+        <div aria-live="polite" className="operator-users-notifications">
+          {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+          {feedback ? <div className="success-banner">{feedback}</div> : null}
+        </div>
 
         {isLoading ? (
           <div className="loading-center">Cargando Usuarios Operadores…</div>
@@ -598,7 +631,6 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                           key={operator.id}
                           onClick={() => {
                             setFeedback(null);
-                            setPasswordRotationDraft(createEmptyPasswordRotationDraft());
                             setSelectedOperatorId(operator.id);
                           }}
                         >
@@ -666,30 +698,41 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                   <div className="row" style={{ gap: "0.5rem" }}>
                     <button
                       className="btn btn-ghost btn-sm"
-                      disabled={!selectedOperator || isRotatingPassword}
-                      onClick={() => {
-                        setPasswordRotationDraft(createEmptyPasswordRotationDraft());
-                        setErrorMessage(null);
-                        setShowPasswordModal(true);
-                      }}
+                      disabled={!selectedOperator || isResendingInvitation}
+                      onClick={() => void handleResendInvitation()}
                       type="button"
                     >
-                      Rotar contraseña
+                      {isResendingInvitation ? "Reenviando…" : "Reenviar invitación"}
                     </button>
                     <button
-                      className="btn btn-danger btn-sm"
-                      disabled={!selectedOperator.isActive || isDeactivating}
-                      onClick={() => void handleDeactivateSelectedOperator()}
+                      className="btn btn-ghost btn-sm"
+                      disabled={!selectedOperator || isSendingPasswordResetLink}
+                      onClick={() => void handleSendPasswordResetLink()}
                       type="button"
                     >
-                      {isDeactivating ? "Desactivando…" : "Desactivar"}
+                      {isSendingPasswordResetLink ? "Enviando…" : "Enviar enlace de restablecimiento"}
                     </button>
+                    {selectedOperator.isActive ? (
+                      <button
+                        className="btn btn-danger btn-sm"
+                        disabled={isDeactivating}
+                        onClick={() => void handleDeactivateSelectedOperator()}
+                        type="button"
+                      >
+                        {isDeactivating ? "Desactivando…" : "Desactivar"}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={isActivating}
+                        onClick={() => void handleActivateSelectedOperator()}
+                        type="button"
+                      >
+                        {isActivating ? "Reactivando…" : "Reactivar"}
+                      </button>
+                    )}
                   </div>
 
-                  <div className="text-muted text-xs" style={{ marginTop: "0.25rem" }}>
-                    <span>Contrato de ruta: </span>
-                    <code>{operatorsUrl}</code>
-                  </div>
                 </div>
               ) : (
                 <div className="empty-state">
@@ -724,7 +767,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                       <label className="form-label">Nombre de usuario</label>
                       <input
                         className="form-input"
-                        maxLength={100}
+                        maxLength={40}
                         onChange={(event) =>
                           setDraft((current) => ({
                             ...current,
@@ -739,7 +782,7 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                       <label className="form-label">Email</label>
                       <input
                         className="form-input"
-                        maxLength={200}
+                        maxLength={120}
                         onChange={(event) =>
                           setDraft((current) => ({
                             ...current,
@@ -752,61 +795,10 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
                       />
                     </div>
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Nombre</label>
-                      <input
-                        className="form-input"
-                        maxLength={80}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            firstName: event.target.value
-                          }))
-                        }
-                        required
-                        value={draft.firstName}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Apellido</label>
-                      <input
-                        className="form-input"
-                        maxLength={80}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            lastName: event.target.value
-                          }))
-                        }
-                        required
-                        value={draft.lastName}
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Contraseña</label>
-                    <input
-                      className="form-input"
-                      minLength={8}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          password: event.target.value
-                        }))
-                      }
-                      required
-                      type="password"
-                      value={draft.password}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Contrato de ruta</label>
-                    <input className="form-input" disabled value={operatorsUrl} />
-                    <span className="form-hint">
-                      Esta sección utiliza GET, POST, POST /{"{userId}"}/deactivate y POST /{"{userId}"}/reset-password.
-                    </span>
-                  </div>
+                  <p className="text-muted text-sm">
+                    El operador recibirá un correo para definir su contraseña, completar su perfil
+                    (nombre y apellido) y verificar su email. El administrador no fija ninguna contraseña.
+                  </p>
                 </div>
               </form>
             </div>
@@ -831,65 +823,6 @@ export function OperatorUsersWorkspace({ accessToken }: OperatorUsersWorkspacePr
         </div>
       ) : null}
 
-      {/* Password rotation modal */}
-      {showPasswordModal && selectedOperator ? (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Rotar contraseña — {selectedOperator.displayName}</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowPasswordModal(false)}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <form id="rotate-password-form" onSubmit={handleRotateSelectedOperatorPassword}>
-                <div className="stack">
-                  <div className="form-group">
-                    <label className="form-label">Nueva contraseña</label>
-                    <input
-                      className="form-input"
-                      disabled={isRotatingPassword}
-                      minLength={8}
-                      onChange={(event) =>
-                        setPasswordRotationDraft({
-                          password: event.target.value
-                        })
-                      }
-                      required
-                      type="password"
-                      value={passwordRotationDraft.password}
-                    />
-                    <span className="form-hint">
-                      El nuevo secreto va a user-management. La consola nunca recibe credenciales de administrador de Keycloak.
-                    </span>
-                  </div>
-                </div>
-              </form>
-            </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-ghost"
-                onClick={() => setShowPasswordModal(false)}
-                type="button"
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
-                disabled={isRotatingPassword}
-                form="rotate-password-form"
-                type="submit"
-              >
-                {isRotatingPassword ? "Rotando…" : "Rotar contraseña"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

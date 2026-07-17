@@ -5,8 +5,10 @@ using Xunit;
 using UserManagement.Api.Controllers;
 using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Operators.Commands.CreateOperator;
+using UserManagement.Application.Features.Operators.Commands.ActivateOperator;
 using UserManagement.Application.Features.Operators.Commands.DeactivateOperator;
-using UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
+using UserManagement.Application.Features.Operators.Commands.ResendOperatorInvitation;
+using UserManagement.Application.Features.Operators.Commands.SendOperatorPasswordResetLink;
 using UserManagement.Application.Features.Operators.Queries.ListOperators;
 
 namespace UserManagement.UnitTests.Controllers;
@@ -46,7 +48,7 @@ public class OperatorsControllerTests
     public async Task CreateOperator_ReturnsCreatedResult_WithOperator()
     {
         // Arrange
-        var command = new CreateOperatorCommand("newop", "new@test.com", "New", "Operator", "password");
+        var command = new CreateOperatorCommand("newop", "new@test.com");
         var expectedOperator = new OperatorDto("123", "newop", "new@test.com", "New", "Operator", true);
 
         _senderMock.Setup(s => s.Send(command, default))
@@ -79,17 +81,47 @@ public class OperatorsControllerTests
     }
 
     [Fact]
-    public async Task ResetPassword_ReturnsOkResult()
+    public async Task ActivateOperator_ReturnsOkResult()
+    {
+        var userId = "123";
+        var expectedOperator = new OperatorDto("123", "op", "op@test.com", "Op", "1", true);
+        _senderMock.Setup(s => s.Send(It.Is<ActivateOperatorCommand>(c => c.UserId == userId), default))
+            .ReturnsAsync(expectedOperator);
+
+        var result = await _controller.ActivateOperator(userId, default);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(expectedOperator, okResult.Value);
+    }
+
+    [Fact]
+    public async Task ResendOnboardingInvitation_ReturnsOkResult()
     {
         // Arrange
         var userId = "123";
-        var request = new RotateOperatorPasswordRequest("newpassword");
         var expectedOperator = new OperatorDto("123", "op", "op@test.com", "Op", "1", true);
-        _senderMock.Setup(s => s.Send(It.Is<RotateOperatorPasswordCommand>(c => c.UserId == userId && c.Password == "newpassword"), default))
+        _senderMock.Setup(s => s.Send(It.Is<ResendOperatorInvitationCommand>(c => c.UserId == userId), default))
             .ReturnsAsync(expectedOperator);
 
         // Act
-        var result = await _controller.ResetPassword(userId, request, default);
+        var result = await _controller.ResendOnboardingInvitation(userId, default);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(expectedOperator, okResult.Value);
+    }
+
+    [Fact]
+    public async Task SendPasswordResetLink_ReturnsOkResult()
+    {
+        // Arrange
+        var userId = "123";
+        var expectedOperator = new OperatorDto("123", "op", "op@test.com", "Op", "1", true);
+        _senderMock.Setup(s => s.Send(It.Is<SendOperatorPasswordResetLinkCommand>(c => c.UserId == userId), default))
+            .ReturnsAsync(expectedOperator);
+
+        // Act
+        var result = await _controller.SendPasswordResetLink(userId, default);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);

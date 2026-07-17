@@ -8,7 +8,7 @@ public sealed class CreateOperatorCommandValidatorTests
     private static readonly CreateOperatorCommandValidator Validator = new();
 
     private static CreateOperatorCommand Valid() =>
-        new("jdoe", "jdoe@example.com", "John", "Doe", "SecurePass123!");
+        new("jdoe", "jdoe@example.com");
 
     // CascadeMode.Stop -> a failing command yields exactly one error: the first rule that failed,
     // in declared order. That single ErrorCode is what UmbralValidationBehavior surfaces to the client.
@@ -44,14 +44,8 @@ public sealed class CreateOperatorCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_RejectsShortPassword()
+    public void Validate_RejectsBlankEmail()
     {
-        Assert.Equal("operator_password_too_short", FirstErrorCode(Valid() with { Password = "short" }));
-    }
-
-    [Fact]
-    public void Validate_RejectsBlankFirstName()
-    {
-        Assert.Equal("operator_first_name_required", FirstErrorCode(Valid() with { FirstName = "   " }));
+        Assert.Equal("operator_email_required", FirstErrorCode(Valid() with { Email = "   " }));
     }
 }

@@ -118,6 +118,19 @@ export function MissionsAdminWorkspace({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!errorMessage && !feedback) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setErrorMessage(null);
+      setFeedback(null);
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [errorMessage, feedback]);
   const selectionSummary = useMemo(
     () => summarizeSelection(missions),
     [missions],
@@ -473,10 +486,12 @@ export function MissionsAdminWorkspace({
           </div>
         </div>
 
-        {errorMessage ? (
-          <div className="error-banner">{errorMessage}</div>
-        ) : null}
-        {feedback ? <div className="success-banner">{feedback}</div> : null}
+        <div aria-live="polite" className="workspace-notifications">
+          {errorMessage ? (
+            <div className="error-banner">{errorMessage}</div>
+          ) : null}
+          {feedback ? <div className="success-banner">{feedback}</div> : null}
+        </div>
 
         <section className="card stack">
           <div className="card-header card-header-actions">

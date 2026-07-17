@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "9564476952567952533"
+      "templateHash": "10326488044579505359"
     }
   },
   "parameters": {
@@ -95,6 +95,18 @@
       "type": "securestring",
       "metadata": {
         "description": "Password used by User Management to call Keycloak admin APIs."
+      }
+    },
+    "keycloakSmtpPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Gmail App Password used by Keycloak to send realm emails."
+      }
+    },
+    "keycloakSmtpFromAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Gmail address Keycloak uses as the sender and SMTP username."
       }
     }
   },
@@ -273,6 +285,10 @@
             {
               "name": "postgres-password",
               "value": "[parameters('postgresPassword')]"
+            },
+            {
+              "name": "keycloak-smtp-password",
+              "value": "[parameters('keycloakSmtpPassword')]"
             }
           ],
           "ingress": {
@@ -336,6 +352,38 @@
                 {
                   "name": "KC_PROXY_HEADERS",
                   "value": "xforwarded"
+                },
+                {
+                  "name": "SMTP_PASSWORD",
+                  "secretRef": "keycloak-smtp-password"
+                },
+                {
+                  "name": "SMTP_FROM_ADDRESS",
+                  "value": "[parameters('keycloakSmtpFromAddress')]"
+                },
+                {
+                  "name": "SMTP_HOST",
+                  "value": "smtp.gmail.com"
+                },
+                {
+                  "name": "SMTP_PORT",
+                  "value": "587"
+                },
+                {
+                  "name": "SMTP_USE_SSL",
+                  "value": "false"
+                },
+                {
+                  "name": "SMTP_STARTTLS",
+                  "value": "true"
+                },
+                {
+                  "name": "SMTP_AUTH",
+                  "value": "true"
+                },
+                {
+                  "name": "SMTP_USERNAME",
+                  "value": "[parameters('keycloakSmtpFromAddress')]"
                 }
               ],
               "resources": {

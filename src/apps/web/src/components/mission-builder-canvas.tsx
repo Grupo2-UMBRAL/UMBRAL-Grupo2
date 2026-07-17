@@ -370,10 +370,12 @@ export function MissionBuilderCanvas({
   return (
     <main className="mb-main">
       <div className="mb-main-inner">
-        {validationIssue ? (
-          <div className="error-banner">{validationIssue}</div>
-        ) : null}
-        {feedback ? <div className="success-banner">{feedback}</div> : null}
+        <div aria-live="polite" className="workspace-notifications">
+          {validationIssue ? (
+            <div className="error-banner">{validationIssue}</div>
+          ) : null}
+          {feedback ? <div className="success-banner">{feedback}</div> : null}
+        </div>
 
         <div className="mb-mission-heading">
           <div className="mb-heading-top">

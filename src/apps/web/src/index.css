@@ -1094,6 +1094,25 @@ tr.clickable {
   font-size: var(--text-sm);
 }
 
+.operator-users-notifications,
+.workspace-notifications {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 1000;
+  width: min(32rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.operator-users-notifications .error-banner,
+.operator-users-notifications .success-banner,
+.workspace-notifications .error-banner,
+.workspace-notifications .success-banner {
+  box-shadow: 0 12px 32px rgb(0 0 0 / 35%);
+  pointer-events: auto;
+}
+
 .info-banner {
   background: var(--blue-subtle);
   border: 1px solid rgba(96, 165, 250, 0.2);
