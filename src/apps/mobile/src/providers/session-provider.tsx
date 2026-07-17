@@ -21,7 +21,8 @@ type SessionContextValue = {
   session: UmbralMobileSession | null;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  renewSession: () => Promise<void>;
+  renewSession: () => Promise<UmbralMobileSession | null>;
+  requireReauthentication: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -41,39 +42,47 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     async function hydrateSession() {
-      const storedSession = await loadStoredSession();
-      if (!active) {
-        return;
-      }
-
-      if (storedSession && isSessionExpired(storedSession)) {
-        // Access token expired while the app was closed — try to renew before giving up.
-        if (isRefreshTokenUsable(storedSession)) {
-          try {
-            const nextSession = await refreshSession(storedSession.refreshToken!);
-            if (!active) {
-              return;
-            }
-            await saveStoredSession(nextSession);
-            setSession(nextSession);
-            setLoading(false);
-            return;
-          } catch {
-            // Refresh token no longer valid; fall through and clear the session.
-          }
-        }
-
+      try {
+        const storedSession = await loadStoredSession();
         if (!active) {
           return;
         }
-        await clearStoredSession();
-        await clearStoredEnrollment();
-        setSession(null);
-      } else {
-        setSession(storedSession);
-      }
 
-      setLoading(false);
+        if (storedSession && isSessionExpired(storedSession)) {
+          // Access token expired while the app was closed — try to renew before giving up.
+          if (isRefreshTokenUsable(storedSession)) {
+            try {
+              const nextSession = await refreshSession(storedSession.refreshToken!);
+              if (!active) {
+                return;
+              }
+              await saveStoredSession(nextSession);
+              setSession(nextSession);
+              setLoading(false);
+              return;
+            } catch {
+              // Refresh token no longer valid; fall through and clear the session.
+            }
+          }
+
+          if (!active) {
+            return;
+          }
+          await clearStoredSession();
+          setSession(null);
+        } else {
+          setSession(storedSession);
+        }
+
+        setLoading(false);
+      } catch {
+        // Web storage can be unavailable (for example, browser privacy settings). The app remains
+        // usable as a signed-out participant instead of waiting forever for hydration to finish.
+        if (active) {
+          setSession(null);
+          setLoading(false);
+        }
+      }
     }
 
     void hydrateSession();
@@ -102,7 +111,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!isRefreshTokenUsable(session)) {
         // Cannot renew (legacy session or refresh token expired) — end it cleanly.
         await clearStoredSession();
-        await clearStoredEnrollment();
         if (!cancelled) {
           setSession(null);
         }
@@ -121,7 +129,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           return;
         }
         await clearStoredSession();
-        await clearStoredEnrollment();
         setSession(null);
       }
     }, delay);
@@ -150,12 +157,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // no longer have. The scheduled refresh above would fix it eventually; a rename needs it now.
   async function renewSession() {
     if (!session || !isRefreshTokenUsable(session)) {
-      return;
+      return null;
     }
 
     const nextSession = await refreshSession(session.refreshToken!);
     await saveStoredSession(nextSession);
     setSession(nextSession);
+    return nextSession;
+  }
+
+  async function requireReauthentication() {
+    await clearStoredSession();
+    setSession(null);
   }
 
   return (
@@ -165,7 +178,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         session,
         signIn,
         signOut,
-        renewSession
+        renewSession,
+        requireReauthentication
       }}
     >
       {children}

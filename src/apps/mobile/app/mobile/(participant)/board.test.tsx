@@ -1,19 +1,26 @@
 ﻿import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import BoardPage from "./board";
 import {
+  ApiClientError,
   createAuthorizedApiClient,
   SnapshotRefreshPolicies,
   type HintUnlockedPayload,
   type SessionStateChangedPayload,
-  type SessionTeamSnapshot
+  type SessionTeamSnapshot,
+  type TeamProgressChangedPayload
 } from "../../../src/lib/api-client";
-import { loadStoredEnrollment } from "../../../src/lib/session-storage";
+import {
+  clearStoredEnrollment,
+  loadStoredEnrollment
+} from "../../../src/lib/session-storage";
 import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useSession } from "../../../src/providers/session-provider";
 
+const mockReplace = jest.fn();
+
 jest.mock("expo-router", () => ({
   Redirect: ({ href }: { href: string }) => `Redirect:${href}`,
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() })
+  useRouter: () => ({ push: jest.fn(), replace: mockReplace })
 }));
 
 jest.mock("../../../src/providers/session-provider", () => ({
@@ -21,6 +28,7 @@ jest.mock("../../../src/providers/session-provider", () => ({
 }));
 
 jest.mock("../../../src/lib/session-storage", () => ({
+  clearStoredEnrollment: jest.fn(),
   loadStoredEnrollment: jest.fn()
 }));
 
@@ -148,7 +156,16 @@ function createTreasureHuntSnapshot(overrides: Partial<SessionTeamSnapshot> = {}
   };
 }
 
-function renderBoard(apiClient = createMockApiClient()) {
+function renderBoard(
+  apiClient = createMockApiClient(),
+  options: {
+    recoveredApiClient?: MockBoardApiClient;
+    requireReauthentication?: jest.Mock;
+    renewSession?: jest.Mock;
+  } = {}
+) {
+  const renewSession = options.renewSession ?? jest.fn();
+  const requireReauthentication = options.requireReauthentication ?? jest.fn();
   (useSession as jest.Mock).mockReturnValue({
     session: {
       accessToken: "participant-token",
@@ -156,14 +173,23 @@ function renderBoard(apiClient = createMockApiClient()) {
       roles: ["Participant"],
       username: "participant",
       displayName: "Participant One"
-    }
+    },
+    renewSession,
+    requireReauthentication
   });
   (loadStoredEnrollment as jest.Mock).mockResolvedValue({
     joinCode: "ABC234",
     teamId: "team-1",
     teamName: "Alpha Team"
   });
-  (createAuthorizedApiClient as jest.Mock).mockReturnValue(apiClient);
+  const createClientMock = createAuthorizedApiClient as jest.Mock;
+  if (options.recoveredApiClient) {
+    createClientMock
+      .mockReturnValueOnce(apiClient)
+      .mockReturnValue(options.recoveredApiClient);
+  } else {
+    createClientMock.mockReturnValue(apiClient);
+  }
 
   render(<BoardPage />);
 
@@ -183,6 +209,7 @@ beforeEach(() => {
     latestConnectionOptions = options;
     return mockConnectionState;
   });
+  (clearStoredEnrollment as jest.Mock).mockResolvedValue(undefined);
 });
 
 test("loads the Session Team snapshot on mount and renders current board data", async () => {
@@ -454,6 +481,222 @@ test("renders timer and session state after realtime session state update", asyn
 
   expect(screen.getByText("En pausa")).toBeTruthy();
   expect(screen.getByText("02:05")).toBeTruthy();
+});
+
+test("ignores a stale realtime team progression event", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(
+    createSnapshot({
+      currentStage: {
+        missionStageId: "stage-2",
+        name: "Open the archive gate",
+        sessionStageOrder: 2,
+        sourceOrder: 20,
+        resolvedTimeBudgetMinutes: 10,
+        difficulty: "Hard",
+        gameType: "TreasureHunt",
+        prompt: "Find the archive gate marker.",
+        choices: []
+      },
+      sync: {
+        sequenceNumber: 3,
+        lastUpdatedUtc: "2026-06-03T08:03:00Z",
+        serverTimeUtc: "2026-06-03T08:03:00Z"
+      }
+    })
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Open the archive gate")).toBeTruthy();
+  });
+
+  const stalePayload: TeamProgressChangedPayload = {
+    metadata: {
+      liveSessionId: "live-session-1",
+      sequenceNumber: 2,
+      occurredAtUtc: "2026-06-03T08:02:00Z",
+      refreshPolicy: SnapshotRefreshPolicies.applyIncremental,
+      reason: "Delayed event"
+    },
+    sessionTeamId: "team-1",
+    currentStage: createSnapshot().currentStage,
+    progressState: "InProgress"
+  };
+
+  await act(async () => {
+    signalRHandlers.ReceiveTeamProgressChanged(stalePayload);
+  });
+
+  expect(screen.getByText("Open the archive gate")).toBeTruthy();
+  expect(screen.queryByText("Decode the seal")).toBeNull();
+});
+
+test("ignores a stale session state event and its countdown", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockResolvedValue(
+    createSnapshot({
+      sync: {
+        sequenceNumber: 3,
+        lastUpdatedUtc: "2026-06-03T08:03:00Z",
+        serverTimeUtc: "2026-06-03T08:03:00Z"
+      }
+    })
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(signalRHandlers.ReceiveSessionStateChanged).toBeDefined();
+  });
+
+  await act(async () => {
+    signalRHandlers.ReceiveSessionStateChanged({
+      metadata: {
+        liveSessionId: "live-session-1",
+        sequenceNumber: 2,
+        occurredAtUtc: "2026-06-03T08:02:00Z",
+        refreshPolicy: SnapshotRefreshPolicies.applyIncremental,
+        reason: "Delayed pause"
+      },
+      previousState: "Running",
+      currentState: "Paused",
+      remainingSeconds: 125
+    } satisfies SessionStateChangedPayload);
+  });
+
+  expect(screen.getByText("En juego")).toBeTruthy();
+  expect(screen.queryByText("02:05")).toBeNull();
+});
+
+test("lets the participant leave a Session Team they no longer belong to", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError(
+      "Participant must belong to this Session Team to read its snapshot.",
+      403,
+      "session_team_participation_required"
+    )
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("Ya no puedes acceder a este equipo")).toBeTruthy();
+  });
+
+  fireEvent.press(screen.getByText("Salir de este equipo"));
+
+  await waitFor(() => {
+    expect(clearStoredEnrollment).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith("/mobile/home");
+  });
+});
+
+test("clears a Session Team that no longer exists and returns to the hub", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Session Team was not found.", 404, "session_team_not_found")
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(clearStoredEnrollment).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith("/mobile/home");
+  });
+});
+
+test("renews an expired access token and resumes the same Session Team", async () => {
+  const expiredClient = createMockApiClient();
+  const recoveredClient = createMockApiClient();
+  const renewedSession = {
+    accessToken: "renewed-token",
+    expiresAt: "2026-06-03T13:00:00Z",
+    roles: ["Participant"],
+    username: "participant",
+    displayName: "Participant One"
+  };
+  const renewSession = jest.fn().mockResolvedValue(renewedSession);
+  expiredClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Access token expired.", 401)
+  );
+  recoveredClient.getSessionTeamSnapshot.mockResolvedValue(createSnapshot());
+
+  renderBoard(expiredClient, { recoveredApiClient: recoveredClient, renewSession });
+
+  await waitFor(() => {
+    expect(screen.getByText("Decode the seal")).toBeTruthy();
+  });
+
+  expect(renewSession).toHaveBeenCalledTimes(1);
+  expect(createAuthorizedApiClient).toHaveBeenCalledWith("renewed-token");
+  expect(recoveredClient.getSessionTeamSnapshot).toHaveBeenCalledWith("team-1");
+  expect(clearStoredEnrollment).not.toHaveBeenCalled();
+});
+
+test("requires sign-in when the renewed access token is also rejected", async () => {
+  const expiredClient = createMockApiClient();
+  const recoveredClient = createMockApiClient();
+  const requireReauthentication = jest.fn().mockResolvedValue(undefined);
+  expiredClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Access token expired.", 401)
+  );
+  recoveredClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Access token expired.", 401)
+  );
+
+  renderBoard(expiredClient, {
+    recoveredApiClient: recoveredClient,
+    renewSession: jest.fn().mockResolvedValue({
+      accessToken: "renewed-token",
+      expiresAt: "2026-06-03T13:00:00Z",
+      roles: ["Participant"],
+      username: "participant",
+      displayName: "Participant One"
+    }),
+    requireReauthentication
+  });
+
+  await waitFor(() => {
+    expect(requireReauthentication).toHaveBeenCalledTimes(1);
+  });
+  expect(clearStoredEnrollment).not.toHaveBeenCalled();
+});
+
+test("keeps the Session Team when snapshot loading has a recoverable server failure", async () => {
+  const apiClient = createMockApiClient();
+  apiClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Session service unavailable.", 503)
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("No pudimos cargar tu tablero")).toBeTruthy();
+  });
+
+  expect(clearStoredEnrollment).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByText("Reintentar"));
+  await waitFor(() => {
+    expect(apiClient.getSessionTeamSnapshot).toHaveBeenCalledTimes(2);
+  });
+});
+
+test("shows retry recovery when clearing an unknown Session Team fails", async () => {
+  const apiClient = createMockApiClient();
+  (clearStoredEnrollment as jest.Mock).mockRejectedValue(new Error("Storage unavailable"));
+  apiClient.getSessionTeamSnapshot.mockRejectedValue(
+    new ApiClientError("Session Team was not found.", 404, "session_team_not_found")
+  );
+
+  renderBoard(apiClient);
+
+  await waitFor(() => {
+    expect(screen.getByText("No pudimos borrar el equipo guardado. Inténtalo de nuevo.")).toBeTruthy();
+  });
+  expect(mockReplace).not.toHaveBeenCalled();
 });
 
 test("shows degraded connection state while SignalR reconnects", async () => {
