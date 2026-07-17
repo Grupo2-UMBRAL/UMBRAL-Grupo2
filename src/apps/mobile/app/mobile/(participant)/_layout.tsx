@@ -40,6 +40,7 @@ export default function ParticipantLayout() {
       <Stack.Screen name="progress" options={{ title: "Progreso" }} />
       <Stack.Screen name="ranking" options={{ title: "Ranking" }} />
       <Stack.Screen name="resolutions" options={{ title: "Pistas" }} />
+      <Stack.Screen name="perfil" options={{ title: "Perfil" }} />
     </Stack>
   );
 }

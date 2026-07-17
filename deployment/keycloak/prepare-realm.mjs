@@ -17,14 +17,6 @@ if (!webClient) {
 webClient.redirectUris = [`${publicBaseUrl}/*`];
 webClient.webOrigins = [publicBaseUrl];
 
-const shortLivedClient = realm.clients.find(
-  (client) => client.clientId === 'umbral-web-shortlived',
-);
-if (shortLivedClient) {
-  shortLivedClient.redirectUris = [`${publicBaseUrl}/*`];
-  shortLivedClient.webOrigins = [publicBaseUrl];
-}
-
 await writeFile(
   '/build/umbral-realm.demo.json',
   `${JSON.stringify(realm, null, 2)}\n`,

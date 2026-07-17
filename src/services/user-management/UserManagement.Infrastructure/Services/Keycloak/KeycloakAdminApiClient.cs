@@ -9,7 +9,7 @@ using Umbral.ServiceDefaults;
 namespace UserManagement.Infrastructure.Keycloak;
 
 public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<KeycloakAdminApiOptions> options)
-    : IOperatorAdministrationPort, IDisposable
+    : IOperatorAdministrationPort, IParticipantAdministrationPort, IDisposable
 {
     private readonly HttpClient httpClient = httpClient;
     private readonly KeycloakAdminApiOptions options = options.Value;
@@ -209,6 +209,82 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         updateResponse.Dispose();
     }
 
+    public async Task<ParticipantProfileDto> GetParticipantProfileAsync(
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        // No allowNotFound: the id is the `sub` of a token this realm just signed, so a 404 means the
+        // realm contradicts its own token. That is a technical fault, not a 404 to hand the player.
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Get,
+            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}",
+            cancellationToken: cancellationToken);
+
+        using (response)
+        {
+            var user = await ReadJsonAsync<KeycloakUserRepresentation>(response, cancellationToken);
+            return ToParticipantProfileDto(user);
+        }
+    }
+
+    public async Task<string?> FindUserIdByUsernameAsync(string username, CancellationToken cancellationToken)
+    {
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Get,
+            $"/admin/realms/{options.Realm}/users?username={Uri.EscapeDataString(username)}&exact=true",
+            cancellationToken: cancellationToken);
+        var users = await ReadJsonAsync<List<KeycloakUserRepresentation>>(response, cancellationToken);
+
+        return users
+            .FirstOrDefault(user => string.Equals(user.Username, username, StringComparison.OrdinalIgnoreCase))
+            ?.Id;
+    }
+
+    public async Task<ParticipantProfileDto> UpdateUsernameAsync(
+        string userId,
+        string username,
+        CancellationToken cancellationToken)
+    {
+        // Keycloak merges a partial UserRepresentation on PUT, so sending username alone leaves email,
+        // names, role mappings and the enabled flag untouched. Read-modify-write would only widen the
+        // race with the handler's pre-check.
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}",
+            new
+            {
+                username
+            },
+            conflictCode: "participant_username_taken",
+            cancellationToken: cancellationToken);
+        response.Dispose();
+
+        return await GetParticipantProfileAsync(userId, cancellationToken);
+    }
+
+    public async Task DeactivateParticipantAsync(string userId, CancellationToken cancellationToken)
+    {
+        // Partial merge again: enabled alone, so deactivating cannot disturb the username or email.
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}",
+            new
+            {
+                enabled = false
+            },
+            cancellationToken: cancellationToken);
+        response.Dispose();
+    }
+
+    public async Task LogoutParticipantSessionsAsync(string userId, CancellationToken cancellationToken)
+    {
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Post,
+            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}/logout",
+            cancellationToken: cancellationToken);
+        response.Dispose();
+    }
+
     public void Dispose()
     {
         tokenLock.Dispose();
@@ -239,11 +315,15 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         }
     }
 
+    // conflictCode is the failure code for a provider 409. It defaults to the Operator vocabulary
+    // because that is where every caller of this method started; participant routes pass their own,
+    // so a player is never handed an operator_* code for a username they chose.
     private async Task<HttpResponseMessage> SendAuthorizedAsync(
         HttpMethod method,
         string path,
         object? payload = null,
         bool allowNotFound = false,
+        string conflictCode = "operator_provider_duplicate",
         CancellationToken cancellationToken = default)
     {
         EnsureRequiredConfiguration();
@@ -274,7 +354,7 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
             throw new UmbralDomainException(
-                "operator_provider_duplicate",
+                conflictCode,
                 detail.Length == 0 ? "Keycloak reported a duplicate User." : detail,
                 UmbralFailureCategory.Conflict);
         }
@@ -432,6 +512,25 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         }
 
         return text.Trim();
+    }
+
+    // ToOperatorDto coalesces every field away, which suits a list an Administrator scans. A profile
+    // is read as fact by its owner, so an id-less or username-less representation fails here instead
+    // of rendering a blank account as though it were the truth.
+    private static ParticipantProfileDto ToParticipantProfileDto(KeycloakUserRepresentation user)
+    {
+        if (string.IsNullOrWhiteSpace(user.Id) || string.IsNullOrWhiteSpace(user.Username))
+        {
+            throw new UmbralTechnicalException(
+                "participant_representation_incomplete",
+                "Keycloak returned a User without an id or a username.");
+        }
+
+        return new ParticipantProfileDto(
+            user.Id,
+            user.Username,
+            user.Email ?? string.Empty,
+            user.Enabled ?? false);
     }
 
     private static OperatorDto ToOperatorDto(KeycloakUserRepresentation user) =>
