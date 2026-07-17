@@ -11,6 +11,7 @@ import {
   clearStoredSession,
   isSessionExpired,
   loadStoredSession,
+  resetOnboardingState,
   saveStoredSession,
   type UmbralMobileSession
 } from "../lib/session-storage";
@@ -134,6 +135,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   async function signIn(username: string, password: string) {
     const nextSession = await loginWithPassword({ username, password });
     await saveStoredSession(nextSession);
+    await resetOnboardingState();
     setSession(nextSession);
   }
 

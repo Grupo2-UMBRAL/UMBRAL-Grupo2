@@ -3,6 +3,7 @@ import type { UmbralRole } from "./roles";
 
 const sessionStorageKey = "umbral.mobile.session";
 const enrollmentStorageKey = "umbral.mobile.enrollment";
+const onboardingStorageKey = "umbral.mobile.onboarding";
 
 export type UmbralMobileSession = {
   accessToken: string;
@@ -68,4 +69,39 @@ export function clearStoredEnrollment() {
 
 export function isSessionExpired(session: UmbralMobileSession) {
   return Date.parse(session.expiresAt) <= Date.now();
+}
+
+/**
+ * Qué piezas de la entrada ya vio el participante durante el inicio de sesión actual. Se reinicia
+ * al autenticar de nuevo para que el tutorial se muestre en cada login; no se toca durante las
+ * renovaciones de token ni al cambiar de sesión de juego.
+ */
+export type OnboardingState = {
+  tutorialSeen: boolean;
+  checklistDismissed: boolean;
+};
+
+const defaultOnboarding: OnboardingState = { tutorialSeen: false, checklistDismissed: false };
+
+export async function loadOnboardingState(): Promise<OnboardingState> {
+  const rawValue = await AsyncStorage.getItem(onboardingStorageKey);
+  if (!rawValue) {
+    return defaultOnboarding;
+  }
+
+  try {
+    return { ...defaultOnboarding, ...(JSON.parse(rawValue) as Partial<OnboardingState>) };
+  } catch {
+    await AsyncStorage.removeItem(onboardingStorageKey);
+    return defaultOnboarding;
+  }
+}
+
+export async function saveOnboardingState(patch: Partial<OnboardingState>) {
+  const current = await loadOnboardingState();
+  return AsyncStorage.setItem(onboardingStorageKey, JSON.stringify({ ...current, ...patch }));
+}
+
+export function resetOnboardingState() {
+  return AsyncStorage.setItem(onboardingStorageKey, JSON.stringify(defaultOnboarding));
 }
