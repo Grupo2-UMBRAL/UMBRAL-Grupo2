@@ -323,4 +323,22 @@ public sealed class KeycloakAdminApiClientTests
 
         Assert.Equal("user_management_admin_credentials_missing", ex.Code);
     }
+
+    [Theory]
+    [InlineData("{\"error_description\": \"Detailed error\"}", "Detailed error")]
+    [InlineData("{\"error\": \"Short error\"}", "Short error")]
+    [InlineData("{\"message\": \"Generic message\"}", "Generic message")]
+    [InlineData("{\"other\": \"value\"}", "{\"other\": \"value\"}")]
+    [InlineData("not json", "not json")]
+    [InlineData("", "400 Bad Request")]
+    public async Task SendAuthorizedAsync_Failure_ReadsFailureDetail(string body, string expectedMessage)
+    {
+        var (client, _) = BuildClient(request =>
+            IsToken(request) ? Token() : Json(HttpStatusCode.BadRequest, body));
+
+        var ex = await Assert.ThrowsAsync<UmbralTechnicalException>(
+            () => client.GetUserByIdAsync("u1", CancellationToken.None));
+
+        Assert.Contains(expectedMessage, ex.Message);
+    }
 }

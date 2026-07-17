@@ -11,6 +11,26 @@ public sealed class KeycloakRoleClaimsTransformationTests
         new("http://localhost:8080/realms/umbral", Audience, false);
 
     [Fact]
+    public async Task TransformAsync_UnauthenticatedIdentity_ReturnsUnchanged()
+    {
+        var identity = new ClaimsIdentity();
+        var principal = new ClaimsPrincipal(identity);
+        var transformation = new KeycloakRoleClaimsTransformation(Auth);
+        
+        var result = await transformation.TransformAsync(principal);
+        
+        Assert.Same(principal, result);
+    }
+
+    [Fact]
+    public async Task TransformAsync_NullPrincipal_ThrowsArgumentNullException()
+    {
+        var transformation = new KeycloakRoleClaimsTransformation(Auth);
+        
+        await Assert.ThrowsAsync<ArgumentNullException>(() => transformation.TransformAsync(null!));
+    }
+
+    [Fact]
     public async Task TransformAsync_PromotesRealmAccessRoles_ToRoleClaims()
     {
         var principal = CreatePrincipal(
@@ -21,6 +41,17 @@ public sealed class KeycloakRoleClaimsTransformationTests
         var roles = RoleValues(result);
         Assert.Contains("operator", roles);
         Assert.Contains("administrator", roles);
+    }
+    
+    [Fact]
+    public async Task TransformAsync_RealmAccess_WithoutRoles_DoesNotThrow()
+    {
+        var principal = CreatePrincipal(
+            new Claim("realm_access", """{"not_roles":["operator"]}"""));
+
+        var result = await Transform(principal);
+
+        Assert.Empty(RoleValues(result));
     }
 
     [Fact]
@@ -42,11 +73,52 @@ public sealed class KeycloakRoleClaimsTransformationTests
         Assert.Contains("operator", roles);
         Assert.DoesNotContain("administrator", roles);
     }
+    
+    [Fact]
+    public async Task TransformAsync_ResourceAccess_WithMissingRolesArray_DoesNotThrow()
+    {
+        var principal = CreatePrincipal(
+            new Claim(
+                "resource_access",
+                $$"""
+                {
+                    "{{Audience}}": { "no_roles": ["operator"] },
+                    "some-other-client": { "roles": ["administrator"] }
+                }
+                """));
+
+        var result = await Transform(principal);
+
+        Assert.Empty(RoleValues(result));
+    }
+    
+    [Fact]
+    public async Task TransformAsync_ResourceAccess_WithNonObjectRoot_DoesNotThrow()
+    {
+        var principal = CreatePrincipal(
+            new Claim("resource_access", """["operator"]"""));
+
+        var result = await Transform(principal);
+
+        Assert.Empty(RoleValues(result));
+    }
 
     [Fact]
     public async Task TransformAsync_PromotesFlatRolesArrayClaim_ToRoleClaims()
     {
         var principal = CreatePrincipal(new Claim("roles", """["operator","participant"]"""));
+
+        var result = await Transform(principal);
+
+        var roles = RoleValues(result);
+        Assert.Contains("operator", roles);
+        Assert.Contains("participant", roles);
+    }
+    
+    [Fact]
+    public async Task TransformAsync_PromotesFlatRolesStringClaim_ToRoleClaims()
+    {
+        var principal = CreatePrincipal(new Claim("roles", "operator,participant"));
 
         var result = await Transform(principal);
 
@@ -70,7 +142,8 @@ public sealed class KeycloakRoleClaimsTransformationTests
     {
         var principal = CreatePrincipal(
             new Claim("realm_access", "{ not valid json"),
-            new Claim("resource_access", ""));
+            new Claim("resource_access", ""),
+            new Claim("roles", ""));
 
         var result = await Transform(principal);
 
@@ -87,6 +160,39 @@ public sealed class KeycloakRoleClaimsTransformationTests
         var result = await Transform(principal);
 
         Assert.Single(RoleValues(result), role => role == "operator");
+    }
+    
+    [Fact]
+    public async Task TransformAsync_IgnoresNonStringRolesInArray()
+    {
+        var principal = CreatePrincipal(
+            new Claim("realm_access", """{"roles":["operator", 123, true, null, ""]}"""));
+
+        var result = await Transform(principal);
+
+        Assert.Single(RoleValues(result), role => role == "operator");
+    }
+    
+    [Fact]
+    public async Task TransformAsync_ReadsAudienceFromAudAndAzpClaims()
+    {
+        var principal = CreatePrincipal(
+            new Claim("aud", "custom-aud"),
+            new Claim("azp", "custom-azp"),
+            new Claim(
+                "resource_access",
+                """
+                {
+                    "custom-aud": { "roles": ["operator"] },
+                    "custom-azp": { "roles": ["administrator"] }
+                }
+                """));
+
+        var result = await Transform(principal);
+
+        var roles = RoleValues(result);
+        Assert.Contains("operator", roles);
+        Assert.Contains("administrator", roles);
     }
 
     private static Task<ClaimsPrincipal> Transform(ClaimsPrincipal principal)

@@ -133,3 +133,11 @@ internal sealed class FakeLiveSessionRepository(IEnumerable<SessionManagement.Do
         return Task.FromResult(session);
     }
 }
+
+public static class TestAsyncEnumerableExtensions
+{
+    public static IQueryable<T> AsTestAsyncQueryable<T>(this IEnumerable<T> source)
+    {
+        return new TestAsyncEnumerable<T>(source);
+    }
+}

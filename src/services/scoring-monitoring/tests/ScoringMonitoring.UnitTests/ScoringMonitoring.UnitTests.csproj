@@ -18,5 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ScoringMonitoring.Domain\ScoringMonitoring.Domain.csproj" />
     <ProjectReference Include="..\..\ScoringMonitoring.Application\ScoringMonitoring.Application.csproj" />
+    <ProjectReference Include="..\..\ScoringMonitoring.Infrastructure\ScoringMonitoring.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\ScoringMonitoring.Api\ScoringMonitoring.Api.csproj" />
   </ItemGroup>
 </Project>

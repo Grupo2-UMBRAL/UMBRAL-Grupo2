@@ -65,3 +65,7 @@ src/old services copy/
 ##claude
 .claude/skills
 design_handoff_missions_redesign/
+
+coveragereport/
+coverage-report/
+coverage-report-clean/
