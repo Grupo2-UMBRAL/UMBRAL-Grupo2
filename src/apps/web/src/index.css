@@ -55,6 +55,9 @@
   --radius-xl: 16px;
   --radius-pill: 999px;
 
+  /* Sticky header (translucent, matches theme bg) */
+  --header-bg: rgba(19, 31, 36, 0.85);
+
   /* Shadow (dark theme) */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -139,6 +142,8 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
   --shadow-glow: 0 0 0 3px rgba(28, 176, 246, 0.18);
+
+  --header-bg: rgba(255, 255, 255, 0.85);
 }
 
 /* ----------------------------------------------------------------
@@ -283,198 +288,9 @@ code {
 /* ----------------------------------------------------------------
    4. LANDING PAGE
    ---------------------------------------------------------------- */
-.landing {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Subtle grid background */
-.landing::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 64px 64px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Ambient glow */
-.landing::after {
-  content: '';
-  position: fixed;
-  top: -20%;
-  right: -10%;
-  width: 60%;
-  height: 60%;
-  background: radial-gradient(ellipse, rgba(196, 132, 29, 0.06) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.landing > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Nav */
-.landing-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-lg) var(--space-2xl);
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.landing-logo {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--accent-text);
-  font-family: var(--font-mono);
-}
-
-.landing-nav-links {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
-
-.landing-nav-link {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  transition: color var(--duration-fast) ease;
-}
-.landing-nav-link:hover {
-  color: var(--text);
-}
-
-/* Hero */
-.hero {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: var(--space-3xl);
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: var(--space-3xl) var(--space-2xl);
-  min-height: calc(100dvh - 80px);
-}
-
-.hero-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.hero-content h1 {
-  font-size: var(--text-5xl);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-
-.hero-content p {
-  font-size: var(--text-lg);
-  max-width: 48ch;
-}
-
-.hero-actions {
-  display: flex;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
-}
-
-.hero-image {
-  position: relative;
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  aspect-ratio: 4 / 3;
-}
-
-.hero-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.hero-image::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl);
-  pointer-events: none;
-}
-
-/* Features */
-.features {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: var(--space-3xl) var(--space-2xl);
-}
-
-.features-header {
-  margin-bottom: var(--space-2xl);
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-lg);
-}
-
-.feature-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-xl);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  transition: border-color var(--duration-base) ease, background var(--duration-base) ease;
-}
-.feature-card:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
-}
-
-.feature-number {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--accent-text);
-  font-weight: 500;
-}
-
-.feature-card h3 {
-  font-size: var(--text-lg);
-}
-
-.feature-card p {
-  font-size: var(--text-sm);
-  line-height: 1.7;
-}
-
-/* Landing footer */
-.landing-footer {
-  padding: var(--space-2xl);
-  text-align: center;
-  border-top: 1px solid var(--border);
-  margin-top: auto;
-}
-
-.landing-footer p {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  margin: 0 auto;
-}
+/* The public landing is a distinct bright/warm brand surface (aligned to the
+   mobile Duolingo palette). Its styles live in pages/landing.css, scoped under
+   .lp so they never collide with this dark operator/admin design system. */
 
 /* ----------------------------------------------------------------
    5. BUTTONS
@@ -721,7 +537,8 @@ code {
   gap: var(--space-md);
   min-width: 0;
 }
-.sidebar-toggle {
+.sidebar-toggle,
+.account-console-link {
   flex-shrink: 0;
   padding: 0.4rem;
   line-height: 0;
@@ -731,7 +548,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(15, 15, 18, 0.85);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   padding: var(--space-md) var(--space-xl);
@@ -1820,21 +1637,6 @@ tr.clickable {
    27. RESPONSIVE
    ---------------------------------------------------------------- */
 @media (max-width: 1024px) {
-  .hero {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    padding-top: var(--space-2xl);
-    padding-bottom: var(--space-2xl);
-  }
-
-  .hero-image {
-    max-height: 400px;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
   .split-layout,
   .split-layout-wide {
     grid-template-columns: 1fr;
@@ -1852,14 +1654,6 @@ tr.clickable {
 
   .main-area {
     margin-left: 0;
-  }
-
-  .hero-content h1 {
-    font-size: var(--text-3xl);
-  }
-
-  .landing-nav {
-    padding: var(--space-md);
   }
 
   .content-body {

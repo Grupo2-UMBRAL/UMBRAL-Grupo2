@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { Stack, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GameButton } from "../../../src/components/game-button";
 import { LoadingScreen } from "../../../src/components/loading-screen";
@@ -16,7 +16,12 @@ import {
 } from "../../../src/lib/stage-progress";
 import { useSessionManagementConnection } from "../../../src/hooks/use-session-management-connection";
 import { useTeamSnapshot } from "../../../src/hooks/use-team-snapshot";
-import { useSession } from "../../../src/providers/session-provider";
+import { OnboardingChecklist, OnboardingTutorial } from "../../../src/components/onboarding";
+import {
+  loadOnboardingState,
+  saveOnboardingState,
+  type OnboardingState
+} from "../../../src/lib/session-storage";
 
 function resolveConnection(kind: string) {
   switch (kind) {
@@ -67,9 +72,25 @@ function HubTile({ icon, title, onPress }: HubTileProps) {
   );
 }
 
+function ProfileHeaderButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel="Mi perfil"
+      accessibilityRole="button"
+      hitSlop={10}
+      onPress={onPress}
+      style={({ pressed }) => [styles.profileButton, pressed && styles.tilePressed]}
+    >
+      <View style={styles.profileIcon}>
+        <View style={styles.profileHead} />
+        <View style={styles.profileBody} />
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
-  const { signOut } = useSession();
   const { loading, enrollment, snapshot, error, refresh, leave, session } = useTeamSnapshot();
   const config = useMemo(() => getClientConfig(), []);
 
@@ -87,6 +108,29 @@ export default function HomePage() {
 
   const progress = useMemo(() => buildStageProgress(snapshot), [snapshot]);
 
+  // `null` mientras se lee AsyncStorage: sin ese tercer estado el tutorial parpadea en cada entrada
+  // de quien ya lo vio, porque `false` se renderiza antes de saber la respuesta.
+  const [onboarding, setOnboarding] = useState<OnboardingState | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    void loadOnboardingState().then((state) => {
+      if (active) {
+        setOnboarding(state);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const closeOnboarding = (patch: Partial<OnboardingState>) => {
+    setOnboarding((current) => (current ? { ...current, ...patch } : current));
+    void saveOnboardingState(patch);
+  };
+
   if (loading) {
     return <LoadingScreen message="Preparando tu misión..." />;
   }
@@ -99,6 +143,12 @@ export default function HomePage() {
   const stagePoints = currentStage ? basePointsForDifficulty(currentStage.difficulty) : null;
 
   return (
+    <View style={styles.root}>
+      <Stack.Screen
+        options={{
+          headerRight: () => <ProfileHeaderButton onPress={() => router.push("/mobile/perfil")} />
+        }}
+      />
     <ScreenShell
       eyebrow={`Hola, ${session?.displayName ?? "participante"}`}
       title="Tu próxima aventura UMBRAL"
@@ -216,30 +266,25 @@ export default function HomePage() {
           )}
         </>
       ) : null}
-
-      {/* Outside the tile row above on purpose: that row only renders once the player has joined a
-          session, and the profile has to stay reachable before then -- a player with no session is
-          exactly the one who may need to fix their account. */}
-      <Pressable
-        onPress={() => router.push("/mobile/perfil")}
-        style={({ pressed }) => [styles.signOut, pressed && styles.tilePressed]}
-      >
-        <Text style={styles.switchLabel}>Mi perfil</Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => {
-          void signOut().then(() => router.replace("/mobile/login"));
-        }}
-        style={({ pressed }) => [styles.signOut, pressed && styles.tilePressed]}
-      >
-        <Text style={styles.signOutLabel}>Cerrar sesión</Text>
-      </Pressable>
     </ScreenShell>
+
+      {onboarding?.tutorialSeen === false ? (
+        <OnboardingTutorial onDone={() => closeOnboarding({ tutorialSeen: true })} />
+      ) : null}
+
+      {/* El checklist espera a que el tutorial se cierre: si no, su pill queda debajo del modal. */}
+      {onboarding?.tutorialSeen && !onboarding.checklistDismissed ? (
+        <OnboardingChecklist onDismiss={() => closeOnboarding({ checklistDismissed: true })} />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Contenedor de posicionamiento para los overlays de entrada, que se dibujan sobre el shell.
+  root: {
+    flex: 1
+  },
   statusRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -304,10 +349,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14
   },
-  signOutLabel: {
-    color: "#EA2B2B",
-    fontSize: 15,
-    fontWeight: "700"
+  // Mismo lenguaje que los tiles: superficie blanca, borde y el labio inferior sólido como única
+  // pista de profundidad (§3). Antes era un aro gris suelto que leía como placeholder.
+  profileButton: {
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E5E5",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderBottomColor: "#D9D9D9",
+    borderBottomWidth: 3,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  profileIcon: {
+    borderColor: "#4B4B4B",
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 26,
+    overflow: "hidden",
+    position: "relative",
+    width: 26
+  },
+  // El origen de los hijos absolutos cae dentro del borde (caja de 22px), así que se centra en x=11.
+  profileHead: {
+    borderColor: "#4B4B4B",
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 8,
+    left: 7,
+    position: "absolute",
+    top: 4,
+    width: 8
+  },
+  profileBody: {
+    borderColor: "#4B4B4B",
+    borderRadius: 999,
+    borderWidth: 2,
+    height: 10,
+    left: 3,
+    position: "absolute",
+    top: 13,
+    width: 16
   },
   switchLabel: {
     color: "#1CB0F6",

@@ -1,0 +1,520 @@
+/* ================================================================
+   UMBRAL landing page. Bright/warm surface aligned to the mobile
+   "Duolingo-bright" brand (green/blue on near-white, Nunito, rounded,
+   spark mascot). Everything is scoped under .lp so it never touches the
+   dark operator/admin design system in index.css.
+   ================================================================ */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,600;0,700;0,800;0,900&display=swap");
+
+.lp {
+  --green: #58cc02;
+  --green-strong: #58a700;
+  --green-tint: #eaf7d6;
+  --blue: #1cb0f6;
+  --blue-strong: #1899d6;
+  --blue-tint: #ddf4ff;
+  --amber: #ffc800;
+  --amber-tint: #fff4cc;
+  --red: #ff4b4b;
+
+  --ink: #3c3c3c;
+  --ink-2: #777777;
+  --ink-3: #afafaf;
+  --line: #e5e5e5;
+  --surface: #ffffff;
+  --bg: #f7f7f7;
+
+  --font: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.lp *,
+.lp *::before,
+.lp *::after {
+  box-sizing: border-box;
+}
+
+.lp h1,
+.lp h2,
+.lp h3 {
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+.lp p {
+  color: var(--ink-2);
+  line-height: 1.55;
+  max-width: none;
+}
+
+/* soft ambient blobs */
+.lp-blobs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.lp-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+}
+.lp-blob.g {
+  width: 460px;
+  height: 460px;
+  background: var(--green-tint);
+  top: -140px;
+  left: -120px;
+}
+.lp-blob.b {
+  width: 520px;
+  height: 520px;
+  background: var(--blue-tint);
+  top: 5%;
+  right: -180px;
+}
+.lp-blob.a {
+  width: 360px;
+  height: 360px;
+  background: var(--amber-tint);
+  bottom: -160px;
+  left: 30%;
+}
+.lp > *:not(.lp-blobs) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- shared nav ---- */
+.lp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 22px 28px;
+}
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.lp-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* centered nav: [links] [big brand] [login] */
+.lp-nav.centered {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+.lp-nav.centered .lp-nav-side {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.lp-nav.centered .lp-nav-side.right {
+  justify-content: flex-end;
+}
+.lp-brand-lg {
+  justify-self: center;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 30px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.lp-brand-lg .lp-brand-word {
+  line-height: 1;
+}
+.lp-brand-lg .lp-brand-word .u {
+  color: var(--green);
+}
+@media (max-width: 640px) {
+  .lp-nav.centered {
+    grid-template-columns: 1fr auto;
+  }
+  .lp-nav.centered .lp-nav-side.left {
+    display: none;
+  }
+  .lp-brand-lg {
+    flex-direction: row;
+    font-size: 24px;
+  }
+}
+
+/* ---- app store badges ---- */
+.lp-stores {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.lp-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 18px 10px 15px;
+  border-radius: 14px;
+  background: #131f24;
+  color: #fff;
+  border: 1px solid #131f24;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.lp-store:hover {
+  filter: brightness(1.12);
+}
+.lp-store:active {
+  transform: translateY(1px);
+}
+.lp-store svg {
+  flex-shrink: 0;
+}
+.lp-store-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+}
+.lp-store-text small {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.lp-store-text strong {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.lp-nav-link {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.lp-nav-link:hover {
+  color: var(--ink);
+}
+
+/* ---- buttons: chunky, bottom-shadow (Duolingo) ---- */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: 16px;
+  padding: 13px 22px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: transform 0.08s ease, filter 0.15s ease;
+  white-space: nowrap;
+}
+.lp-btn:active {
+  transform: translateY(2px);
+}
+.lp-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.lp-btn-green {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--green-strong);
+}
+.lp-btn-green:active {
+  box-shadow: 0 2px 0 var(--green-strong);
+}
+.lp-btn-blue {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--blue-strong);
+}
+.lp-btn-blue:active {
+  box-shadow: 0 2px 0 var(--blue-strong);
+}
+.lp-btn-ghost {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 2px solid var(--line);
+  box-shadow: 0 4px 0 var(--line);
+}
+.lp-btn-lg {
+  font-size: 16px;
+  padding: 16px 28px;
+  border-radius: 18px;
+}
+.lp-btn-sm {
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 12px;
+}
+
+.lp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.lp-pill-green {
+  background: var(--green-tint);
+  color: var(--green-strong);
+}
+.lp-pill-blue {
+  background: var(--blue-tint);
+  color: var(--blue-strong);
+}
+.lp-pill-amber {
+  background: var(--amber-tint);
+  color: #8c6e00;
+}
+
+.lp-footer {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ink-3);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ================================================================
+   HERO — split: player-facing copy left, live-console preview right
+   ================================================================ */
+.lpb-hero {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 28px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 56px;
+}
+.lpb-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+.lpb-copy h1 {
+  font-size: clamp(36px, 4.6vw, 54px);
+  font-weight: 900;
+}
+.lpb-copy h1 .u {
+  color: var(--green);
+}
+.lpb-copy p {
+  font-size: 18px;
+  font-weight: 600;
+  max-width: 460px;
+}
+.lpb-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.lpb-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* product preview card */
+.lpb-preview {
+  position: relative;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 26px;
+  padding: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
+  transform: rotate(1.4deg);
+}
+.lpb-preview-mascot {
+  position: absolute;
+  top: -46px;
+  right: -14px;
+  z-index: 2;
+  transform: rotate(-6deg);
+}
+.lpb-pv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 14px;
+}
+.lpb-pv-title {
+  font-weight: 900;
+  font-size: 16px;
+}
+.lpb-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--green-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lpb-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px var(--green-tint);
+  animation: lpb-pulse 1.6s ease-in-out infinite;
+}
+@keyframes lpb-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.lpb-team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  margin-bottom: 8px;
+}
+.lpb-team.lead {
+  background: var(--green-tint);
+  border-color: transparent;
+}
+.lpb-medal {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 14px;
+  flex-shrink: 0;
+  background: #fff;
+  color: var(--ink-2);
+  border: 2px solid var(--line);
+}
+.lpb-medal.g { background: var(--amber); color: #fff; border-color: transparent; }
+.lpb-team-name {
+  flex: 1;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+}
+.lpb-team-score {
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--green-strong);
+}
+.lpb-progress-label {
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 12px 6px 8px;
+}
+.lpb-track {
+  display: flex;
+  gap: 5px;
+  padding: 0 6px 6px;
+}
+.lpb-seg {
+  flex: 1;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.lpb-seg.done {
+  background: var(--green);
+}
+.lpb-seg.cur {
+  background: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-tint);
+}
+
+/* feature cards row */
+.lpb-feats {
+  max-width: 1180px;
+  margin: 40px auto 0;
+  padding: 30px 28px 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.lpb-card {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  padding: 26px 22px;
+  box-shadow: 0 4px 0 var(--line);
+  transition: transform 0.12s ease;
+}
+.lpb-card:hover {
+  transform: translateY(-3px);
+}
+.lpb-card-ico {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  margin-bottom: 14px;
+}
+.lpb-card-ico.green { background: var(--green-tint); }
+.lpb-card-ico.blue { background: var(--blue-tint); }
+.lpb-card-ico.amber { background: var(--amber-tint); }
+.lpb-card h3 {
+  font-size: 19px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.lpb-card p {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---- responsive ---- */
+@media (max-width: 900px) {
+  .lpb-hero {
+    grid-template-columns: 1fr;
+    gap: 60px;
+  }
+  .lpb-preview {
+    transform: none;
+    max-width: 440px;
+  }
+  .lpb-feats {
+    grid-template-columns: 1fr;
+  }
+}

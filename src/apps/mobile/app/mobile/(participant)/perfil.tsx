@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { GameButton } from "../../../src/components/game-button";
 import { LoadingScreen } from "../../../src/components/loading-screen";
 import { ScreenShell, shellStyles } from "../../../src/components/screen-shell";
@@ -153,6 +153,16 @@ export default function ProfilePage() {
       title="Tu cuenta UMBRAL"
       description="Revisa tus datos, cambia tu usuario o tu contraseña, y gestiona tu cuenta."
     >
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          void signOut().then(() => router.replace("/mobile/login"));
+        }}
+        style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
+      >
+        <Text style={styles.signOutLabel}>Cerrar sesión</Text>
+      </Pressable>
+
       {error ? (
         <View style={shellStyles.card}>
           <StatusChip label="Algo salió mal" tone="error" />
@@ -231,6 +241,18 @@ export default function ProfilePage() {
 }
 
 const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.85
+  },
+  signOut: {
+    alignSelf: "flex-start",
+    paddingVertical: 2
+  },
+  signOutLabel: {
+    color: colors.state.error.text,
+    fontSize: 15,
+    fontWeight: "700"
+  },
   field: {
     gap: 4
   },

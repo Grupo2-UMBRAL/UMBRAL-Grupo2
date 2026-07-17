@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
 import type { WebShellRole } from "@/lib/roles";
+import { buildAccountConsoleUrl } from "@/lib/keycloak-account";
 import { Link } from "react-router-dom";
 
 type DashboardLayoutProps = {
@@ -20,9 +21,9 @@ export function DashboardLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") {
-      return "dark";
+      return "light";
     }
-    return window.localStorage.getItem("umbral-theme") === "light" ? "light" : "dark";
+    return window.localStorage.getItem("umbral-theme") === "dark" ? "dark" : "light";
   });
 
   useEffect(() => {
@@ -115,6 +116,19 @@ export function DashboardLayout({
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
+            <a
+              className="btn btn-ghost btn-sm account-console-link"
+              href={buildAccountConsoleUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Mi cuenta de Keycloak"
+              title="Mi cuenta (Keycloak)"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+              </svg>
+            </a>
             <h2>{title}</h2>
           </div>
           <div className="content-header-actions">

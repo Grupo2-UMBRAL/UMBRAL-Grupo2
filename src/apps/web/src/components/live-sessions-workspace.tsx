@@ -408,10 +408,16 @@ function createAuthorizedHeaders(accessToken: string) {
   };
 }
 
+function currentLocalDateTimeValue(): string {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 function createEmptyDraft(): LiveSessionDraft {
   return {
     name: "",
-    scheduledStartAtLocal: ""
+    scheduledStartAtLocal: currentLocalDateTimeValue()
   };
 }
 
@@ -2446,7 +2452,7 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
       setSelectedLiveSessionId(liveSession.id);
       setDraft({
         name: `${selectedMission.name} / Ejecución de seguimiento`,
-        scheduledStartAtLocal: ""
+        scheduledStartAtLocal: currentLocalDateTimeValue()
       });
       setFeedback("LiveSession programada a partir de la captura de Misión activa.");
       await loadLiveSessions(liveSession.id);
