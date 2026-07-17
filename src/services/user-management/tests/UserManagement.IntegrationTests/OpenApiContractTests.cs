@@ -9,7 +9,7 @@ namespace UserManagement.IntegrationTests;
 public sealed class OpenApiContractTests
 {
     [Fact]
-    public async Task Api_PublishesOpenApiDocumentAndInteractiveReference()
+    public async Task Api_PublishesOpenApiDocumentWithoutInteractiveReference()
     {
         await using var factory = new UserManagementApiFactory();
         var client = factory.CreateClient();
@@ -19,8 +19,7 @@ public sealed class OpenApiContractTests
 
         Assert.Equal(HttpStatusCode.OK, documentResponse.StatusCode);
         Assert.Equal("application/json", documentResponse.Content.Headers.ContentType?.MediaType);
-        Assert.Equal(HttpStatusCode.OK, referenceResponse.StatusCode);
-        Assert.Equal("text/html", referenceResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, referenceResponse.StatusCode);
 
         using var document = JsonDocument.Parse(await documentResponse.Content.ReadAsStreamAsync());
         var paths = document.RootElement.GetProperty("paths");
@@ -30,7 +29,18 @@ public sealed class OpenApiContractTests
         Assert.True(document.RootElement
             .GetProperty("components")
             .GetProperty("securitySchemes")
-            .TryGetProperty("Bearer", out _));
+            .TryGetProperty("OAuth2", out var oauth2));
+        Assert.Equal("oauth2", oauth2.GetProperty("type").GetString());
+
+        var authorizationCode = oauth2
+            .GetProperty("flows")
+            .GetProperty("authorizationCode");
+
+        Assert.Equal("/auth/realms/umbral/protocol/openid-connect/auth",
+            authorizationCode.GetProperty("authorizationUrl").GetString());
+        Assert.Equal("/auth/realms/umbral/protocol/openid-connect/token",
+            authorizationCode.GetProperty("tokenUrl").GetString());
+        Assert.True(authorizationCode.GetProperty("scopes").TryGetProperty("openid", out _));
     }
 
     [Fact]

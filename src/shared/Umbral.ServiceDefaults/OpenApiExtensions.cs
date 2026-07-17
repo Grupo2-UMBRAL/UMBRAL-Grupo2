@@ -41,7 +41,7 @@ public static class OpenApiExtensions
 
             if (requiresBearerAuthentication)
             {
-                AddBearerSecurityScheme(document);
+                AddOAuth2SecurityScheme(document);
             }
 
             return Task.CompletedTask;
@@ -60,7 +60,7 @@ public static class OpenApiExtensions
                 operation.Security ??= [];
                 operation.Security.Add(new OpenApiSecurityRequirement
                 {
-                    [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = []
+                    [new OpenApiSecuritySchemeReference("OAuth2", context.Document)] = []
                 });
 
                 return Task.CompletedTask;
@@ -75,7 +75,6 @@ public static class OpenApiExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapOpenApi();
-        app.MapScalarApiReference("/swagger");
 
         return app;
     }
@@ -93,6 +92,8 @@ public static class OpenApiExtensions
 
         app.MapScalarApiReference("/swagger", options =>
         {
+            ConfigureScalarAuth(options);
+
             foreach (var (slug, title) in services)
             {
                 options.AddDocument(slug, title, $"/{slug}/openapi/v1.json");
@@ -146,16 +147,37 @@ public static class OpenApiExtensions
         ];
     }
 
-    private static void AddBearerSecurityScheme(OpenApiDocument document)
+    private static void ConfigureScalarAuth(ScalarOptions options)
+    {
+        options.AddAuthorizationCodeFlow("OAuth2", flow =>
+        {
+            flow.ClientId = "umbral-web";
+            flow.Pkce = Pkce.Sha256;
+            flow.SelectedScopes = ["openid"];
+        });
+        options.AddPreferredSecuritySchemes(["OAuth2"]);
+        options.EnablePersistentAuthentication();
+    }
+
+    private static void AddOAuth2SecurityScheme(OpenApiDocument document)
     {
         document.Components ??= new OpenApiComponents();
         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        document.Components.SecuritySchemes["OAuth2"] = new OpenApiSecurityScheme
         {
-            Type = SecuritySchemeType.Http,
-            Scheme = "bearer",
-            In = ParameterLocation.Header,
-            BearerFormat = "JWT"
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows
+            {
+                AuthorizationCode = new OpenApiOAuthFlow
+                {
+                    AuthorizationUrl = new Uri("/auth/realms/umbral/protocol/openid-connect/auth", UriKind.Relative),
+                    TokenUrl = new Uri("/auth/realms/umbral/protocol/openid-connect/token", UriKind.Relative),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        ["openid"] = "OpenID Connect"
+                    }
+                }
+            }
         };
     }
 }
