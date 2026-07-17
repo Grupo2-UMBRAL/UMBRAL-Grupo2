@@ -39,6 +39,7 @@ import {
   isTreasureHunt
 } from "../../../src/lib/stage-progress";
 import {
+  clearStoredEnrollment,
   loadStoredEnrollment,
   type StoredEnrollment
 } from "../../../src/lib/session-storage";
@@ -48,6 +49,7 @@ import { useSession } from "../../../src/providers/session-provider";
 type ConnectionTone = "neutral" | "info" | "success" | "warn" | "error";
 
 type TeamScore = { score: number; rank: number };
+type SnapshotRecovery = "retry" | "participation" | null;
 
 function resolveSessionState(state: string | null): { label: string; tone: ConnectionTone } {
   switch (state) {
@@ -99,6 +101,18 @@ function readErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "No pudimos actualizar tu tablero.";
 }
 
+function isMissingSessionTeam(error: unknown) {
+  return error instanceof ApiClientError
+    && error.status === 404
+    && error.code === "session_team_not_found";
+}
+
+function isMissingTeamParticipation(error: unknown) {
+  return error instanceof ApiClientError
+    && error.status === 403
+    && error.code === "session_team_participation_required";
+}
+
 function formatCountdown(remainingSeconds: number | null) {
   if (remainingSeconds === null) {
     return null;
@@ -142,7 +156,8 @@ function groupHintsByStage(hints: VisibleHintSnapshot[]) {
 
 export default function BoardPage() {
   const router = useRouter();
-  const { session } = useSession();
+  const routerRef = useRef(router);
+  const { session, renewSession, requireReauthentication } = useSession();
   const config = useMemo(() => getClientConfig(), []);
   const apiClient = useMemo(
     () => (session ? createAuthorizedApiClient(session.accessToken) : null),
@@ -152,12 +167,56 @@ export default function BoardPage() {
   const [storedEnrollment, setStoredEnrollment] = useState<StoredEnrollment | null>(null);
   const [snapshot, setSnapshot] = useState<SessionTeamSnapshot | null>(null);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [snapshotRecovery, setSnapshotRecovery] = useState<SnapshotRecovery>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [teamScore, setTeamScore] = useState<TeamScore | null>(null);
+  const newestSequenceNumber = useRef(0);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
+  const applySnapshot = useCallback((nextSnapshot: SessionTeamSnapshot) => {
+    if (nextSnapshot.sync.sequenceNumber < newestSequenceNumber.current) {
+      return;
+    }
+
+    newestSequenceNumber.current = nextSnapshot.sync.sequenceNumber;
+    setSnapshot((currentSnapshot) => {
+      if (currentSnapshot && nextSnapshot.sync.sequenceNumber < currentSnapshot.sync.sequenceNumber) {
+        return currentSnapshot;
+      }
+
+      return nextSnapshot;
+    });
+  }, []);
+
+  const leaveInvalidSessionTeam = useCallback(async () => {
+    try {
+      await clearStoredEnrollment();
+    } catch {
+      setSnapshotError("No pudimos borrar el equipo guardado. Inténtalo de nuevo.");
+      setSnapshotRecovery("retry");
+      return;
+    }
+
+    setStoredEnrollment(null);
+    routerRef.current.replace("/mobile/home");
+  }, []);
+
+  const handleSnapshotFailure = useCallback(async (error: unknown) => {
+    if (isMissingSessionTeam(error)) {
+      await leaveInvalidSessionTeam();
+      return;
+    }
+
+    setSnapshotError(readErrorMessage(error));
+    setSnapshotRecovery(isMissingTeamParticipation(error) ? "participation" : "retry");
+  }, [leaveInvalidSessionTeam]);
 
   const refreshSnapshot = useCallback(async () => {
     if (!apiClient || !storedEnrollment) {
@@ -165,14 +224,51 @@ export default function BoardPage() {
     }
 
     setSnapshotError(null);
+    setSnapshotRecovery(null);
 
     try {
       const nextSnapshot = await apiClient.getSessionTeamSnapshot(storedEnrollment.teamId);
-      setSnapshot(nextSnapshot);
+      applySnapshot(nextSnapshot);
     } catch (error) {
-      setSnapshotError(readErrorMessage(error));
+      if (!(error instanceof ApiClientError) || error.status !== 401) {
+        await handleSnapshotFailure(error);
+        return;
+      }
+
+      let renewedSession;
+      try {
+        renewedSession = await renewSession();
+      } catch {
+        await requireReauthentication();
+        return;
+      }
+
+      if (!renewedSession) {
+        await requireReauthentication();
+        return;
+      }
+
+      try {
+        const recoveredClient = createAuthorizedApiClient(renewedSession.accessToken);
+        const nextSnapshot = await recoveredClient.getSessionTeamSnapshot(storedEnrollment.teamId);
+        applySnapshot(nextSnapshot);
+      } catch (retryError) {
+        if (retryError instanceof ApiClientError && retryError.status === 401) {
+          await requireReauthentication();
+          return;
+        }
+
+        await handleSnapshotFailure(retryError);
+      }
     }
-  }, [apiClient, storedEnrollment]);
+  }, [
+    apiClient,
+    applySnapshot,
+    handleSnapshotFailure,
+    renewSession,
+    requireReauthentication,
+    storedEnrollment
+  ]);
 
   const refreshScore = useCallback(async (liveSessionId: string) => {
     if (!session || !storedEnrollment || typeof fetch !== "function") {
@@ -246,14 +342,18 @@ export default function BoardPage() {
           !currentSnapshot
           || payload.sessionTeamId !== currentSnapshot.sessionTeamId
           || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+          || payload.metadata.sequenceNumber <= currentSnapshot.sync.sequenceNumber
         ) {
           return currentSnapshot;
         }
 
         if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          newestSequenceNumber.current = payload.metadata.sequenceNumber;
           void refreshSnapshot();
           return currentSnapshot;
         }
+
+        newestSequenceNumber.current = payload.metadata.sequenceNumber;
 
         return {
           ...currentSnapshot,
@@ -271,19 +371,23 @@ export default function BoardPage() {
     };
 
     const handleSessionStateChanged = (payload: SessionStateChangedPayload) => {
-      setRemainingSeconds(payload.remainingSeconds ?? null);
       setSnapshot((currentSnapshot) => {
         if (
           !currentSnapshot
           || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+          || payload.metadata.sequenceNumber <= currentSnapshot.sync.sequenceNumber
         ) {
           return currentSnapshot;
         }
 
         if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          newestSequenceNumber.current = payload.metadata.sequenceNumber;
           void refreshSnapshot();
           return currentSnapshot;
         }
+
+        newestSequenceNumber.current = payload.metadata.sequenceNumber;
+        setRemainingSeconds(payload.remainingSeconds ?? null);
 
         return {
           ...currentSnapshot,
@@ -306,14 +410,18 @@ export default function BoardPage() {
           !currentSnapshot
           || payload.sessionTeamId !== currentSnapshot.sessionTeamId
           || payload.metadata.liveSessionId !== currentSnapshot.liveSessionId
+          || payload.metadata.sequenceNumber <= currentSnapshot.sync.sequenceNumber
         ) {
           return currentSnapshot;
         }
 
         if (payload.metadata.refreshPolicy === SnapshotRefreshPolicies.refreshSnapshot) {
+          newestSequenceNumber.current = payload.metadata.sequenceNumber;
           void refreshSnapshot();
           return currentSnapshot;
         }
+
+        newestSequenceNumber.current = payload.metadata.sequenceNumber;
 
         if (payload.currentStage?.missionStageId !== currentSnapshot.currentStage?.missionStageId) {
           setSelectedChoiceId(null);
@@ -525,6 +633,47 @@ export default function BoardPage() {
   }
 
   if (!snapshot) {
+    if (snapshotError) {
+      const participationMissing = snapshotRecovery === "participation";
+
+      return (
+        <ScreenShell
+          eyebrow="Tablero"
+          title={participationMissing ? "Ya no puedes acceder a este equipo" : "No pudimos cargar tu tablero"}
+          description={
+            participationMissing
+              ? "Este participante ya no tiene una participación activa en el Session Team guardado."
+              : "Conservamos tu contexto de juego para que puedas reintentar cuando se restablezca la conexión."
+          }
+        >
+          <View style={shellStyles.card}>
+            <StatusChip label="Sin sincronización" tone="error" />
+            <Text style={shellStyles.cardText}>{snapshotError}</Text>
+            {participationMissing ? (
+              <GameButton
+                label="Salir de este equipo"
+                icon="↩"
+                variant="secondary"
+                onPress={() => void leaveInvalidSessionTeam()}
+              />
+            ) : (
+              <GameButton
+                label="Reintentar"
+                icon="↻"
+                onPress={() => void refreshSnapshot()}
+              />
+            )}
+            <GameButton
+              label="Volver al inicio"
+              icon="🏠"
+              variant="ghost"
+              onPress={() => router.replace("/mobile/home")}
+            />
+          </View>
+        </ScreenShell>
+      );
+    }
+
     return <LoadingScreen message="Cargando tu tablero..." />;
   }
 

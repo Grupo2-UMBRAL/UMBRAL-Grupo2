@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import { Pressable, Text } from "react-native";
 import { loginWithPassword } from "../lib/auth";
 import {
+  clearStoredEnrollment,
+  clearStoredSession,
   loadStoredSession,
   resetOnboardingState,
   saveStoredSession,
@@ -41,6 +43,22 @@ function SignInButton() {
   );
 }
 
+function SessionHydrationState() {
+  const { loading, session } = useSession();
+
+  return <Text>{loading ? "Cargando" : session ? "Autenticado" : "Sin sesión"}</Text>;
+}
+
+function ReauthenticateButton() {
+  const { requireReauthentication } = useSession();
+
+  return (
+    <Pressable onPress={() => void requireReauthentication()}>
+      <Text>Reautenticar</Text>
+    </Pressable>
+  );
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   (loadStoredSession as jest.Mock).mockResolvedValue(null);
@@ -62,4 +80,33 @@ test("resets onboarding after each successful sign-in", async () => {
     expect(saveStoredSession).toHaveBeenCalledWith(session);
     expect(resetOnboardingState).toHaveBeenCalledTimes(1);
   });
+});
+
+test("finishes hydration as signed out when local session storage is unavailable", async () => {
+  (loadStoredSession as jest.Mock).mockRejectedValue(new Error("Storage disabled"));
+
+  render(
+    <SessionProvider>
+      <SessionHydrationState />
+    </SessionProvider>
+  );
+
+  await waitFor(() => {
+    expect(screen.getByText("Sin sesión")).toBeTruthy();
+  });
+});
+
+test("keeps the Session Team context when authentication must be renewed", async () => {
+  render(
+    <SessionProvider>
+      <ReauthenticateButton />
+    </SessionProvider>
+  );
+
+  fireEvent.press(screen.getByText("Reautenticar"));
+
+  await waitFor(() => {
+    expect(clearStoredSession).toHaveBeenCalledTimes(1);
+  });
+  expect(clearStoredEnrollment).not.toHaveBeenCalled();
 });
