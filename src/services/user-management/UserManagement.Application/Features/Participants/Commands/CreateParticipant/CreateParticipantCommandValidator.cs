@@ -13,7 +13,6 @@ namespace UserManagement.Application.Features.Participants.Commands.CreatePartic
 /// </summary>
 public sealed class CreateParticipantCommandValidator : AbstractValidator<CreateParticipantCommand>
 {
-    private const string UsernamePattern = "^[A-Za-z0-9._-]+$";
     private const string EmailPattern = @"^[^\s@]+@[^\s@]+\.[^\s@]+$";
 
     public CreateParticipantCommandValidator()
@@ -21,16 +20,7 @@ public sealed class CreateParticipantCommandValidator : AbstractValidator<Create
         ClassLevelCascadeMode = CascadeMode.Stop;
         RuleLevelCascadeMode = CascadeMode.Stop;
 
-        RuleFor(x => x.Username)
-            .Must(v => !string.IsNullOrWhiteSpace(v))
-                .WithErrorCode("participant_username_required").WithMessage("Username is required.")
-            .Must(v => v!.Trim().Length <= 40)
-                .WithErrorCode("participant_username_too_long").WithMessage("Username must stay under 40 characters.")
-            .Must(v => v!.Trim().Length >= 3)
-                .WithErrorCode("participant_username_too_short").WithMessage("Username must contain at least 3 characters.")
-            .Must(v => Regex.IsMatch(v!.Trim(), UsernamePattern))
-                .WithErrorCode("participant_username_invalid")
-                .WithMessage("Username only admits letters, digits, dot, underscore, or dash.");
+        RuleFor(x => x.Username).ParticipantUsername();
 
         RuleFor(x => x.Email)
             .Must(v => !string.IsNullOrWhiteSpace(v))

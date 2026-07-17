@@ -8,7 +8,7 @@
     "env:development": "node ./scripts/select-environment.mjs development",
     "env:deployment": "node ./scripts/select-environment.mjs deployment",
     "start:development": "npm run env:development && expo start --clear",
-    "start:deployment": "npm run env:deployment && expo start --clear",
+    "start:deployment": "npm run env:deployment && expo start --tunnel --clear",
     "start:expo-go": "npm run env:development && expo start --lan --clear",
     "android": "expo run:android",
     "ios": "expo run:ios",

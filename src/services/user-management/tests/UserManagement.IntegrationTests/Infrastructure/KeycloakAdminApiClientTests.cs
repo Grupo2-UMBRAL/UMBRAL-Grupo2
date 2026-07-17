@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Umbral.ServiceDefaults;
+using UserManagement.Application.Common.Dtos;
 using UserManagement.Infrastructure.Keycloak;
 using Xunit;
 
@@ -270,6 +271,153 @@ public sealed class KeycloakAdminApiClientTests
         var result = await client.GetUserByIdAsync("missing", CancellationToken.None);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetParticipantProfileAsync_MapsRepresentation_ToSelfServiceFields()
+    {
+        const string userJson = """{"id":"u1","username":"pao.rojas","email":"pao.rojas@example.cl","firstName":"pao.rojas","lastName":"Jugador","enabled":true}""";
+        var (client, handler) = BuildClient(request =>
+            IsToken(request) ? Token() : Json(HttpStatusCode.OK, userJson));
+
+        var result = await client.GetParticipantProfileAsync("u1", CancellationToken.None);
+
+        Assert.Contains(handler.Requests, r =>
+            r.Method == HttpMethod.Get &&
+            r.RequestUri!.AbsolutePath.EndsWith($"/admin/realms/{Realm}/users/u1", StringComparison.Ordinal));
+        Assert.Equal(new ParticipantProfileDto("u1", "pao.rojas", "pao.rojas@example.cl", true), result);
+    }
+
+    // A representation missing its username cannot produce a usable profile, and the screen shows the
+    // username as the handle the player logs in with. Surfacing that as a DTO full of empty strings
+    // would render a blank profile as if it were the truth, so it fails loudly instead.
+    [Fact]
+    public async Task GetParticipantProfileAsync_RepresentationWithoutUsername_Throws_Incomplete()
+    {
+        var (client, _) = BuildClient(request =>
+            IsToken(request) ? Token() : Json(HttpStatusCode.OK, """{"id":"u1","enabled":true}"""));
+
+        var ex = await Assert.ThrowsAsync<UmbralTechnicalException>(
+            () => client.GetParticipantProfileAsync("u1", CancellationToken.None));
+
+        Assert.Equal("participant_representation_incomplete", ex.Code);
+    }
+
+    [Fact]
+    public async Task UpdateUsernameAsync_PutsUsernameAlone_AndReturnsTheUpdatedProfile()
+    {
+        var putBody = string.Empty;
+        var (client, handler) = BuildClient(request =>
+        {
+            if (IsToken(request))
+            {
+                return Token();
+            }
+
+            if (request.Method == HttpMethod.Put)
+            {
+                putBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+
+            return Json(
+                HttpStatusCode.OK,
+                """{"id":"u1","username":"nuevo.nombre","email":"pao@example.cl","enabled":true}""");
+        });
+
+        var result = await client.UpdateUsernameAsync("u1", "nuevo.nombre", CancellationToken.None);
+
+        Assert.Contains(handler.Requests, r =>
+            r.Method == HttpMethod.Put &&
+            r.RequestUri!.AbsolutePath.EndsWith($"/admin/realms/{Realm}/users/u1", StringComparison.Ordinal));
+        // Keycloak merges partial representations, so the payload must carry the username and nothing
+        // else: sending "enabled" here would let a rename silently resurrect a deactivated account.
+        Assert.Equal("""{"username":"nuevo.nombre"}""", putBody);
+        Assert.Equal("nuevo.nombre", result.Username);
+    }
+
+    // SendAuthorizedAsync used to map every 409 from every call to operator_provider_duplicate. A
+    // player renaming into a taken handle would have been told, in Operator vocabulary, that a
+    // provider reported a duplicate.
+    [Fact]
+    public async Task UpdateUsernameAsync_Conflict_Throws_InParticipantVocabulary()
+    {
+        var (client, _) = BuildClient(request =>
+            IsToken(request) ? Token() : new HttpResponseMessage(HttpStatusCode.Conflict));
+
+        var ex = await Assert.ThrowsAsync<UmbralDomainException>(
+            () => client.UpdateUsernameAsync("u1", "taken", CancellationToken.None));
+
+        Assert.Equal("participant_username_taken", ex.Code);
+        Assert.Equal(UmbralFailureCategory.Conflict, ex.Category);
+    }
+
+    [Fact]
+    public async Task FindUserIdByUsernameAsync_ReturnsHolderId_WhenTaken()
+    {
+        var (client, handler) = BuildClient(request =>
+            IsToken(request)
+                ? Token()
+                : Json(HttpStatusCode.OK, """[{"id":"u9","username":"pao.rojas","enabled":true}]"""));
+
+        var result = await client.FindUserIdByUsernameAsync("pao.rojas", CancellationToken.None);
+
+        Assert.Equal("u9", result);
+        Assert.Contains(handler.Requests, r =>
+            r.Method == HttpMethod.Get &&
+            r.RequestUri!.Query.Contains("username=pao.rojas", StringComparison.Ordinal) &&
+            r.RequestUri!.Query.Contains("exact=true", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task FindUserIdByUsernameAsync_ReturnsNull_WhenFree()
+    {
+        var (client, _) = BuildClient(request =>
+            IsToken(request) ? Token() : Json(HttpStatusCode.OK, "[]"));
+
+        var result = await client.FindUserIdByUsernameAsync("libre", CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DeactivateParticipantAsync_PutsEnabledFalse_AndNothingElse()
+    {
+        var putBody = string.Empty;
+        var (client, handler) = BuildClient(request =>
+        {
+            if (IsToken(request))
+            {
+                return Token();
+            }
+
+            putBody = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.NoContent);
+        });
+
+        await client.DeactivateParticipantAsync("u1", CancellationToken.None);
+
+        Assert.Single(
+            handler.Requests,
+            r => r.Method == HttpMethod.Put &&
+                 r.RequestUri!.AbsolutePath.EndsWith($"/admin/realms/{Realm}/users/u1", StringComparison.Ordinal));
+        Assert.Equal("""{"enabled":false}""", putBody);
+    }
+
+    [Fact]
+    public async Task LogoutParticipantSessionsAsync_PostsToTheLogoutEndpoint()
+    {
+        var (client, handler) = BuildClient(request =>
+            IsToken(request) ? Token() : new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        await client.LogoutParticipantSessionsAsync("u1", CancellationToken.None);
+
+        Assert.Single(
+            handler.Requests,
+            r => r.Method == HttpMethod.Post &&
+                 r.RequestUri!.AbsolutePath.EndsWith(
+                     $"/admin/realms/{Realm}/users/u1/logout",
+                     StringComparison.Ordinal));
     }
 
     [Fact]

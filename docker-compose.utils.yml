@@ -8,7 +8,6 @@ services:
       EDGE_PROXY_URL: http://edge-proxy:8080
       KEYCLOAK_URL: http://edge-proxy:8080/auth
       KEYCLOAK_REALM: umbral
-      SHORT_LIVED_CLIENT_ID: umbral-web-shortlived
       AUTH_SMOKE_SCENARIO: ${AUTH_SMOKE_SCENARIO:-all}
     depends_on:
       edge-proxy:

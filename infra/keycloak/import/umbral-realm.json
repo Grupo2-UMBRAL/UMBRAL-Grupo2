@@ -4,6 +4,10 @@
   "displayName": "UMBRAL",
   "accessTokenLifespan": 600,
   "ssoSessionIdleTimeout": 3600,
+  "editUsernameAllowed": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es", "en"],
+  "defaultLocale": "es",
   "roles": {
     "realm": [
       { "name": "Administrator" },
@@ -19,31 +23,39 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "basic",
-        "profile",
-        "roles",
-        "email",
-        "umbral-api-audiences"
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
+      "protocolMappers": [
+        {
+          "name": "audience-user-management-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.client.audience": "umbral-user-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
+        },
+        {
+          "name": "audience-mission-management-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.client.audience": "umbral-mission-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
+        },
+        {
+          "name": "audience-session-management-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.client.audience": "umbral-session-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
+        },
+        {
+          "name": "audience-scoring-monitoring-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": { "included.client.audience": "umbral-scoring-monitoring-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
+        }
       ],
-      "redirectUris": [
-        "http://localhost:3000/*",
-        "http://localhost:5173/*",
-        "http://127.0.0.1:3000/*",
-        "http://127.0.0.1:5173/*",
-        "http://localhost:7500/*",
-        "http://127.0.0.1:7500/*"
-      ],
-      "webOrigins": [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://localhost:7500",
-        "http://127.0.0.1:7500"
-      ]
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:5173/*", "http://127.0.0.1:3000/*", "http://127.0.0.1:5173/*", "http://localhost:7500/*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173", "http://localhost:7500"]
     },
     {
       "clientId": "umbral-mobile",
@@ -52,270 +64,49 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "basic",
-        "profile",
-        "roles",
-        "email",
-        "umbral-api-audiences"
-      ],
-      "redirectUris": [
-        "http://localhost/*",
-        "http://localhost:19006/*",
-        "http://127.0.0.1:19006/*",
-        "http://localhost:7500/*",
-        "http://127.0.0.1:7500/*"
-      ],
-      "webOrigins": [
-        "+"
-      ]
-    },
-    {
-      "clientId": "umbral-web-shortlived",
-      "name": "UMBRAL Web Short-Lived",
-      "enabled": true,
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "attributes": {
-        "access.token.lifespan": "1"
-      },
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "basic",
-        "profile",
-        "roles",
-        "email",
-        "umbral-api-audiences"
-      ],
-      "redirectUris": [
-        "http://localhost:3000/*",
-        "http://localhost:5173/*",
-        "http://127.0.0.1:3000/*",
-        "http://127.0.0.1:5173/*",
-        "http://localhost:7500/*",
-        "http://127.0.0.1:7500/*"
-      ],
-      "webOrigins": [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://localhost:7500",
-        "http://127.0.0.1:7500"
-      ]
-    },
-    {
-      "clientId": "umbral-user-management-api",
-      "name": "Identity and Access API",
-      "enabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "secret": "user-management-secret"
-    },
-    {
-      "clientId": "umbral-mission-management-api",
-      "name": "Mission Management API",
-      "enabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "secret": "mission-management-secret"
-    },
-    {
-      "clientId": "umbral-session-management-api",
-      "name": "Session Operations API",
-      "enabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "secret": "session-management-secret"
-    },
-    {
-      "clientId": "umbral-scoring-monitoring-api",
-      "name": "Scoring and Monitoring API",
-      "enabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "secret": "scoring-monitoring-secret"
-    },
-    {
-      "clientId": "umbral-edge-proxy",
-      "name": "Edge Proxy",
-      "enabled": true,
-      "publicClient": false,
-      "protocol": "openid-connect",
-      "serviceAccountsEnabled": true,
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "secret": "edge-proxy-secret"
-    }
-  ],
-  "clientScopes": [
-    {
-      "name": "basic",
-      "description": "Restores subject claims for lightweight access tokens used by local clients.",
-      "protocol": "openid-connect",
-      "attributes": {
-        "include.in.token.scope": "false",
-        "display.on.consent.screen": "false"
-      },
-      "protocolMappers": [
-        {
-          "name": "subject",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-sub-mapper",
-          "consentRequired": false,
-          "config": {
-            "access.token.claim": "true",
-            "introspection.token.claim": "true",
-            "lightweight.claim": "true"
-          }
-        }
-      ]
-    },
-    {
-      "name": "umbral-api-audiences",
-      "description": "Adds the API audiences required by local login tokens.",
-      "protocol": "openid-connect",
-      "attributes": {
-        "include.in.token.scope": "false",
-        "display.on.consent.screen": "false"
-      },
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "protocolMappers": [
         {
           "name": "audience-user-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
-          "config": {
-            "included.client.audience": "umbral-user-management-api",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "lightweight.claim": "false"
-          }
+          "config": { "included.client.audience": "umbral-user-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
         },
         {
           "name": "audience-mission-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
-          "config": {
-            "included.client.audience": "umbral-mission-management-api",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "lightweight.claim": "false"
-          }
+          "config": { "included.client.audience": "umbral-mission-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
         },
         {
           "name": "audience-session-management-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
-          "config": {
-            "included.client.audience": "umbral-session-management-api",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "lightweight.claim": "false"
-          }
+          "config": { "included.client.audience": "umbral-session-management-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
         },
         {
           "name": "audience-scoring-monitoring-api",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "consentRequired": false,
-          "config": {
-            "included.client.audience": "umbral-scoring-monitoring-api",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "lightweight.claim": "false"
-          }
-        },
-        {
-          "name": "realm-roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
-          "consentRequired": false,
-          "config": {
-            "multivalued": "true",
-            "userinfo.token.claim": "false",
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "claim.name": "roles",
-            "jsonType.label": "String"
-          }
+          "config": { "included.client.audience": "umbral-scoring-monitoring-api", "id.token.claim": "false", "access.token.claim": "true", "lightweight.claim": "false" }
         }
-      ]
-    }
+      ],
+      "redirectUris": ["http://localhost/*", "http://localhost:19006/*", "http://127.0.0.1:19006/*", "http://127.0.0.1:7500/*"],
+      "webOrigins": ["+"]
+    },
+    { "clientId": "umbral-user-management-api", "name": "Identity and Access API", "enabled": true, "publicClient": false, "protocol": "openid-connect", "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false, "secret": "user-management-secret" },
+    { "clientId": "umbral-mission-management-api", "name": "Mission Management API", "enabled": true, "publicClient": false, "protocol": "openid-connect", "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false, "secret": "mission-management-secret" },
+    { "clientId": "umbral-session-management-api", "name": "Session Operations API", "enabled": true, "publicClient": false, "protocol": "openid-connect", "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false, "secret": "session-management-secret" },
+    { "clientId": "umbral-scoring-monitoring-api", "name": "Scoring and Monitoring API", "enabled": true, "publicClient": false, "protocol": "openid-connect", "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false, "secret": "scoring-monitoring-secret" },
+    { "clientId": "umbral-edge-proxy", "name": "Edge Proxy", "enabled": true, "publicClient": false, "protocol": "openid-connect", "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false, "secret": "edge-proxy-secret" }
   ],
   "users": [
-    {
-      "username": "admin",
-      "enabled": true,
-      "email": "admin@umbral.local",
-      "emailVerified": true,
-      "firstName": "Admin",
-      "lastName": "UMBRAL",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin123!",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "Administrator",
-        "Operator"
-      ]
-    },
-    {
-      "username": "operator",
-      "enabled": true,
-      "email": "operator@umbral.local",
-      "emailVerified": true,
-      "firstName": "Operator",
-      "lastName": "UMBRAL",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "operator123!",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "Operator"
-      ]
-    },
-    {
-      "username": "participant",
-      "enabled": true,
-      "email": "participant@umbral.local",
-      "emailVerified": true,
-      "firstName": "Participant",
-      "lastName": "UMBRAL",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "participant123!",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "Participant"
-      ]
-    }
+    { "username": "admin", "enabled": true, "email": "admin@umbral.local", "emailVerified": true, "firstName": "Admin", "lastName": "UMBRAL", "credentials": [{ "type": "password", "value": "admin123!", "temporary": false }], "realmRoles": ["default-roles-umbral", "Administrator", "Operator"] },
+    { "username": "operator", "enabled": true, "email": "operator@umbral.local", "emailVerified": true, "firstName": "Operator", "lastName": "UMBRAL", "credentials": [{ "type": "password", "value": "operator123!", "temporary": false }], "realmRoles": ["default-roles-umbral", "Operator"] },
+    { "username": "participant", "enabled": true, "email": "participant@umbral.local", "emailVerified": true, "firstName": "Participant", "lastName": "UMBRAL", "credentials": [{ "type": "password", "value": "participant123!", "temporary": false }], "realmRoles": ["default-roles-umbral", "Participant"] }
   ]
 }
