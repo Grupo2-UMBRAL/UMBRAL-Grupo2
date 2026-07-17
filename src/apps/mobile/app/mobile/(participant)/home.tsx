@@ -217,6 +217,16 @@ export default function HomePage() {
         </>
       ) : null}
 
+      {/* Outside the tile row above on purpose: that row only renders once the player has joined a
+          session, and the profile has to stay reachable before then -- a player with no session is
+          exactly the one who may need to fix their account. */}
+      <Pressable
+        onPress={() => router.push("/mobile/perfil")}
+        style={({ pressed }) => [styles.signOut, pressed && styles.tilePressed]}
+      >
+        <Text style={styles.switchLabel}>Mi perfil</Text>
+      </Pressable>
+
       <Pressable
         onPress={() => {
           void signOut().then(() => router.replace("/mobile/login"));

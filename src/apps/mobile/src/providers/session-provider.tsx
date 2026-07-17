@@ -20,6 +20,7 @@ type SessionContextValue = {
   session: UmbralMobileSession | null;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  renewSession: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -142,13 +143,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }
 
+  // Re-mints the access token on demand. Claims are baked into the JWT, so after a rename the stored
+  // token still carries the old preferred_username and the app would greet the player by a name they
+  // no longer have. The scheduled refresh above would fix it eventually; a rename needs it now.
+  async function renewSession() {
+    if (!session || !isRefreshTokenUsable(session)) {
+      return;
+    }
+
+    const nextSession = await refreshSession(session.refreshToken!);
+    await saveStoredSession(nextSession);
+    setSession(nextSession);
+  }
+
   return (
     <SessionContext.Provider
       value={{
         loading,
         session,
         signIn,
-        signOut
+        signOut,
+        renewSession
       }}
     >
       {children}

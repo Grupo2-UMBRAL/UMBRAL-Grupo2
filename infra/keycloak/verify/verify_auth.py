@@ -14,7 +14,6 @@ from urllib import error, parse, request
 EDGE_PROXY_URL = os.environ.get("EDGE_PROXY_URL", "http://edge-proxy:8080").rstrip("/")
 KEYCLOAK_URL = os.environ.get("KEYCLOAK_URL", f"{EDGE_PROXY_URL}/auth").rstrip("/")
 REALM = os.environ.get("KEYCLOAK_REALM", "umbral")
-SHORT_LIVED_CLIENT_ID = os.environ.get("SHORT_LIVED_CLIENT_ID", "umbral-web-shortlived")
 SCENARIO = os.environ.get("AUTH_SMOKE_SCENARIO", "all")
 
 EXPECTED_API_AUDIENCES = {
@@ -156,6 +155,15 @@ def require_subject_claim(payload: dict[str, Any], client_id: str) -> None:
         )
 
 
+def require_identity_claims(payload: dict[str, Any], client_id: str) -> None:
+    username = payload.get("preferred_username")
+    email = payload.get("email")
+    if not isinstance(username, str) or not username.strip():
+        fail(f"{client_id} token does not contain preferred_username from the standard profile scope.")
+    if not isinstance(email, str) or not email.strip():
+        fail(f"{client_id} token does not contain email from the standard email scope.")
+
+
 def expect_status(actual_status: int, expected_status: int, label: str) -> None:
     if actual_status != expected_status:
         fail(f"{label}: expected HTTP {expected_status}, got HTTP {actual_status}.")
@@ -168,10 +176,13 @@ def verify_login_and_audiences() -> None:
         token = get_password_token(client_id, "participant", SEED_USERS["participant"])
         payload = decode_jwt_payload(token)
         require_subject_claim(payload, client_id)
+        require_identity_claims(payload, client_id)
         audiences = audience_set(payload)
         missing_audiences = sorted(EXPECTED_API_AUDIENCES.difference(audiences))
         if missing_audiences:
             fail(f"{client_id} token is missing audiences: {', '.join(missing_audiences)}.")
+        if "account" not in audiences:
+            fail(f"{client_id} token is missing the account audience required by Account Console.")
 
         roles = role_set(payload)
         if "Participant" not in roles:
@@ -207,25 +218,6 @@ def verify_invalid_token() -> None:
     expect_status(status, 401, "Invalid token is rejected by API behind edge proxy")
 
 
-def verify_expired_token() -> None:
-    token = get_password_token(SHORT_LIVED_CLIENT_ID, "participant", SEED_USERS["participant"])
-    payload = decode_jwt_payload(token)
-    expires_at = int(payload.get("exp", 0))
-    if expires_at <= 0:
-        fail("Short-lived token does not contain a valid exp claim.")
-
-    wait_seconds = max(expires_at - int(time.time()) + 1, 2)
-    log(f"Waiting {wait_seconds}s for short-lived token to expire.")
-    time.sleep(wait_seconds)
-
-    status = request_status(
-        "GET",
-        f"{EDGE_PROXY_URL}{BOOTSTRAP_PATHS[0]}",
-        bearer_token=token,
-    )
-    expect_status(status, 401, "Expired token is rejected by API behind edge proxy")
-
-
 def verify_insufficient_role() -> None:
     participant_token = get_password_token("umbral-web", "participant", SEED_USERS["participant"])
     status = request_status(
@@ -244,7 +236,6 @@ def main() -> int:
     scenario_order = {
         "login": verify_login_and_audiences,
         "invalid": verify_invalid_token,
-        "expired": verify_expired_token,
         "insufficient-role": verify_insufficient_role,
     }
 

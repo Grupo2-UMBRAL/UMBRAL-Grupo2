@@ -217,6 +217,13 @@ export type RegisterParticipantResult = {
   username: string;
 };
 
+export type ParticipantProfile = {
+  userId: string;
+  username: string;
+  email: string;
+  isActive: boolean;
+};
+
 /**
  * Public participant self-registration. Hits the user-management facade through the edge proxy
  * (server-side Keycloak admin create + Participant role), so it needs no access token — it runs
@@ -249,11 +256,21 @@ export async function registerParticipant(input: RegisterParticipantInput) {
   return body as RegisterParticipantResult;
 }
 
-export function createAuthorizedApiClient(accessToken: string) {
+/**
+ * Authorized transport for one service behind the edge proxy. The prefix is an argument rather than
+ * a constant because the participant now talks to two services with the same token, and duplicating
+ * this factory per service would duplicate the auth header, the error shape, and every future fix to
+ * either.
+ */
+function createServiceClient(
+  accessToken: string,
+  servicePrefix: string,
+  fallbackErrorMessage: string
+) {
   const config = getClientConfig();
 
   async function request(path: string, init: RequestInit = {}) {
-    const url = `${config.edgeProxyPublicBaseUrl}/session-management${normalizePath(path)}`;
+    const url = `${config.edgeProxyPublicBaseUrl}${servicePrefix}${normalizePath(path)}`;
     const headers = new Headers(init.headers);
     headers.set("authorization", `Bearer ${accessToken}`);
 
@@ -278,7 +295,7 @@ export function createAuthorizedApiClient(accessToken: string) {
 
     if (!response.ok) {
       throw new ApiClientError(
-        readErrorMessage(body, "Session Operations request failed."),
+        readErrorMessage(body, fallbackErrorMessage),
         response.status,
         readErrorCode(body)
       );
@@ -286,6 +303,16 @@ export function createAuthorizedApiClient(accessToken: string) {
 
     return body as T;
   }
+
+  return { requestJson };
+}
+
+export function createAuthorizedApiClient(accessToken: string) {
+  const { requestJson } = createServiceClient(
+    accessToken,
+    "/session-management",
+    "Session Operations request failed."
+  );
 
   return {
     validateEnrollmentJoinCode(joinCode: string) {
@@ -342,6 +369,35 @@ export function createAuthorizedApiClient(accessToken: string) {
           })
         }
       );
+    }
+  };
+}
+
+/**
+ * The participant's own account, in user-management. Every route is `/me`: the server resolves the
+ * account from the token, so there is no id to pass and none to get wrong.
+ */
+export function createParticipantAccountClient(accessToken: string) {
+  const { requestJson } = createServiceClient(
+    accessToken,
+    "/user-management",
+    "No pudimos contactar tu cuenta."
+  );
+
+  return {
+    getMyProfile() {
+      return requestJson<ParticipantProfile>("/api/participants/me");
+    },
+    changeMyUsername(username: string) {
+      return requestJson<ParticipantProfile>("/api/participants/me/username", {
+        method: "PATCH",
+        body: JSON.stringify({ username: username.trim() })
+      });
+    },
+    deactivateMyAccount() {
+      // 204, no body: there is no post-state worth reading for an account that is about to be
+      // signed out. Anything but 2xx still throws through the shared error path above.
+      return requestJson<unknown>("/api/participants/me/deactivate", { method: "POST" });
     }
   };
 }
