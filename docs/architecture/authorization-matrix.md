@@ -34,6 +34,7 @@ The public `edge-proxy` may be the preferred client entry, but this matrix is st
 | Session Operations | `CreateLiveSessionCommand` | `Administrator`, `Operator` | None |
 | Identity and Access | `ListOperatorsQuery` | `Administrator` | None |
 | Identity and Access | `CreateOperatorCommand` | `Administrator` | None |
+| Identity and Access | `ResendOperatorInvitationCommand` | `Administrator` | None |
 | Identity and Access | `DeactivateOperatorCommand` | `Administrator` | None |
 | Identity and Access | `RotateOperatorPasswordCommand` | `Administrator` | None |
 | Scoring and Monitoring | `GetScoringMonitoringBootstrapDetailsQuery` | Any authenticated role | None |

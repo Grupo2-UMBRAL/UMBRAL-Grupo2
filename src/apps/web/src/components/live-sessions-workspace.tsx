@@ -1605,6 +1605,19 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!errorMessage && !feedback) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setErrorMessage(null);
+      setFeedback(null);
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [errorMessage, feedback]);
+
   const eligibleMissionsUrl = useMemo(
     () => `${getClientConfig().edgeProxyPublicBaseUrl}/mission-management/api/mission-management/missions/eligible-for-live-session`,
     []
@@ -3447,8 +3460,10 @@ export function LiveSessionsWorkspace({ accessToken }: LiveSessionsWorkspaceProp
           </div>
         </div>
 
-        {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
-        {feedback ? <p className="success-banner">{feedback}</p> : null}
+        <div aria-live="polite" className="workspace-notifications">
+          {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
+          {feedback ? <p className="success-banner">{feedback}</p> : null}
+        </div>
 
         <div className="split-layout">
           <section className="card">

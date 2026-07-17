@@ -61,6 +61,14 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM_ADDRESS: no-reply@umbral.app
+      SMTP_USE_SSL: "false"
+      SMTP_STARTTLS: "false"
+      SMTP_AUTH: "false"
+      SMTP_USERNAME: no-reply@umbral.app
+      SMTP_PASSWORD: not-used-by-mailpit
     ports:
       - "${KEYCLOAK_PORT}:8080"
     volumes:
@@ -106,6 +114,8 @@ services:
       UserManagement__Keycloak__AdminClientId: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_CLIENT_ID}
       UserManagement__Keycloak__AdminUsername: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_USERNAME}
       UserManagement__Keycloak__AdminPassword: ${USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD}
+      UserManagement__Keycloak__WebClientId: umbral-web
+      UserManagement__Keycloak__OnboardingRedirectUri: ${OPERATOR_ONBOARDING_REDIRECT_URI:-http://localhost:3000}
       Persistence__ApplyMigrationsOnStartup: "true"
       Email__Smtp__Host: ${SMTP_HOST}
       Email__Smtp__Port: ${SMTP_PORT}

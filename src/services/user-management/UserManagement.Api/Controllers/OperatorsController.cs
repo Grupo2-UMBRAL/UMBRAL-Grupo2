@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Umbral.ServiceDefaults;
 using UserManagement.Application.Common.Dtos;
 using UserManagement.Application.Features.Operators.Commands.CreateOperator;
+using UserManagement.Application.Features.Operators.Commands.ActivateOperator;
 using UserManagement.Application.Features.Operators.Commands.DeactivateOperator;
-using UserManagement.Application.Features.Operators.Commands.RotateOperatorPassword;
+using UserManagement.Application.Features.Operators.Commands.ResendOperatorInvitation;
+using UserManagement.Application.Features.Operators.Commands.SendOperatorPasswordResetLink;
 using UserManagement.Application.Features.Operators.Queries.ListOperators;
 
 namespace UserManagement.Api.Controllers;
@@ -61,31 +63,46 @@ public sealed class OperatorsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("{userId}/reset-password")]
-    [EndpointSummary("Reset an operator password")]
-    [EndpointDescription("Rotates the password of an Operator in Keycloak.")]
+    [HttpPost("{userId}/activate")]
+    [EndpointSummary("Reactivate an operator")]
+    [EndpointDescription("Reactivates a deactivated Operator in Keycloak.")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OperatorDto>> ResetPassword(
+    public async Task<ActionResult<OperatorDto>> ActivateOperator(string userId, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new ActivateOperatorCommand(userId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{userId}/resend-onboarding-invitation")]
+    [EndpointSummary("Resend an operator onboarding invitation")]
+    [EndpointDescription("Re-issues the Keycloak onboarding email (set password, complete profile, verify email) for an existing Operator.")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OperatorDto>> ResendOnboardingInvitation(
         string userId,
-        [FromBody] RotateOperatorPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
-            new RotateOperatorPasswordCommand(userId, request.Password),
-            cancellationToken);
-            
+        var result = await sender.Send(new ResendOperatorInvitationCommand(userId), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{userId}/send-password-reset-link")]
+    [EndpointSummary("Send an operator password reset link")]
+    [EndpointDescription("Asks Keycloak to email an Operator a link to choose a new password.")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OperatorDto>> SendPasswordResetLink(
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new SendOperatorPasswordResetLinkCommand(userId), cancellationToken);
         return Ok(result);
     }
 }
-
-/// <summary>
-/// Body of the operator password rotation request.
-/// </summary>
-/// <param name="Password">The new password. Required, 8 to 128 characters, trimmed before use;
-/// null or blank is rejected with 400. Nullable here only so the omitted value surfaces as a
-/// validation error instead of a deserialization failure.</param>
-public sealed record RotateOperatorPasswordRequest(string? Password);

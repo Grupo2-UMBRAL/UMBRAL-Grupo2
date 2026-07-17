@@ -8,6 +8,17 @@
   "internationalizationEnabled": true,
   "supportedLocales": ["es", "en"],
   "defaultLocale": "es",
+  "smtpServer": {
+    "host": "${SMTP_HOST}",
+    "port": "${SMTP_PORT}",
+    "from": "${SMTP_FROM_ADDRESS}",
+    "fromDisplayName": "UMBRAL",
+    "ssl": "${SMTP_USE_SSL}",
+    "starttls": "${SMTP_STARTTLS}",
+    "auth": "${SMTP_AUTH}",
+    "user": "${SMTP_USERNAME}",
+    "password": "${SMTP_PASSWORD}"
+  },
   "roles": {
     "realm": [
       { "name": "Administrator" },
@@ -20,6 +31,8 @@
       "clientId": "umbral-web",
       "name": "UMBRAL Web",
       "enabled": true,
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "http://localhost:3000",
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,

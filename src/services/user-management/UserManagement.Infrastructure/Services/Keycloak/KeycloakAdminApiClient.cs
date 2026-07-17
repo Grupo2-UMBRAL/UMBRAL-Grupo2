@@ -19,13 +19,23 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
 
     public async Task<IReadOnlyList<OperatorDto>> ListOperatorsAsync(CancellationToken cancellationToken)
     {
-        var response = await SendAuthorizedAsync(
-            HttpMethod.Get,
-            $"/admin/realms/{options.Realm}/roles/{options.OperatorRoleName}/users?briefRepresentation=false",
-            cancellationToken: cancellationToken);
-        var users = await ReadJsonAsync<List<KeycloakUserRepresentation>>(response, cancellationToken);
+        const int pageSize = 100;
+        var users = new List<KeycloakUserRepresentation>();
 
-        return users.Select(ToOperatorDto).ToArray();
+        for (var first = 0; ; first += pageSize)
+        {
+            var response = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"/admin/realms/{options.Realm}/roles/{options.OperatorRoleName}/users?briefRepresentation=false&first={first}&max={pageSize}",
+                cancellationToken: cancellationToken);
+            var page = await ReadJsonAsync<List<KeycloakUserRepresentation>>(response, cancellationToken);
+            users.AddRange(page);
+
+            if (page.Count < pageSize)
+            {
+                return users.Select(ToOperatorDto).ToArray();
+            }
+        }
     }
 
     public async Task<IReadOnlyList<OperatorDto>> FindUsersByEmailAsync(string email, CancellationToken cancellationToken)
@@ -61,32 +71,50 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
     public async Task<string> CreateUserAsync(
         string username,
         string email,
-        string firstName,
-        string lastName,
-        string password,
+        string? firstName,
+        string? lastName,
+        string? password,
         CancellationToken cancellationToken)
     {
+        // Keycloak merges only the keys we send. A passwordless account is created with no credential
+        // and emailVerified=false so it cannot sign in until the onboarding invitation is completed;
+        // the VERIFY_EMAIL action then flips the flag. Passing a password keeps the legacy verified,
+        // permanently-credentialed account that self-registering Participants depend on.
+        var payload = new Dictionary<string, object?>
+        {
+            ["username"] = username,
+            ["email"] = email,
+            ["enabled"] = true,
+            ["emailVerified"] = !string.IsNullOrWhiteSpace(password)
+        };
+
+        if (!string.IsNullOrWhiteSpace(firstName))
+        {
+            payload["firstName"] = firstName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(lastName))
+        {
+            payload["lastName"] = lastName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(password))
+        {
+            payload["credentials"] = new[]
+            {
+                new
+                {
+                    type = "password",
+                    value = password,
+                    temporary = false
+                }
+            };
+        }
+
         var response = await SendAuthorizedAsync(
             HttpMethod.Post,
             $"/admin/realms/{options.Realm}/users",
-            new
-            {
-                username = username,
-                email = email,
-                firstName = firstName,
-                lastName = lastName,
-                enabled = true,
-                emailVerified = true,
-                credentials = new[]
-                {
-                    new
-                    {
-                        type = "password",
-                        value = password,
-                        temporary = false
-                    }
-                }
-            },
+            payload,
             cancellationToken: cancellationToken);
 
         var createdUserId = response.Headers.Location?.Segments.LastOrDefault()?.Trim('/');
@@ -107,6 +135,51 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         }
 
         return recoveredUser.Id;
+    }
+
+    // The required actions Keycloak walks the Operator through, in the order they read best. Keycloak
+    // owns the actual screen sequence; this is only the set to require.
+    private static readonly string[] OnboardingRequiredActions =
+        ["UPDATE_PASSWORD", "UPDATE_PROFILE", "VERIFY_EMAIL"];
+
+    public async Task SendOperatorOnboardingInvitationAsync(string userId, CancellationToken cancellationToken)
+        => await SendExecuteActionsEmailAsync(userId, OnboardingRequiredActions, cancellationToken);
+
+    public async Task SendOperatorPasswordResetAsync(string userId, CancellationToken cancellationToken)
+        => await SendExecuteActionsEmailAsync(userId, ["UPDATE_PASSWORD"], cancellationToken);
+
+    private async Task SendExecuteActionsEmailAsync(
+        string userId,
+        IReadOnlyList<string> requiredActions,
+        CancellationToken cancellationToken)
+    {
+        var query = new List<string>();
+
+        // client_id and redirect_uri travel together: a redirect is only honoured against a client, and
+        // omitting both lets Keycloak fall back to its account console. lifespan overrides the realm default.
+        if (!string.IsNullOrWhiteSpace(options.OnboardingRedirectUri))
+        {
+            query.Add($"client_id={Uri.EscapeDataString(options.WebClientId)}");
+            query.Add($"redirect_uri={Uri.EscapeDataString(options.OnboardingRedirectUri)}");
+        }
+
+        if (options.OnboardingLinkLifespanSeconds > 0)
+        {
+            query.Add($"lifespan={options.OnboardingLinkLifespanSeconds}");
+        }
+
+        var path = $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}/execute-actions-email";
+        if (query.Count > 0)
+        {
+            path = $"{path}?{string.Join('&', query)}";
+        }
+
+        var response = await SendAuthorizedAsync(
+            HttpMethod.Put,
+            path,
+            requiredActions,
+            cancellationToken: cancellationToken);
+        response.Dispose();
     }
 
     public Task AssignOperatorRoleAsync(string userId, CancellationToken cancellationToken)
@@ -189,24 +262,6 @@ public sealed class KeycloakAdminApiClient(HttpClient httpClient, IOptions<Keycl
         }
 
         return updatedUser;
-    }
-
-    public async Task RotateOperatorPasswordAsync(
-        string userId,
-        string password,
-        CancellationToken cancellationToken)
-    {
-        var updateResponse = await SendAuthorizedAsync(
-            HttpMethod.Put,
-            $"/admin/realms/{options.Realm}/users/{Uri.EscapeDataString(userId)}/reset-password",
-            new KeycloakCredentialRepresentation
-            {
-                Type = "password",
-                Value = password,
-                Temporary = false
-            },
-            cancellationToken: cancellationToken);
-        updateResponse.Dispose();
     }
 
     public async Task<ParticipantProfileDto> GetParticipantProfileAsync(

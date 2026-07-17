@@ -43,6 +43,12 @@
     },
     "userManagementKeycloakAdminPassword": {
       "value": "REPLACE_WITH_STRONG_SECRET"
+    },
+    "keycloakSmtpPassword": {
+      "value": "REPLACE_WITH_GMAIL_APP_PASSWORD"
+    },
+    "keycloakSmtpFromAddress": {
+      "value": "REPLACE_WITH_GMAIL_ADDRESS"
     }
   }
 }

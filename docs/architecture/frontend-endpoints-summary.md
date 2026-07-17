@@ -21,7 +21,8 @@ Base: `/user-management/api/user-management`
 
 - `GET /bootstrap`
 - `GET /operators`
-- `POST /operators`
+- `POST /operators` — body `{ username, email }` only; Keycloak emails the operator an onboarding link to set their own password and complete their profile
+- `POST /operators/{userId}/resend-onboarding-invitation`
 - `POST /operators/{userId}/deactivate`
 - `POST /operators/{userId}/reset-password`
 

@@ -46,6 +46,13 @@ param keycloakAdminPassword string
 @description('Password used by User Management to call Keycloak admin APIs.')
 param userManagementKeycloakAdminPassword string
 
+@secure()
+@description('Gmail App Password used by Keycloak to send realm emails.')
+param keycloakSmtpPassword string
+
+@description('Gmail address Keycloak uses as the sender and SMTP username.')
+param keycloakSmtpFromAddress string
+
 var tags = {
   project: 'umbral'
   workload: 'academic-demo'
@@ -197,6 +204,10 @@ resource keycloak 'Microsoft.App/containerApps@2024-03-01' = if (deployContainer
           name: 'postgres-password'
           value: postgresPassword
         }
+        {
+          name: 'keycloak-smtp-password'
+          value: keycloakSmtpPassword
+        }
       ]
       ingress: {
         external: false
@@ -259,6 +270,38 @@ resource keycloak 'Microsoft.App/containerApps@2024-03-01' = if (deployContainer
             {
               name: 'KC_PROXY_HEADERS'
               value: 'xforwarded'
+            }
+            {
+              name: 'SMTP_PASSWORD'
+              secretRef: 'keycloak-smtp-password'
+            }
+            {
+              name: 'SMTP_FROM_ADDRESS'
+              value: keycloakSmtpFromAddress
+            }
+            {
+              name: 'SMTP_HOST'
+              value: 'smtp.gmail.com'
+            }
+            {
+              name: 'SMTP_PORT'
+              value: '587'
+            }
+            {
+              name: 'SMTP_USE_SSL'
+              value: 'false'
+            }
+            {
+              name: 'SMTP_STARTTLS'
+              value: 'true'
+            }
+            {
+              name: 'SMTP_AUTH'
+              value: 'true'
+            }
+            {
+              name: 'SMTP_USERNAME'
+              value: keycloakSmtpFromAddress
             }
           ]
           resources: {

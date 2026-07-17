@@ -141,6 +141,129 @@ public sealed class KeycloakAdminApiClientTests
         Assert.Equal("operator_create_location_missing", ex.Code);
     }
 
+    // Passwordless creation: no credential is set and the email stays unverified, so the account
+    // cannot sign in until the onboarding invitation is completed. Absent names avoid overwriting the
+    // profile the Operator fills in during UPDATE_PROFILE.
+    [Fact]
+    public async Task CreateUserAsync_WithoutPassword_OmitsCredentials_AndLeavesEmailUnverified()
+    {
+        var body = string.Empty;
+        var newId = Guid.NewGuid().ToString();
+        var (client, _) = BuildClient(request =>
+        {
+            if (IsToken(request))
+            {
+                return Token();
+            }
+
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            var response = new HttpResponseMessage(HttpStatusCode.Created);
+            response.Headers.Location = new Uri($"http://keycloak:8080/admin/realms/{Realm}/users/{newId}");
+            return response;
+        });
+
+        var result = await client.CreateUserAsync("jdoe", "jdoe@x.com", null, null, null, CancellationToken.None);
+
+        Assert.Equal(newId, result);
+        Assert.Contains("\"emailVerified\":false", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("credentials", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("firstName", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("lastName", body, StringComparison.Ordinal);
+    }
+
+    // A supplied password keeps the legacy behaviour self-registering Participants rely on: a permanent
+    // credential and a pre-verified email.
+    [Fact]
+    public async Task CreateUserAsync_WithPassword_IncludesCredentials_AndVerifiesEmail()
+    {
+        var body = string.Empty;
+        var newId = Guid.NewGuid().ToString();
+        var (client, _) = BuildClient(request =>
+        {
+            if (IsToken(request))
+            {
+                return Token();
+            }
+
+            body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            var response = new HttpResponseMessage(HttpStatusCode.Created);
+            response.Headers.Location = new Uri($"http://keycloak:8080/admin/realms/{Realm}/users/{newId}");
+            return response;
+        });
+
+        await client.CreateUserAsync("jdoe", "jdoe@x.com", "John", "Doe", "pw123456", CancellationToken.None);
+
+        Assert.Contains("\"emailVerified\":true", body, StringComparison.Ordinal);
+        Assert.Contains("\"type\":\"password\"", body, StringComparison.Ordinal);
+        Assert.Contains("\"value\":\"pw123456\"", body, StringComparison.Ordinal);
+        Assert.Contains("\"firstName\":\"John\"", body, StringComparison.Ordinal);
+        Assert.Contains("\"lastName\":\"Doe\"", body, StringComparison.Ordinal);
+    }
+
+    // The onboarding invitation is a PUT to execute-actions-email carrying exactly the required actions,
+    // scoped to the web client and redirect so the link lands back inside UMBRAL.
+    [Fact]
+    public async Task SendOperatorOnboardingInvitationAsync_PutsExecuteActionsEmail_WithActionsAndRedirect()
+    {
+        var body = string.Empty;
+        var options = new KeycloakAdminApiOptions
+        {
+            BaseUrl = "http://keycloak:8080",
+            Realm = Realm,
+            AdminRealm = AdminRealm,
+            AdminClientId = "admin-cli",
+            AdminUsername = "admin",
+            AdminPassword = "pw",
+            WebClientId = "umbral-web",
+            OnboardingRedirectUri = "http://localhost:3000"
+        };
+        var (client, handler) = BuildClient(
+            request =>
+            {
+                if (IsToken(request))
+                {
+                    return Token();
+                }
+
+                body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            },
+            options);
+
+        await client.SendOperatorOnboardingInvitationAsync("u1", CancellationToken.None);
+
+        var invitation = Assert.Single(
+            handler.Requests,
+            r => r.Method == HttpMethod.Put &&
+                 r.RequestUri!.AbsolutePath.EndsWith(
+                     $"/admin/realms/{Realm}/users/u1/execute-actions-email",
+                     StringComparison.Ordinal));
+        Assert.Contains("client_id=umbral-web", invitation.RequestUri!.Query, StringComparison.Ordinal);
+        Assert.Contains("redirect_uri=http", invitation.RequestUri!.Query, StringComparison.Ordinal);
+        Assert.Contains("UPDATE_PASSWORD", body, StringComparison.Ordinal);
+        Assert.Contains("UPDATE_PROFILE", body, StringComparison.Ordinal);
+        Assert.Contains("VERIFY_EMAIL", body, StringComparison.Ordinal);
+    }
+
+    // With no redirect configured the link falls back to Keycloak's account console: still a valid PUT,
+    // but without a client_id/redirect_uri that would need a whitelisted client to honour.
+    [Fact]
+    public async Task SendOperatorOnboardingInvitationAsync_WithoutRedirect_OmitsClientQuery()
+    {
+        var (client, handler) = BuildClient(
+            request => IsToken(request) ? Token() : new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        await client.SendOperatorOnboardingInvitationAsync("u1", CancellationToken.None);
+
+        var invitation = Assert.Single(
+            handler.Requests,
+            r => r.Method == HttpMethod.Put &&
+                 r.RequestUri!.AbsolutePath.EndsWith(
+                     $"/admin/realms/{Realm}/users/u1/execute-actions-email",
+                     StringComparison.Ordinal));
+        Assert.DoesNotContain("client_id", invitation.RequestUri!.Query, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CreateUserAsync_Conflict_Throws_ProviderDuplicate()
     {
@@ -204,7 +327,7 @@ public sealed class KeycloakAdminApiClientTests
     }
 
     [Fact]
-    public async Task RotateOperatorPasswordAsync_PutsResetPassword_WithPasswordType()
+    public async Task SendOperatorPasswordResetAsync_PutsExecuteActionsEmail_WithOnlyPasswordAction()
     {
         var putBody = string.Empty;
         var (client, handler) = BuildClient(request =>
@@ -218,16 +341,15 @@ public sealed class KeycloakAdminApiClientTests
             return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        await client.RotateOperatorPasswordAsync("u1", "newpw123456", CancellationToken.None);
+        await client.SendOperatorPasswordResetAsync("u1", CancellationToken.None);
 
         Assert.Single(
             handler.Requests,
             r => r.Method == HttpMethod.Put &&
                  r.RequestUri!.AbsolutePath.EndsWith(
-                     $"/admin/realms/{Realm}/users/u1/reset-password",
+                     $"/admin/realms/{Realm}/users/u1/execute-actions-email",
                      StringComparison.Ordinal));
-        Assert.Contains("\"type\":\"password\"", putBody, StringComparison.Ordinal);
-        Assert.Contains("\"temporary\":false", putBody, StringComparison.Ordinal);
+        Assert.Equal("[\"UPDATE_PASSWORD\"]", putBody);
     }
 
     [Fact]

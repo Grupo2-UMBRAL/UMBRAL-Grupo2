@@ -16,9 +16,9 @@ public sealed class UserCreationFlowHandler(
     public async Task<OperatorDto> CreateUserAsync(
         string email,
         string username,
-        string firstName,
-        string lastName,
-        string password,
+        string? firstName,
+        string? lastName,
+        string? password,
         bool isOperator,
         CancellationToken cancellationToken)
     {
@@ -45,13 +45,14 @@ public sealed class UserCreationFlowHandler(
                 UmbralFailureCategory.Conflict);
         }
 
-        // 2. Execution
+        // 2. Execution — names and password are optional (Operators complete them via onboarding),
+        // so trim only what is present and let the port decide what a null password means.
         var createdUserId = await port.CreateUserAsync(
             normalizedUsername,
             normalizedEmail,
-            firstName.Trim(),
-            lastName.Trim(),
-            password.Trim(),
+            firstName?.Trim(),
+            lastName?.Trim(),
+            password?.Trim(),
             cancellationToken);
 
         // 3. Role Assignment & Rollback

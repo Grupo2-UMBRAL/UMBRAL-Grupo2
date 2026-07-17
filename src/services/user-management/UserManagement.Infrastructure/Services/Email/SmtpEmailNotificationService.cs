@@ -13,36 +13,6 @@ public sealed class SmtpEmailNotificationService(
 {
     private readonly SmtpEmailOptions _options = options.Value;
 
-    public async Task SendOperatorCredentialsAsync(
-        string email, string username, string rawPassword, CancellationToken cancellationToken = default)
-    {
-        var subject = "Bienvenido a UMBRAL — Tus credenciales de acceso";
-
-        var htmlBody = BuildHtmlEmail(
-            greeting: $"Hola, {username}",
-            headline: "Tu cuenta de operador ha sido creada",
-            bodyParagraph: "Un administrador te ha dado acceso a la plataforma <strong style=\"color:#e8a84c;\">UMBRAL</strong>. A continuación encontrarás tus credenciales para iniciar sesión:",
-            credentials: new[] { ("Usuario", username), ("Contraseña", rawPassword) },
-            footerNote: "Por favor, guarda estas credenciales en un lugar seguro.");
-
-        await SendAsync(email, subject, htmlBody, cancellationToken);
-    }
-
-    public async Task SendPasswordRotatedAsync(
-        string email, string username, string newPassword, CancellationToken cancellationToken = default)
-    {
-        var subject = "UMBRAL — Tu contraseña ha sido actualizada";
-
-        var htmlBody = BuildHtmlEmail(
-            greeting: $"Hola, {username}",
-            headline: "Tu contraseña ha sido actualizada",
-            bodyParagraph: "Un administrador ha actualizado la contraseña de tu cuenta en la plataforma <strong style=\"color:#e8a84c;\">UMBRAL</strong>. A continuación encontrarás tus nuevas credenciales:",
-            credentials: new[] { ("Usuario", username), ("Nueva Contraseña", newPassword) },
-            footerNote: "Si no solicitaste este cambio, contacta a tu administrador de inmediato.");
-
-        await SendAsync(email, subject, htmlBody, cancellationToken);
-    }
-
     public async Task SendParticipantWelcomeAsync(
         string email, string username, CancellationToken cancellationToken = default)
     {
