@@ -7,7 +7,7 @@ namespace SessionManagement.IntegrationTests;
 public sealed class OpenApiContractTests
 {
     [Fact]
-    public async Task Api_PublishesOpenApiDocumentAndInteractiveReference()
+    public async Task Api_PublishesOpenApiDocumentWithoutInteractiveReference()
     {
         await using var factory = new SessionManagementApiFactory();
         var client = factory.CreateClient();
@@ -17,8 +17,7 @@ public sealed class OpenApiContractTests
 
         Assert.Equal(HttpStatusCode.OK, documentResponse.StatusCode);
         Assert.Equal("application/json", documentResponse.Content.Headers.ContentType?.MediaType);
-        Assert.Equal(HttpStatusCode.OK, referenceResponse.StatusCode);
-        Assert.Equal("text/html", referenceResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.NotFound, referenceResponse.StatusCode);
 
         using var document = JsonDocument.Parse(await documentResponse.Content.ReadAsStreamAsync());
         var paths = document.RootElement.GetProperty("paths");
@@ -28,7 +27,7 @@ public sealed class OpenApiContractTests
         Assert.True(document.RootElement
             .GetProperty("components")
             .GetProperty("securitySchemes")
-            .TryGetProperty("Bearer", out _));
+            .TryGetProperty("OAuth2", out _));
     }
 
     // The SignalR hub speaks its own protocol and has no place in an HTTP contract. It is absent
