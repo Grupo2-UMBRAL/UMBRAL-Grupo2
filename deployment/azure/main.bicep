@@ -533,6 +533,10 @@ resource sessionManagement 'Microsoft.App/containerApps@2024-03-01' = if (deploy
               secretRef: 'rabbitmq-password'
             }
             {
+              name: 'MissionManagement__BaseUrl'
+              value: 'http://mission-management-service/'
+            }
+            {
               name: 'ScoringMonitoring__BaseUrl'
               value: 'http://scoring-monitoring-service/'
             }
