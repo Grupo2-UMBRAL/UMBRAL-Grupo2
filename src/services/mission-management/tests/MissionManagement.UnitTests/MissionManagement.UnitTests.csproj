@@ -19,5 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\MissionManagement.Domain\MissionManagement.Domain.csproj" />
     <ProjectReference Include="..\..\MissionManagement.Application\MissionManagement.Application.csproj" />
+    <ProjectReference Include="..\..\MissionManagement.Infrastructure\MissionManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\MissionManagement.Api\MissionManagement.Api.csproj" />
   </ItemGroup>
 </Project>

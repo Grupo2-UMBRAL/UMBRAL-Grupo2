@@ -87,7 +87,7 @@ public sealed class SmtpEmailNotificationService(
     }
 
     // ponytail: single method builds all email variants — no template engine needed yet.
-    private static string BuildHtmlEmail(
+    internal static string BuildHtmlEmail(
         string greeting,
         string headline,
         string bodyParagraph,

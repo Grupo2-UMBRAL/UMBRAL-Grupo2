@@ -122,7 +122,7 @@ public sealed class PenaltyApplicationQaTests
     private static LiveSession CreateActiveLiveSession()
     {
         var liveSession = CreateScheduledLiveSession();
-        ForceState(liveSession, "Active");
+        liveSession.ForceState("Active");
         return liveSession;
     }
 
@@ -152,14 +152,6 @@ public sealed class PenaltyApplicationQaTests
 
         liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-10)));
         return liveSession;
-    }
-
-    private static void ForceState(LiveSession liveSession, string state)
-    {
-        var backingField = typeof(LiveSession).GetField("<State>k__BackingField", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
-
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

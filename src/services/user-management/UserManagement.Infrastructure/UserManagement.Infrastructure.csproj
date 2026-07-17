@@ -6,4 +6,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="MailKit" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="UserManagement.UnitTests" />
+  </ItemGroup>
 </Project>

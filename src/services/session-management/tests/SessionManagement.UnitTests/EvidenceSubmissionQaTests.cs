@@ -49,7 +49,7 @@ public sealed class EvidenceSubmissionQaTests
     public void SubmitEvidence_ThrowsBusinessError_WhenLiveSessionDoesNotAcceptEvidence(string blockedState)
     {
         var liveSession = CreateLiveSessionWithTeam(stageCount: 2);
-        ForceState(liveSession, blockedState);
+        SampleLiveSessions.ForceState(liveSession, blockedState);
 
         var exception = Assert.Throws<UmbralDomainException>(() =>
             liveSession.SubmitEvidence(TeamId, "qr-stage-1", NowUtc));
@@ -236,14 +236,6 @@ public sealed class EvidenceSubmissionQaTests
         liveSession.SessionTeams.Add(SessionTeam.Create(liveSession.Id, TeamId, "Alpha Team", NowUtc.AddMinutes(-20)));
 
         return liveSession;
-    }
-
-    private static void ForceState(LiveSession liveSession, string state)
-    {
-        var backingField = typeof(LiveSession).GetField("<State>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
-
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
     }
 }
 

@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="SessionManagement.IntegrationTests" />
+    <InternalsVisibleTo Include="SessionManagement.UnitTests" />
   </ItemGroup>
 </Project>

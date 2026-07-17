@@ -147,11 +147,61 @@ internal static class SampleLiveSessions
 
     public static void ForceState(LiveSession liveSession, string state)
     {
-        var backingField = typeof(LiveSession).GetField(
-            "<State>k__BackingField",
-            BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("LiveSession.State backing field was not found.");
+        var targetState = LiveSessionState.FromName(state);
+        if (liveSession.State == targetState) return;
 
-        backingField.SetValue(liveSession, LiveSessionState.FromName(state));
+        var now = DateTimeOffset.UtcNow;
+        
+        // Base requirements to start a session
+        if (liveSession.State == LiveSessionState.Scheduled)
+        {
+            if (string.IsNullOrEmpty(liveSession.JoinCodeValue))
+                liveSession.AssignJoinCode(JoinCode());
+            
+            if (liveSession.EnrollmentWindowOpenedAtUtc == null)
+                liveSession.OpenEnrollmentWindow(now.AddHours(-1));
+                
+            if (!liveSession.SessionTeams.Any())
+            {
+                 var team = liveSession.RegisterTeam(TeamId(1), "Team 1", JoinCode(), now);
+                 liveSession.EnrollParticipantInTeam(team.Id, "participant-1", JoinCode(), now);
+            }
+            liveSession.Start(now);
+        }
+
+        if (targetState == LiveSessionState.Active)
+        {
+            liveSession.ClearDomainEvents();
+            return;
+        }
+
+        if (targetState == LiveSessionState.Paused)
+        {
+            liveSession.Pause();
+            liveSession.ClearDomainEvents();
+            return;
+        }
+        
+        if (targetState == LiveSessionState.Canceled)
+        {
+            liveSession.Cancel();
+            liveSession.ClearDomainEvents();
+            return;
+        }
+
+        if (targetState == LiveSessionState.Finalized)
+        {
+            // First we need to make sure we are not already canceled
+            if (liveSession.State != LiveSessionState.Canceled)
+            {
+                // Can only finalize if in progress or paused
+                if (liveSession.State == LiveSessionState.Scheduled) liveSession.Start(now);
+                liveSession.FinalizeSession();
+            }
+            liveSession.ClearDomainEvents();
+            return;
+        }
+
+        throw new NotSupportedException($"Cannot force transition to state {state}");
     }
 }

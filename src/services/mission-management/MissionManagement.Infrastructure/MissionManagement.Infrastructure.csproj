@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MissionManagement.IntegrationTests" />
+    <InternalsVisibleTo Include="MissionManagement.UnitTests" />
   </ItemGroup>
 </Project>
