@@ -51,6 +51,11 @@ cd src/apps/mobile
 npm run start:deployment
 ```
 
+Este perfil abre un tunel (`expo start --tunnel`): el QR queda accesible desde cualquier red, no
+solo desde tu LAN, para que alguien mas pueda escanearlo con Expo Go durante la demo. Metro sigue
+corriendo en tu maquina — el tunel expone el bundle, y las APIs las sirve el Edge Proxy de Azure.
+La primera vez Expo pide instalar `@expo/ngrok`; acepta.
+
 Para generar el bundle web con cada perfil, ejecuta `npm run build:development` o `npm run build:deployment`. El script `npm run build` conserva el comportamiento local y equivale a `build:development`.
 
 If you want a native phone preview instead of Expo web, see `README.expo-go.md`.
