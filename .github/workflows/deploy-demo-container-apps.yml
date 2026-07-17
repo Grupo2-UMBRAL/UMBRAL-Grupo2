@@ -61,6 +61,8 @@ jobs:
             DEMO_RABBITMQ_PASSWORD = "${{ secrets.DEMO_RABBITMQ_PASSWORD }}"
             DEMO_KEYCLOAK_ADMIN_PASSWORD = "${{ secrets.DEMO_KEYCLOAK_ADMIN_PASSWORD }}"
             DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD = "${{ secrets.DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD }}"
+            DEMO_KEYCLOAK_SMTP_FROM_ADDRESS = "${{ secrets.DEMO_KEYCLOAK_SMTP_FROM_ADDRESS }}"
+            DEMO_KEYCLOAK_SMTP_PASSWORD = "${{ secrets.DEMO_KEYCLOAK_SMTP_PASSWORD }}"
           }
 
           $missing = $requiredValues.GetEnumerator() |
@@ -103,7 +105,9 @@ jobs:
               postgresPassword="${{ secrets.DEMO_NEON_PASSWORD }}" `
               rabbitMqPassword="${{ secrets.DEMO_RABBITMQ_PASSWORD }}" `
               keycloakAdminPassword="${{ secrets.DEMO_KEYCLOAK_ADMIN_PASSWORD }}" `
-              userManagementKeycloakAdminPassword="${{ secrets.DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD }}"
+              userManagementKeycloakAdminPassword="${{ secrets.DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD }}" `
+              keycloakSmtpFromAddress="${{ secrets.DEMO_KEYCLOAK_SMTP_FROM_ADDRESS }}" `
+              keycloakSmtpPassword="${{ secrets.DEMO_KEYCLOAK_SMTP_PASSWORD }}"
 
       - name: Login to Azure Container Registry
         shell: pwsh
@@ -198,7 +202,9 @@ jobs:
               postgresPassword="${{ secrets.DEMO_NEON_PASSWORD }}" `
               rabbitMqPassword="${{ secrets.DEMO_RABBITMQ_PASSWORD }}" `
               keycloakAdminPassword="${{ secrets.DEMO_KEYCLOAK_ADMIN_PASSWORD }}" `
-              userManagementKeycloakAdminPassword="${{ secrets.DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD }}"
+              userManagementKeycloakAdminPassword="${{ secrets.DEMO_USER_MANAGEMENT_KEYCLOAK_ADMIN_PASSWORD }}" `
+              keycloakSmtpFromAddress="${{ secrets.DEMO_KEYCLOAK_SMTP_FROM_ADDRESS }}" `
+              keycloakSmtpPassword="${{ secrets.DEMO_KEYCLOAK_SMTP_PASSWORD }}"
 
       - name: Health check public edge
         shell: pwsh
