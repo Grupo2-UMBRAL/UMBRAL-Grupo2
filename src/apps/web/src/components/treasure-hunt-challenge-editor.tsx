@@ -87,6 +87,24 @@ export function TreasureHuntChallengeEditor({
     );
   }
 
+  function updateHintLocation(
+    clientId: string,
+    hintClientId: string,
+    latitude: string,
+    longitude: string,
+  ) {
+    onChange(
+      updateSearch(searches, clientId, (search) => ({
+        ...search,
+        hints: search.hints.map((hint) =>
+          hint.clientId === hintClientId
+            ? { ...hint, latitude, longitude }
+            : hint,
+        ),
+      })),
+    );
+  }
+
   return (
     <div className="stack">
       <div className="card-header card-header-actions">
@@ -251,6 +269,9 @@ export function TreasureHuntChallengeEditor({
                     onRemove={() => removeHint(search.clientId, hint.clientId)}
                     onUpdate={(field, value) =>
                       updateHint(search.clientId, hint.clientId, field, value)
+                    }
+                    onLocationUpdate={(latitude, longitude) =>
+                      updateHintLocation(search.clientId, hint.clientId, latitude, longitude)
                     }
                   />
                 ))}
