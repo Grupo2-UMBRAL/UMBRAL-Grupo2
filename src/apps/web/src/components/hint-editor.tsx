@@ -11,10 +11,11 @@ type HintEditorProps = {
   };
   index: number;
   onUpdate: (field: "content" | "isSolution" | "latitude" | "longitude", value: string | boolean) => void;
+  onLocationUpdate: (latitude: string, longitude: string) => void;
   onRemove: () => void;
 };
 
-export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps) {
+export function HintEditor({ hint, index, onUpdate, onLocationUpdate, onRemove }: HintEditorProps) {
   const hasLocation = hint.latitude.trim() !== "" && hint.longitude.trim() !== "";
   const [showLocation, setShowLocation] = useState(hasLocation);
 
@@ -73,10 +74,7 @@ export function HintEditor({ hint, index, onUpdate, onRemove }: HintEditorProps)
             <MapLocationPicker
               latitude={hint.latitude}
               longitude={hint.longitude}
-              onChange={(lat, lng) => {
-                onUpdate("latitude", lat);
-                onUpdate("longitude", lng);
-              }}
+              onChange={onLocationUpdate}
             />
             <div className="form-row">
               <div className="form-group">
