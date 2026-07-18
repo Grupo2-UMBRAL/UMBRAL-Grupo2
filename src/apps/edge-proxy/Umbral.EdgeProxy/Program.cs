@@ -75,8 +75,8 @@ if (coverageAvailable)
 app.UseRouting();
 app.UseCors("edge");
 
-// The API reference is the directory of the stack, so the root just points at it.
-app.MapGet("/", () => Results.Redirect("/swagger"));
+// The root is left to the YARP "web-fallback" catch-all (Order 100) so "/" serves the web app.
+// The API reference stays reachable at "/swagger" (see MapUmbralApiReferenceHub below).
 
 // Machine-readable edge metadata (kept for programmatic consumers / smoke checks).
 app.MapGet("/edge-info", () => Results.Ok(new
