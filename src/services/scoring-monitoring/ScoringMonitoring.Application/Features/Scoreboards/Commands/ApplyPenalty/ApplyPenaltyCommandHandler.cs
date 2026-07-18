@@ -29,13 +29,10 @@ public sealed class ApplyPenaltyHandler(
             request.Reason,
             request.RecordedAt);
 
-        ScoreEntry? scoreEntry = null;
+        var scoreEntry = scoreboard.ApplyPenalty(penalty);
         SessionEventLog? eventLog = null;
-        var penaltyApplied = false;
-
-        try
+        if (scoreEntry is not null)
         {
-            scoreEntry = scoreboard.ApplyPenalty(penalty);
             eventLog = new SessionEventLog(
                 Guid.NewGuid(),
                 request.LiveSessionId,
@@ -44,15 +41,10 @@ public sealed class ApplyPenaltyHandler(
                 request.RecordedAt);
             await scoreboardStore.PersistPenaltyApplicationAsync(eventLog, cancellationToken);
             scoreboard.RebuildState();
-            penaltyApplied = true;
-        }
-        catch (UmbralDomainException exception) when (exception.Code == "scoreboard.duplicate_penalty_command")
-        {
-            penaltyApplied = false;
         }
 
         var ranking = RankingProjection.Create(scoreboard, timeProvider.GetUtcNow());
-        if (penaltyApplied)
+        if (scoreEntry is not null)
         {
             await updatesPublisher.PublishRankingUpdatedAsync(ranking, cancellationToken);
             await updatesPublisher.PublishEventLogUpdatedAsync(
@@ -64,9 +56,9 @@ public sealed class ApplyPenaltyHandler(
             scoreboard.LiveSessionId,
             request.SessionTeamId,
             request.CommandId,
-            penaltyApplied ? penalty.PenaltyId : null,
+            scoreEntry is not null ? penalty.PenaltyId : null,
             scoreEntry?.ScoreEntryId,
-            penaltyApplied,
+            scoreEntry is not null,
             scoreboard.GetTeamScore(request.SessionTeamId).VisibleScore,
             ranking);
     }

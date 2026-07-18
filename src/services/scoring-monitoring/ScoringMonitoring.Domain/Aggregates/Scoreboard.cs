@@ -100,15 +100,13 @@ public sealed class Scoreboard
             resolutionTime);
     }
 
-    public ScoreEntry ApplyPenalty(Penalty penalty)
+    public ScoreEntry? ApplyPenalty(Penalty penalty)
     {
         ArgumentNullException.ThrowIfNull(penalty);
 
         if (!processedPenaltyCommandIds.Add(penalty.CommandId))
         {
-            throw new UmbralDomainException(
-                "scoreboard.duplicate_penalty_command",
-                "Penalty command was already processed for this Scoreboard.");
+            return null;
         }
 
         return ApplyDelta(
