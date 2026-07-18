@@ -73,6 +73,9 @@ services:
       - "${KEYCLOAK_PORT}:8080"
     volumes:
       - ./infra/keycloak/import:/opt/keycloak/data/import
+      # Custom brand themes. start-dev disables theme caching, so CSS/FTL edits
+      # hot-reload on browser refresh — no container rebuild needed.
+      - ./infra/keycloak/themes:/opt/keycloak/themes
     depends_on:
       postgres:
         condition: service_healthy

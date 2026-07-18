@@ -1,0 +1,216 @@
+/* ============================================================================
+   UMBRAL login theme — brand overrides
+   Palette mirrors the mobile client (bright Duolingo): src/apps/mobile/src/theme/tokens.ts
+   Loaded AFTER the base keycloak login.css, so these rules win the cascade.
+   ============================================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+
+:root {
+  /* surface */
+  --umbral-bg: #f7f7f7;
+  --umbral-card: #ffffff;
+  --umbral-card-border: #e5e5e5;
+  /* text */
+  --umbral-text: #4b4b4b;
+  --umbral-text-muted: #777777;
+  --umbral-text-faint: #afafaf;
+  /* brand */
+  --umbral-green: #58cc02;
+  --umbral-green-strong: #58a700; /* Duolingo 3D shadow + pressed */
+  --umbral-blue: #1cb0f6;
+  --umbral-blue-strong: #1899d6;
+  /* error */
+  --umbral-error-fill: #ffe5e5;
+  --umbral-error-border: #ff4b4b;
+  --umbral-error-text: #ea2b2b;
+  /* geometry */
+  --umbral-radius: 18px;
+  --umbral-radius-control: 12px;
+  --umbral-font: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---- page background ------------------------------------------------------ */
+html.login-pf,
+.login-pf body,
+body {
+  background: var(--umbral-bg) !important;
+  font-family: var(--umbral-font) !important;
+  color: var(--umbral-text);
+}
+
+.login-pf-page {
+  padding-top: 40px;
+}
+
+/* ---- brand wordmark (realm displayName = "UMBRAL") ------------------------ */
+#kc-header-wrapper {
+  font-family: var(--umbral-font) !important;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--umbral-green) !important;
+  padding: 24px 10px;
+  text-shadow: none;
+  white-space: normal;
+}
+
+/* ---- login card ----------------------------------------------------------- */
+.card-pf {
+  background: var(--umbral-card) !important;
+  border: 1px solid var(--umbral-card-border) !important;
+  border-radius: var(--umbral-radius) !important;
+  box-shadow: 0 6px 24px rgba(75, 75, 75, 0.08) !important;
+  padding: 32px 32px 28px !important;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+#kc-page-title {
+  font-family: var(--umbral-font) !important;
+  font-weight: 800;
+  color: var(--umbral-text) !important;
+}
+
+/* ---- labels & inputs ------------------------------------------------------ */
+label,
+.control-label,
+.pf-c-form__label {
+  font-family: var(--umbral-font) !important;
+  font-weight: 700 !important;
+  color: var(--umbral-text) !important;
+}
+
+input.form-control,
+.pf-c-form-control,
+#kc-form input[type="text"],
+#kc-form input[type="password"],
+#kc-form input[type="email"] {
+  font-family: var(--umbral-font) !important;
+  font-size: 16px !important;
+  color: var(--umbral-text) !important;
+  background: var(--umbral-card) !important;
+  border: 2px solid var(--umbral-card-border) !important;
+  border-radius: var(--umbral-radius-control) !important;
+  box-shadow: none !important;
+  padding: 12px 14px !important;
+  height: auto !important;
+  transition: border-color 0.12s ease;
+}
+
+input.form-control:focus,
+.pf-c-form-control:focus,
+#kc-form input:focus {
+  border-color: var(--umbral-blue) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(28, 176, 246, 0.22) !important;
+}
+
+input.form-control::placeholder {
+  color: var(--umbral-text-faint) !important;
+}
+
+/* ---- primary button (Duolingo 3D press) ---------------------------------- */
+.btn-primary,
+input[type="submit"].btn,
+#kc-login {
+  font-family: var(--umbral-font) !important;
+  font-weight: 800 !important;
+  font-size: 16px !important;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #ffffff !important;
+  background: var(--umbral-green) !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: var(--umbral-radius-control) !important;
+  box-shadow: 0 4px 0 var(--umbral-green-strong) !important;
+  padding: 13px 18px !important;
+  margin-top: 6px;
+  transition: transform 0.05s ease, box-shadow 0.05s ease, filter 0.12s ease;
+}
+
+.btn-primary:hover,
+#kc-login:hover {
+  filter: brightness(1.03);
+  background: var(--umbral-green) !important;
+}
+
+.btn-primary:active,
+#kc-login:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--umbral-green-strong) !important;
+}
+
+.btn-primary:focus,
+#kc-login:focus {
+  box-shadow: 0 4px 0 var(--umbral-green-strong), 0 0 0 3px rgba(88, 204, 2, 0.28) !important;
+  outline: none !important;
+}
+
+/* secondary / default buttons */
+.btn-default,
+.btn-secondary {
+  font-family: var(--umbral-font) !important;
+  font-weight: 700 !important;
+  border-radius: var(--umbral-radius-control) !important;
+  border: 2px solid var(--umbral-card-border) !important;
+  background: var(--umbral-card) !important;
+  color: var(--umbral-text) !important;
+}
+
+/* ---- links ---------------------------------------------------------------- */
+a,
+#kc-registration a,
+#kc-info-wrapper a,
+.login-pf-page a {
+  color: var(--umbral-blue) !important;
+  font-weight: 700;
+  text-decoration: none;
+}
+a:hover {
+  color: var(--umbral-blue-strong) !important;
+  text-decoration: underline;
+}
+
+/* ---- checkbox (remember me) ---------------------------------------------- */
+.checkbox label,
+#kc-form-options label {
+  font-weight: 600 !important;
+  color: var(--umbral-text-muted) !important;
+}
+
+/* ---- feedback / alerts ---------------------------------------------------- */
+.alert-error,
+.pf-c-alert.pf-m-danger,
+.kc-feedback-text {
+  font-family: var(--umbral-font) !important;
+}
+
+.alert-error,
+.pf-c-alert.pf-m-danger {
+  background: var(--umbral-error-fill) !important;
+  border: 1px solid var(--umbral-error-border) !important;
+  border-radius: var(--umbral-radius-control) !important;
+  color: var(--umbral-error-text) !important;
+}
+
+.alert-success,
+.pf-c-alert.pf-m-success {
+  background: rgba(88, 204, 2, 0.12) !important;
+  border: 1px solid var(--umbral-green) !important;
+  border-radius: var(--umbral-radius-control) !important;
+  color: var(--umbral-green-strong) !important;
+}
+
+/* ---- language selector ---------------------------------------------------- */
+#kc-locale ul {
+  border-radius: var(--umbral-radius-control) !important;
+  border: 1px solid var(--umbral-card-border) !important;
+  background: var(--umbral-card) !important;
+}
+#kc-locale a {
+  color: var(--umbral-text-muted) !important;
+}

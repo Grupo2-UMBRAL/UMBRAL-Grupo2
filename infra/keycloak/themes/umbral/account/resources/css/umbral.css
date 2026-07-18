@@ -1,0 +1,43 @@
+/* ============================================================================
+   UMBRAL account console — brand tint over PatternFly 5 (keycloak.v3).
+   Palette mirrors src/apps/mobile/src/theme/tokens.ts (bright Duolingo).
+   CSS-only branding of a React SPA is best-effort: we retint the primary/link
+   tokens and typography rather than restyle every component.
+   ============================================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+
+:root {
+  /* brand */
+  --pf-v5-global--primary-color--100: #58cc02;
+  --pf-v5-global--primary-color--200: #58a700;
+  --pf-v5-global--link--Color: #1cb0f6;
+  --pf-v5-global--link--Color--hover: #1899d6;
+  --pf-v5-global--active-color--100: #58cc02;
+  --pf-v5-global--active-color--200: #58a700;
+
+  /* surface + text */
+  --pf-v5-global--BackgroundColor--100: #ffffff;
+  --pf-v5-global--BackgroundColor--200: #f7f7f7;
+  --pf-v5-global--Color--100: #4b4b4b;
+  --pf-v5-global--Color--200: #777777;
+
+  /* typography */
+  --pf-v5-global--FontFamily--text: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pf-v5-global--FontFamily--heading: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pf-v5-global--BorderRadius--sm: 12px;
+}
+
+body {
+  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #4b4b4b;
+}
+
+/* Primary buttons — nudge toward the brand green even where tokens don't reach. */
+.pf-v5-c-button.pf-m-primary {
+  background-color: #58cc02;
+  font-weight: 700;
+}
+.pf-v5-c-button.pf-m-primary:hover {
+  background-color: #58a700;
+}
