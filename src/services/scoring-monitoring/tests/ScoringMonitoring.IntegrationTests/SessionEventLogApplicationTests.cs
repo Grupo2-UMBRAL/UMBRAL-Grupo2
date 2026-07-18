@@ -22,7 +22,7 @@ public sealed class SessionEventLogApplicationTests
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new LogSessionEventHandler(
             dbContext,
-            new Repository<SessionEventLog>(dbContext),
+            new SessionEventLogRepository(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();
@@ -47,7 +47,7 @@ public sealed class SessionEventLogApplicationTests
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new LogSessionEventHandler(
             dbContext,
-            new Repository<SessionEventLog>(dbContext),
+            new SessionEventLogRepository(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var command = new LogSessionEventCommand(
@@ -91,7 +91,7 @@ public sealed class SessionEventLogApplicationTests
             DateTimeOffset.Parse("2026-06-04T02:00:00Z"));
         dbContext.SessionEventLogs.AddRange(oldest, newest, otherSessionEvent);
         await dbContext.SaveChangesAsync();
-        var handler = new GetSessionEventLogHandler(new Repository<SessionEventLog>(dbContext));
+        var handler = new GetSessionEventLogHandler(new SessionEventLogRepository(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(liveSessionId), CancellationToken.None);
 
@@ -105,7 +105,7 @@ public sealed class SessionEventLogApplicationTests
     public async Task GetSessionEventLogQuery_ReturnsEmptyListWhenSessionHasNoEvents()
     {
         await using var dbContext = CreateDbContext();
-        var handler = new GetSessionEventLogHandler(new Repository<SessionEventLog>(dbContext));
+        var handler = new GetSessionEventLogHandler(new SessionEventLogRepository(dbContext));
 
         var payload = await handler.Handle(new GetSessionEventLogQuery(Guid.NewGuid()), CancellationToken.None);
 
@@ -119,8 +119,8 @@ public sealed class SessionEventLogApplicationTests
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new RecordStageCreditHandler(
             dbContext,
-            new Repository<Scoreboard>(dbContext),
-            new Repository<SessionEventLog>(dbContext),
+            new ScoreboardRepository(dbContext),
+            new SessionEventLogRepository(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();
@@ -154,7 +154,9 @@ public sealed class SessionEventLogApplicationTests
         await using var dbContext = CreateDbContext();
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new ApplyPenaltyHandler(
-            new ApplyPenaltyScoreboardStore(dbContext),
+            dbContext,
+            new ScoreboardRepository(dbContext),
+            new SessionEventLogRepository(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();
@@ -189,7 +191,9 @@ public sealed class SessionEventLogApplicationTests
         await using var dbContext = CreateDbContext();
         var updatesPublisher = new CapturingScoringMonitoringUpdatesPublisher();
         var handler = new ApplyPenaltyHandler(
-            new ApplyPenaltyScoreboardStore(dbContext),
+            dbContext,
+            new ScoreboardRepository(dbContext),
+            new SessionEventLogRepository(dbContext),
             TimeProvider.System,
             updatesPublisher);
         var liveSessionId = Guid.NewGuid();

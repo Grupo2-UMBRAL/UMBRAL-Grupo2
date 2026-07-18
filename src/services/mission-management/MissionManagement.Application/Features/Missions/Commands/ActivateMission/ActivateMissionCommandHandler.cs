@@ -3,7 +3,7 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.ActivateMission;
 
-public sealed class ActivateMissionCommandHandler(IMissionStore missionStore)
+public sealed class ActivateMissionCommandHandler(IMissionRepository missionRepository)
     : IRequestHandler<ActivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(ActivateMissionCommand request, CancellationToken cancellationToken)
@@ -11,7 +11,7 @@ public sealed class ActivateMissionCommandHandler(IMissionStore missionStore)
         ArgumentNullException.ThrowIfNull(request);
 
         // Activation evaluates eligibility over the flattened play path, so the tree must be hydrated.
-        var mission = await missionStore.GetWithItemsAsync(request.MissionId, cancellationToken);
+        var mission = await missionRepository.GetWithItemsAsync(request.MissionId, cancellationToken);
         if (mission is null)
         {
             throw new UmbralDomainException(
@@ -21,7 +21,7 @@ public sealed class ActivateMissionCommandHandler(IMissionStore missionStore)
         }
 
         mission.Activate();
-        await missionStore.UpdateAsync(mission, cancellationToken);
+        await missionRepository.UpdateAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }

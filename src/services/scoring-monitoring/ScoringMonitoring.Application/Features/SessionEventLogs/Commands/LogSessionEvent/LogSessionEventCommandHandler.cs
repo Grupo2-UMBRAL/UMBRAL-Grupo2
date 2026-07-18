@@ -4,7 +4,8 @@ using ScoringMonitoring.Domain.Audit;
 namespace ScoringMonitoring.Application.Features.SessionEventLogs.Commands.LogSessionEvent;
 
 public sealed class LogSessionEventHandler(
-    IUnitOfWork unitOfWork, IRepository<SessionEventLog> sessionEventLogRepository,
+    IUnitOfWork unitOfWork,
+    ISessionEventLogRepository sessionEventLogRepository,
     TimeProvider timeProvider,
     IScoringMonitoringUpdatesPublisher updatesPublisher)
     : IRequestHandler<LogSessionEventCommand, SessionEventLogPayload>

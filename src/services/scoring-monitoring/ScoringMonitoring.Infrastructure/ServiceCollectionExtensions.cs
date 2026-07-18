@@ -14,10 +14,8 @@ public static class ServiceCollectionExtensions
 
         services.AddUmbralPostgresDbContext<ScoringMonitoringDbContext>(configuration, ScoringMonitoringPersistence.SchemaName);
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped<IApplyPenaltyScoreboardStore, ApplyPenaltyScoreboardStore>();
-
-
-        services.AddScoped(typeof(ScoringMonitoring.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
+        services.AddScoped<ScoringMonitoring.Application.Abstractions.IScoreboardRepository, Persistence.ScoreboardRepository>();
+        services.AddScoped<ScoringMonitoring.Application.Abstractions.ISessionEventLogRepository, Persistence.SessionEventLogRepository>();
         services.AddScoped<ScoringMonitoring.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.ScoringMonitoringDbContext>());
 
         services.AddScoringMonitoringMessaging(configuration);
