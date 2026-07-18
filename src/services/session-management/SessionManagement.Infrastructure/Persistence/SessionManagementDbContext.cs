@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Domain.LiveSessions;
+using SessionManagement.Domain.LiveSessions.States;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -58,8 +59,8 @@ public sealed class SessionManagementDbContext(DbContextOptions<SessionManagemen
                 .IsRequired();
             liveSession.Property(entity => entity.State)
                 .HasConversion(
-                    state => state.Value,
-                    value => LiveSessionState.FromName(value))
+                    state => state.Name,
+                    value => LiveSessionStateFactory.FromName(value))
                 .HasMaxLength(40)
                 .IsRequired();
             liveSession.Property(entity => entity.ScheduledStartAtUtc);

@@ -1,4 +1,5 @@
 using SessionManagement.Domain.Abstractions;
+using SessionManagement.Domain.LiveSessions.States;
 using Umbral.ServiceDefaults;
 
 namespace SessionManagement.Domain.LiveSessions;
@@ -14,7 +15,7 @@ public sealed class LiveSession : AggregateRoot
         Guid missionId,
         string missionName,
         string name,
-        LiveSessionState state,
+        ILiveSessionState state,
         DateTimeOffset? scheduledStartAtUtc,
         DateTimeOffset createdAtUtc,
         IReadOnlyList<LiveSessionStage> sessionStageFlow)
@@ -37,7 +38,7 @@ public sealed class LiveSession : AggregateRoot
 
     public string Name { get; private set; } = string.Empty;
 
-    public LiveSessionState State { get; private set; } = LiveSessionState.Scheduled;
+    public ILiveSessionState State { get; private set; } = new ScheduledState();
 
     public DateTimeOffset? ScheduledStartAtUtc { get; private set; }
 
@@ -81,7 +82,7 @@ public sealed class LiveSession : AggregateRoot
             NormalizeGuid(missionId, "live_session_mission_required", "LiveSession must reference a Mission."),
             NormalizeRequiredText(missionName, "live_session_mission_name_required", "Mission name is required.", 120),
             NormalizeRequiredText(name, "live_session_name_required", "LiveSession name is required.", 120),
-            LiveSessionState.Scheduled,
+            new ScheduledState(),
             scheduledStartAtUtc,
             createdAtUtc,
             Array.Empty<LiveSessionStage>());
@@ -98,63 +99,29 @@ public sealed class LiveSession : AggregateRoot
         SessionStageFlow = NormalizeSessionStageFlow(sessionStageFlow);
     }
 
+    internal void ChangeState(ILiveSessionState newState)
+    {
+        State = newState;
+    }
+
     public void Start(DateTimeOffset startedAtUtc)
     {
-        EnsureState(
-            LiveSessionState.Scheduled,
-            "live_session_cannot_start",
-            "Only a Scheduled LiveSession can start.");
-
-        if (SessionTeams.Count == 0)
-        {
-            throw new UmbralDomainException(
-                "live_session_requires_session_teams",
-                "LiveSession cannot start without at least one Session Team registered.",
-                UmbralFailureCategory.Conflict);
-        }
-
-        if (EnrollmentWindowOpenedAtUtc is not null && EnrollmentWindowClosedAtUtc is null)
-        {
-            CloseEnrollmentWindow(startedAtUtc);
-        }
-
-        State = LiveSessionState.Active;
+        State.Start(this, startedAtUtc);
     }
 
     public void Pause()
     {
-        EnsureState(
-            LiveSessionState.Active,
-            "live_session_cannot_pause",
-            "Only an Active LiveSession can pause.");
-
-        State = LiveSessionState.Paused;
+        State.Pause(this);
     }
 
     public void Resume()
     {
-        EnsureState(
-            LiveSessionState.Paused,
-            "live_session_cannot_resume",
-            "Only a Paused LiveSession can resume.");
-
-        State = LiveSessionState.Active;
+        State.Resume(this);
     }
 
     public void FinalizeSession()
     {
-        if (State == LiveSessionState.Finalized)
-        {
-            return;
-        }
-
-        EnsureState(
-            LiveSessionState.Active,
-            LiveSessionState.Paused,
-            "live_session_cannot_finalize",
-            "Only an Active or Paused LiveSession can finalize.");
-
-        State = LiveSessionState.Finalized;
+        State.FinalizeSession(this);
     }
 
     public IReadOnlyList<ReleasedHint> FinalizeAndRevealAllHints(DateTimeOffset releasedAtUtc)
@@ -201,14 +168,7 @@ public sealed class LiveSession : AggregateRoot
 
     public void Cancel()
     {
-        EnsureState(
-            LiveSessionState.Scheduled,
-            LiveSessionState.Active,
-            LiveSessionState.Paused,
-            "live_session_cannot_cancel",
-            "Only a Scheduled, Active or Paused LiveSession can cancel.");
-
-        State = LiveSessionState.Canceled;
+        State.Cancel(this);
     }
 
     public void AssignJoinCode(JoinCode joinCode)
@@ -234,7 +194,7 @@ public sealed class LiveSession : AggregateRoot
 
     public void OpenEnrollmentWindow(DateTimeOffset openedAtUtc)
     {
-        EnsureScheduled();
+        State.EnsureCanModifyEnrollment();
 
         if (JoinCodeValue is null)
         {
@@ -325,7 +285,7 @@ public sealed class LiveSession : AggregateRoot
         string teamName,
         DateTimeOffset createdAtUtc)
     {
-        EnsureScheduled();
+        State.EnsureCanModifyEnrollment();
 
         var normalizedTeamName = SessionTeam.NormalizeTeamName(teamName);
         if (SessionTeams.Any(team => string.Equals(team.NormalizedName, normalizedTeamName, StringComparison.Ordinal)))
@@ -382,7 +342,7 @@ public sealed class LiveSession : AggregateRoot
 
     public EvidenceSubmission SubmitEvidence(Guid sessionTeamId, string qrHash, DateTimeOffset submittedAtUtc)
     {
-        EnsureEvidenceSubmissionAllowed();
+        State.EnsureCanSubmitEvidence();
         EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
 
         var orderedStages = GetOrderedStages();
@@ -428,7 +388,7 @@ public sealed class LiveSession : AggregateRoot
 
     public EvidenceSubmission SubmitTriviaAnswer(Guid sessionTeamId, Guid selectedChoiceId, DateTimeOffset submittedAtUtc)
     {
-        EnsureEvidenceSubmissionAllowed();
+        State.EnsureCanSubmitEvidence();
         EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
 
         var orderedStages = GetOrderedStages();
@@ -515,7 +475,7 @@ public sealed class LiveSession : AggregateRoot
         DateTimeOffset releasedAtUtc,
         string unlockReason = "Manual")
     {
-        EnsureHintReleaseAllowed();
+        State.EnsureCanReleaseHint();
         EnsureSessionTeamBelongsToLiveSession(sessionTeamId);
 
         var currentStage = GetCurrentStageForTeam(sessionTeamId);
@@ -569,11 +529,7 @@ public sealed class LiveSession : AggregateRoot
 
     public void EnsurePenaltyAllowed()
     {
-        EnsureState(
-            LiveSessionState.Active,
-            LiveSessionState.Paused,
-            "live_session_cannot_penalize",
-            "LiveSession must be Active or Paused to apply a Penalty.");
+        State.EnsureCanPenalize();
     }
 
     public LiveSessionStageHint AddOperationalHint(
@@ -583,7 +539,7 @@ public sealed class LiveSession : AggregateRoot
         double? longitude,
         DateTimeOffset createdAtUtc)
     {
-        EnsureHintReleaseAllowed();
+        State.EnsureCanReleaseHint();
 
         var orderedStages = GetOrderedStages();
         var stageIndex = Array.FindIndex(orderedStages, stage => stage.MissionStageId == missionStageId);
@@ -665,7 +621,7 @@ public sealed class LiveSession : AggregateRoot
 
     public void DeactivateStage(Guid missionStageId, DateTimeOffset updatedAtUtc)
     {
-        EnsureStageDeactivationAllowed();
+        State.EnsureCanDeactivateStage();
 
         var orderedStages = GetOrderedStages();
         if (orderedStages.Length <= 1)
@@ -805,7 +761,7 @@ public sealed class LiveSession : AggregateRoot
         if (progress.CurrentStageIndex >= orderedStages.Count - 1)
         {
             progress.Complete(acceptedAtUtc);
-            State = LiveSessionState.Finalized;
+            ChangeState(new FinalizedState());
             return;
         }
 
@@ -872,48 +828,6 @@ public sealed class LiveSession : AggregateRoot
             evidenceSubmission.Outcome.ToString(),
             source,
             submittedAtUtc));
-    }
-
-    private void EnsureEvidenceSubmissionAllowed()
-    {
-        if (State == LiveSessionState.Paused
-            || State == LiveSessionState.Finalized
-            || State == LiveSessionState.Canceled)
-        {
-            throw new UmbralDomainException(
-                "live_session_not_accepting_evidence",
-                "LiveSession is not accepting Evidence Submissions.",
-                UmbralFailureCategory.Conflict);
-        }
-    }
-
-    private void EnsureHintReleaseAllowed()
-    {
-        if (State == LiveSessionState.Active
-            || State == LiveSessionState.Paused)
-        {
-            return;
-        }
-
-        throw new UmbralDomainException(
-            "live_session_not_accepting_hint_release",
-            "LiveSession must be Active or Paused to release or create Hints.",
-            UmbralFailureCategory.Conflict);
-    }
-
-    private void EnsureStageDeactivationAllowed()
-    {
-        if (State == LiveSessionState.Scheduled
-            || State == LiveSessionState.Active
-            || State == LiveSessionState.Paused)
-        {
-            return;
-        }
-
-        throw new UmbralDomainException(
-            "live_session_stage_deactivation_not_allowed_for_state",
-            "LiveSession must be Scheduled, Active or Paused to deactivate a pending Session Stage.",
-            UmbralFailureCategory.Conflict);
     }
 
     private void EnsureSessionTeamBelongsToLiveSession(Guid sessionTeamId)
@@ -1009,7 +923,7 @@ public sealed class LiveSession : AggregateRoot
     private void EnsureEnrollmentAllowed(JoinCode presentedJoinCode, DateTimeOffset nowUtc)
     {
         ArgumentNullException.ThrowIfNull(presentedJoinCode);
-        EnsureScheduled();
+        State.EnsureCanModifyEnrollment();
 
         if (JoinCodeValue is null)
         {
@@ -1034,45 +948,6 @@ public sealed class LiveSession : AggregateRoot
                 "Enrollment window is not active.",
                 UmbralFailureCategory.Conflict);
         }
-    }
-
-    private void EnsureScheduled()
-    {
-        EnsureState(
-            LiveSessionState.Scheduled,
-            "live_session_not_scheduled",
-            "LiveSession must be scheduled to accept enrollment changes.");
-    }
-
-    private void EnsureState(LiveSessionState expectedState, string errorCode, string errorMessage)
-        => EnsureState([expectedState], errorCode, errorMessage);
-
-    private void EnsureState(
-        LiveSessionState expectedStateA,
-        LiveSessionState expectedStateB,
-        string errorCode,
-        string errorMessage)
-        => EnsureState([expectedStateA, expectedStateB], errorCode, errorMessage);
-
-    private void EnsureState(
-        LiveSessionState expectedStateA,
-        LiveSessionState expectedStateB,
-        LiveSessionState expectedStateC,
-        string errorCode,
-        string errorMessage)
-        => EnsureState([expectedStateA, expectedStateB, expectedStateC], errorCode, errorMessage);
-
-    private void EnsureState(
-        IReadOnlyCollection<LiveSessionState> expectedStates,
-        string errorCode,
-        string errorMessage)
-    {
-        if (expectedStates.Contains(State))
-        {
-            return;
-        }
-
-        throw new UmbralDomainException(errorCode, errorMessage, UmbralFailureCategory.Conflict);
     }
 
     private static Guid NormalizeGuid(Guid value, string errorCode, string errorMessage)

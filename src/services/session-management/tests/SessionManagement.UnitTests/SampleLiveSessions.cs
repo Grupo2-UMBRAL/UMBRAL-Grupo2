@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using System.Reflection;
 using SessionManagement.Domain.LiveSessions;
 
@@ -147,13 +148,13 @@ internal static class SampleLiveSessions
 
     public static void ForceState(LiveSession liveSession, string state)
     {
-        var targetState = LiveSessionState.FromName(state);
-        if (liveSession.State == targetState) return;
+        var targetState = LiveSessionStateFactory.FromName(state);
+        if (liveSession.State.Name == targetState.Name) return;
 
         var now = DateTimeOffset.UtcNow;
         
         // Base requirements to start a session
-        if (liveSession.State == LiveSessionState.Scheduled)
+        if (liveSession.State is ScheduledState)
         {
             if (string.IsNullOrEmpty(liveSession.JoinCodeValue))
                 liveSession.AssignJoinCode(JoinCode());
@@ -169,33 +170,33 @@ internal static class SampleLiveSessions
             liveSession.Start(now);
         }
 
-        if (targetState == LiveSessionState.Active)
+        if (targetState is ActiveState)
         {
             liveSession.ClearDomainEvents();
             return;
         }
 
-        if (targetState == LiveSessionState.Paused)
+        if (targetState is PausedState)
         {
             liveSession.Pause();
             liveSession.ClearDomainEvents();
             return;
         }
         
-        if (targetState == LiveSessionState.Canceled)
+        if (targetState is CanceledState)
         {
             liveSession.Cancel();
             liveSession.ClearDomainEvents();
             return;
         }
 
-        if (targetState == LiveSessionState.Finalized)
+        if (targetState is FinalizedState)
         {
             // First we need to make sure we are not already canceled
-            if (liveSession.State != LiveSessionState.Canceled)
+            if (liveSession.State is not CanceledState)
             {
                 // Can only finalize if in progress or paused
-                if (liveSession.State == LiveSessionState.Scheduled) liveSession.Start(now);
+                if (liveSession.State is ScheduledState) liveSession.Start(now);
                 liveSession.FinalizeSession();
             }
             liveSession.ClearDomainEvents();

@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
@@ -169,7 +170,7 @@ public sealed class HintReleaseQaTests
 
         var releasedHints = liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(5));
 
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
         Assert.Equal(8, releasedHints.Count);
         Assert.Equal(8, liveSession.ReleasedHints.Count);
         Assert.Equal(1, liveSession.SequenceNumber);
@@ -198,7 +199,7 @@ public sealed class HintReleaseQaTests
         var sequenceAfterFirstRelease = liveSession.SequenceNumber;
         var secondRelease = liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(6));
 
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
         Assert.Equal(8, firstRelease.Count);
         Assert.Empty(secondRelease);
         Assert.Equal(8, liveSession.ReleasedHints.Count);

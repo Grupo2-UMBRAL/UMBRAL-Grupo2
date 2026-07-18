@@ -2,6 +2,7 @@ using SessionManagement.Domain.LiveSessions;
 using MediatR;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
+using SessionManagement.Domain.LiveSessions.States;
 
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
@@ -42,7 +43,7 @@ public sealed class GetLiveSessionOverviewQueryHandler(
             liveSession.Name,
             liveSession.MissionId,
             liveSession.MissionName,
-            liveSession.State.Value,
+            liveSession.State.Name,
             liveSession.ScheduledStartAtUtc,
             CalculateRemainingSeconds(liveSession, serverTimeUtc),
             serverTimeUtc,
@@ -58,7 +59,7 @@ public sealed class GetLiveSessionOverviewQueryHandler(
 
     private static int? CalculateRemainingSeconds(LiveSession liveSession, DateTimeOffset serverTimeUtc)
     {
-        if (liveSession.State != LiveSessionState.Scheduled)
+        if (liveSession.State is not ScheduledState)
         {
             return null;
         }

@@ -3,6 +3,7 @@ using MediatR;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Abstractions;
+using SessionManagement.Domain.LiveSessions.States;
 
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
@@ -47,7 +48,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             liveSession.Id,
             sessionTeam.Id,
             sessionTeam.Name,
-            liveSession.State.Value,
+            liveSession.State.Name,
             liveSession.GetProgressStateForTeam(sessionTeam.Id),
             MapCurrentStage(liveSession.GetCurrentStageForTeam(sessionTeam.Id)),
             MapVisibleHints(liveSession, sessionTeam.Id),
@@ -125,7 +126,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
 
     private static IReadOnlyList<CurrentSessionStageSnapshot>? MapAllStages(LiveSession liveSession)
     {
-        if (liveSession.State != LiveSessionState.Finalized)
+        if (liveSession.State is not FinalizedState)
         {
             return null;
         }
@@ -159,7 +160,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
             }
 
             if (hint.IsSolution
-                && liveSession.State != LiveSessionState.Finalized)
+                && liveSession.State is not FinalizedState)
             {
                 continue;
             }

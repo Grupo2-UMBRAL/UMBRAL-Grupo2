@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;
 using Xunit;
@@ -16,7 +17,7 @@ public sealed class LiveSessionCreateTests
         var liveSession = SampleLiveSessions.Create(SampleLiveSessions.TreasureStages(3));
 
         Assert.NotEqual(Guid.Empty, liveSession.Id);
-        Assert.Equal("Scheduled", liveSession.State.Value);
+        Assert.Equal("Scheduled", liveSession.State.Name);
         Assert.Equal(3, liveSession.SessionStageFlow.Count);
         Assert.Equal([1, 2, 3], liveSession.SessionStageFlow.Select(stage => stage.SessionStageOrder));
     }
@@ -144,7 +145,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Start(SampleLiveSessions.CreatedAt.AddMinutes(20));
 
-        Assert.Equal("Active", liveSession.State.Value);
+        Assert.Equal("Active", liveSession.State.Name);
         Assert.NotNull(liveSession.EnrollmentWindowClosedAtUtc);
     }
 
@@ -155,7 +156,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Start(SampleLiveSessions.Now);
 
-        Assert.Equal("Active", liveSession.State.Value);
+        Assert.Equal("Active", liveSession.State.Name);
         Assert.Null(liveSession.EnrollmentWindowOpenedAtUtc);
     }
 
@@ -199,7 +200,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Pause();
 
-        Assert.Equal("Paused", liveSession.State.Value);
+        Assert.Equal("Paused", liveSession.State.Name);
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Resume();
 
-        Assert.Equal("Active", liveSession.State.Value);
+        Assert.Equal("Active", liveSession.State.Name);
     }
 
     [Fact]
@@ -240,7 +241,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.Cancel();
 
-        Assert.Equal("Canceled", liveSession.State.Value);
+        Assert.Equal("Canceled", liveSession.State.Name);
     }
 
     [Fact]
@@ -259,7 +260,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.FinalizeSession();
 
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
     }
 
     [Fact]
@@ -280,7 +281,7 @@ public sealed class LiveSessionLifecycleTests
 
         liveSession.FinalizeSession();
 
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
     }
 
     [Fact]
@@ -296,7 +297,7 @@ public sealed class LiveSessionLifecycleTests
         var released = liveSession.FinalizeAndRevealAllHints(SampleLiveSessions.Now);
 
         Assert.Single(released);
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
         Assert.Equal(1, liveSession.SequenceNumber);
     }
 

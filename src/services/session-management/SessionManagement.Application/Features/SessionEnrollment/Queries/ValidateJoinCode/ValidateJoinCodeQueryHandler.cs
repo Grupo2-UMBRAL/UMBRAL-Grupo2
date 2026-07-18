@@ -23,7 +23,7 @@ public sealed class ValidateJoinCodeHandler(
 
         return new ParticipantEnrollmentStatusResponse(
             liveSession.Id,
-            liveSession.State.Value,
+            liveSession.State.Name,
             liveSession.EnrollmentWindowOpenedAtUtc,
             liveSession.EnrollmentWindowClosedAtUtc,
             liveSession.IsEnrollmentOpenAt(timeProvider.GetUtcNow()));

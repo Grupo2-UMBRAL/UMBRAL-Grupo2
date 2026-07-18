@@ -4,6 +4,7 @@ using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Features.SessionSnapshots;
+using SessionManagement.Domain.LiveSessions.States;
 using SessionManagement.Domain.LiveSessions;
 using Umbral.ServiceDefaults;
 
@@ -189,15 +190,15 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
 
     private async Task PublishSessionStateChangedAsync(
         LiveSession liveSession,
-        LiveSessionState previousState,
+        ILiveSessionState previousState,
         string reason,
         DateTimeOffset occurredAtUtc,
         CancellationToken cancellationToken)
         => await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
-                previousState.Value,
-                liveSession.State.Value,
+                previousState.Name,
+                liveSession.State.Name,
                 liveSession.SessionTeams.Count,
                 liveSession.SequenceNumber,
                 reason,
