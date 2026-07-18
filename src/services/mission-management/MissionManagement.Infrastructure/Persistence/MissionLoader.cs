@@ -4,7 +4,7 @@ using MissionManagement.Application.Abstractions;
 using MissionManagement.Domain.Missions;
 using Umbral.ServiceDefaults;
 
-namespace MissionManagement.Application.Features.Missions;
+namespace MissionManagement.Infrastructure.Persistence;
 
 /// <summary>
 /// Loads and persists the Mission aggregate. The aggregate has no arbitrary-depth navigation, so we
@@ -12,10 +12,10 @@ namespace MissionManagement.Application.Features.Missions;
 /// <see cref="Mission.Rehydrate"/> rebuild the Section tree in memory. Replacement deletes existing
 /// path items (cascade clears plays/choices/hints) before attaching the new tree.
 /// </summary>
-public static class MissionLoader
+internal static class MissionLoader
 {
     public static async Task<Mission?> LoadAsync(
-        IMissionManagementDbContext dbContext,
+        MissionManagementDbContext dbContext,
         Guid missionId,
         CancellationToken cancellationToken)
     {
@@ -86,7 +86,7 @@ public static class MissionLoader
     }
 
     public static async Task<Mission> RequireAsync(
-        IMissionManagementDbContext dbContext,
+        MissionManagementDbContext dbContext,
         Guid missionId,
         CancellationToken cancellationToken)
     {
@@ -104,7 +104,7 @@ public static class MissionLoader
 
     /// <summary>Removes all path items (and cascaded plays/choices/hints) currently stored for a mission.</summary>
     public static async Task DeleteItemsAsync(
-        IMissionManagementDbContext dbContext,
+        MissionManagementDbContext dbContext,
         Guid missionId,
         CancellationToken cancellationToken)
     {
@@ -118,7 +118,7 @@ public static class MissionLoader
     }
 
     /// <summary>Adds the mission's root path items (recursively, depth-first) to the change tracker.</summary>
-    public static void AddItems(IMissionManagementDbContext dbContext, Mission mission)
+    public static void AddItems(MissionManagementDbContext dbContext, Mission mission)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
         ArgumentNullException.ThrowIfNull(mission);

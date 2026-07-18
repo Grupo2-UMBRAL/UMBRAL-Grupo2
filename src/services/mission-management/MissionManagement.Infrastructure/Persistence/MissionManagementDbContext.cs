@@ -5,7 +5,7 @@ using MissionManagement.Domain.Missions;
 namespace MissionManagement.Infrastructure.Persistence;
 
 public sealed class MissionManagementDbContext(DbContextOptions<MissionManagementDbContext> options)
-    : DbContext(options), IMissionManagementDbContext
+    : DbContext(options)
 {
     public DbSet<Mission> Missions => Set<Mission>();
 

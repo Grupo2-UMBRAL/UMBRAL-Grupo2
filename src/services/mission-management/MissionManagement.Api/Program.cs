@@ -10,7 +10,7 @@ builder.Services.AddOpenApi(options =>
     options.AddUmbralDefaults("Mission Management API", requiresBearerAuthentication: true));
 builder.Services.AddMissionManagementApplication();
 builder.Services.AddMissionManagementInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IMissionManagementDbContext>(serviceProvider => serviceProvider.GetRequiredService<MissionManagementDbContext>());
+
 
 var app = builder.Build();
 

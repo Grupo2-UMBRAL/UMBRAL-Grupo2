@@ -13,13 +13,22 @@ namespace MissionManagement.Application.Abstractions;
 /// anyway (it flushes twice). A handler-driven commit would have to know that, which is exactly the
 /// EF detail this seam exists to hide.
 /// </summary>
-public interface IMissionStore
+public interface IMissionRepository
 {
     /// <summary>Tracked scalar aggregate (no path-item tree). For mutations that only touch scalar state.</summary>
     Task<Mission?> GetAsync(Guid missionId, CancellationToken cancellationToken);
 
     /// <summary>Tracked scalar aggregate with its path-item tree hydrated (for eligibility / full response).</summary>
     Task<Mission?> GetWithItemsAsync(Guid missionId, CancellationToken cancellationToken);
+
+    /// <summary>Gets a required tracked scalar aggregate with its path-item tree hydrated.</summary>
+    Task<Mission> GetRequiredWithItemsAsync(Guid missionId, CancellationToken cancellationToken);
+
+    /// <summary>Lists all missions (scalar aggregate only, untracked).</summary>
+    Task<IReadOnlyList<Mission>> ListMissionsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Lists all eligible active missions with their path-item tree hydrated (untracked).</summary>
+    Task<IReadOnlyList<Mission>> ListEligibleMissionsAsync(CancellationToken cancellationToken);
 
     /// <summary>Persists a new mission (scalar row + its path-item tree).</summary>
     Task AddAsync(Mission mission, CancellationToken cancellationToken);

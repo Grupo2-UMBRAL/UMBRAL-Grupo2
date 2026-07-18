@@ -32,7 +32,7 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddSignalR();
 builder.Services.AddScoringMonitoringApplication();
 builder.Services.AddScoringMonitoringInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IScoringMonitoringDbContext>(serviceProvider => serviceProvider.GetRequiredService<ScoringMonitoringDbContext>());
+
 builder.Services.AddScoped<IScoringMonitoringUpdatesPublisher, SignalRScoringMonitoringUpdatesPublisher>();
 
 var app = builder.Build();

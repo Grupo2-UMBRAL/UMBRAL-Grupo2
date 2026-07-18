@@ -1,10 +1,9 @@
 using MissionManagement.Application.Abstractions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace MissionManagement.Application.Features.Missions.Queries.ListMissions;
 
-public sealed class ListMissionsQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class ListMissionsQueryHandler(IMissionRepository missionRepository)
     : IRequestHandler<ListMissionsQuery, IReadOnlyList<MissionSummaryResponse>>
 {
     public async Task<IReadOnlyList<MissionSummaryResponse>> Handle(
@@ -13,10 +12,7 @@ public sealed class ListMissionsQueryHandler(IMissionManagementDbContext dbConte
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return await dbContext.Missions
-            .AsNoTracking()
-            .OrderBy(mission => mission.Name)
-            .Select(mission => mission.ToSummaryResponse())
-            .ToListAsync(cancellationToken);
+        var missions = await missionRepository.ListMissionsAsync(cancellationToken);
+        return missions.Select(mission => mission.ToSummaryResponse()).ToList();
     }
 }

@@ -4,14 +4,14 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.UpdateMission;
 
-public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
+public sealed class UpdateMissionCommandHandler(IMissionRepository missionRepository)
     : IRequestHandler<UpdateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(UpdateMissionCommand request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await missionStore.GetWithItemsAsync(request.MissionId, cancellationToken);
+        var mission = await missionRepository.GetWithItemsAsync(request.MissionId, cancellationToken);
         if (mission is null)
         {
             throw new UmbralDomainException(
@@ -26,12 +26,12 @@ public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
             request.MaximumDurationMinutes);
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
-            missionStore, mission.Name, excludeMissionId: request.MissionId, cancellationToken);
+            missionRepository, mission.Name, excludeMissionId: request.MissionId, cancellationToken);
 
         if (request.Items is null)
         {
             // Scalar-only update: the tree stays as loaded, so the response reflects it without a reload.
-            await missionStore.UpdateAsync(mission, cancellationToken);
+            await missionRepository.UpdateAsync(mission, cancellationToken);
             return mission.ToResponse();
         }
 
@@ -49,7 +49,7 @@ public sealed class UpdateMissionCommandHandler(IMissionStore missionStore)
             updatedView.EnsureEligibleForLiveSession();
         }
 
-        await missionStore.ReplaceItemsAsync(updatedView, cancellationToken);
+        await missionRepository.ReplaceItemsAsync(updatedView, cancellationToken);
 
         return updatedView.ToResponse();
     }

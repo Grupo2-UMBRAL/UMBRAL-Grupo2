@@ -14,12 +14,12 @@ public static class DependencyInjection
     {
         services.AddMediatR(configuration =>
         {
-            configuration.RegisterServicesFromAssemblyContaining<IMissionManagementDbContext>();
+            configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
             configuration.AddOpenBehavior(typeof(UmbralLoggingBehavior<,>));
             configuration.AddOpenBehavior(typeof(UmbralValidationBehavior<,>));
         });
 
-        services.AddValidatorsFromAssemblyContaining<IMissionManagementDbContext>();
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         return services;
     }

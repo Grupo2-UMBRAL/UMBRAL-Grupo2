@@ -5,12 +5,7 @@ using ScoringMonitoring.Domain.Scoreboards;
 
 namespace ScoringMonitoring.Application.Features.Scoreboards;
 
-public interface IApplyPenaltyScoreboardStore
-{
-    Task<Scoreboard> LoadAsync(Guid liveSessionId, CancellationToken cancellationToken);
 
-    Task PersistPenaltyApplicationAsync(SessionEventLog eventLog, CancellationToken cancellationToken);
-}
 
 public interface IScoringMonitoringUpdatesPublisher
 {

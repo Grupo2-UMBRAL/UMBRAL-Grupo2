@@ -3,7 +3,7 @@ using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Application.Features.Missions.Commands.CreateMission;
 
-public sealed class CreateMissionCommandHandler(IMissionStore missionStore)
+public sealed class CreateMissionCommandHandler(IMissionRepository missionRepository)
     : IRequestHandler<CreateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(CreateMissionCommand request, CancellationToken cancellationToken)
@@ -21,9 +21,9 @@ public sealed class CreateMissionCommandHandler(IMissionStore missionStore)
             rootItems);
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
-            missionStore, mission.Name, excludeMissionId: null, cancellationToken);
+            missionRepository, mission.Name, excludeMissionId: null, cancellationToken);
 
-        await missionStore.AddAsync(mission, cancellationToken);
+        await missionRepository.AddAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }

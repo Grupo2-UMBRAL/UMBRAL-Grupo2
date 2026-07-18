@@ -10,7 +10,7 @@ public sealed class DeactivateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_RejectsNullRequest()
     {
-        var handler = new DeactivateMissionCommandHandler(new InMemoryMissionStore());
+        var handler = new DeactivateMissionCommandHandler(new InMemoryMissionRepository());
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             handler.Handle(null!, CancellationToken.None));
@@ -19,7 +19,7 @@ public sealed class DeactivateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_ThrowsNotFound_WhenMissionMissing()
     {
-        var store = new InMemoryMissionStore();
+        var store = new InMemoryMissionRepository();
         var handler = new DeactivateMissionCommandHandler(store);
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
@@ -34,7 +34,7 @@ public sealed class DeactivateMissionCommandHandlerTests
     {
         var mission = SampleMissions.SingleTreasureHunt(Guid.NewGuid(), "Deactivation Mission");
         mission.Activate();
-        var store = new InMemoryMissionStore(mission);
+        var store = new InMemoryMissionRepository(mission);
         var handler = new DeactivateMissionCommandHandler(store);
 
         var response = await handler.Handle(new DeactivateMissionCommand(mission.Id), CancellationToken.None);
@@ -49,7 +49,7 @@ public sealed class DeactivateMissionCommandHandlerTests
     public async Task Handle_ThrowsConflict_WhenAlreadyInactive()
     {
         var mission = SampleMissions.SingleTreasureHunt(Guid.NewGuid(), "Already Inactive");
-        var store = new InMemoryMissionStore(mission);
+        var store = new InMemoryMissionRepository(mission);
         var handler = new DeactivateMissionCommandHandler(store);
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>

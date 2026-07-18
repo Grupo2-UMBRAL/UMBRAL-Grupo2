@@ -3,7 +3,7 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Commands.DeactivateMission;
 
-public sealed class DeactivateMissionCommandHandler(IMissionStore missionStore)
+public sealed class DeactivateMissionCommandHandler(IMissionRepository missionRepository)
     : IRequestHandler<DeactivateMissionCommand, MissionResponse>
 {
     public async Task<MissionResponse> Handle(DeactivateMissionCommand request, CancellationToken cancellationToken)
@@ -12,7 +12,7 @@ public sealed class DeactivateMissionCommandHandler(IMissionStore missionStore)
 
         // ponytail: loads the tree even though deactivation only flips a flag — the response body carries
         // the full mission and the web admin re-renders the builder from it (a scalar-only load would blank it).
-        var mission = await missionStore.GetWithItemsAsync(request.MissionId, cancellationToken);
+        var mission = await missionRepository.GetWithItemsAsync(request.MissionId, cancellationToken);
         if (mission is null)
         {
             throw new UmbralDomainException(
@@ -22,7 +22,7 @@ public sealed class DeactivateMissionCommandHandler(IMissionStore missionStore)
         }
 
         mission.Deactivate();
-        await missionStore.UpdateAsync(mission, cancellationToken);
+        await missionRepository.UpdateAsync(mission, cancellationToken);
 
         return mission.ToResponse();
     }

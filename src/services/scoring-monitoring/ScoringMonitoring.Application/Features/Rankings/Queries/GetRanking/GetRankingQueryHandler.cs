@@ -5,7 +5,7 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Application.Features.Rankings.Queries.GetRanking;
 
 public sealed class GetRankingHandler(
-    IRepository<Scoreboard> scoreboardRepository,
+    IScoreboardRepository scoreboardRepository,
     TimeProvider timeProvider)
     : IRequestHandler<GetRankingQuery, RankingPayload>
 {
@@ -15,9 +15,7 @@ public sealed class GetRankingHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await scoreboardRepository
-            .Include(entity => entity.ScoreEntries)
-            .SingleOrDefaultAsync(entity => entity.LiveSessionId == request.LiveSessionId, cancellationToken);
+        var scoreboard = await scoreboardRepository.GetByLiveSessionIdAsync(request.LiveSessionId, cancellationToken);
         if (scoreboard is null)
         {
             throw new UmbralDomainException(

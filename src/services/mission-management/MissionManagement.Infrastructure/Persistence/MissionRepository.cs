@@ -1,17 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using MissionManagement.Application.Abstractions;
-using MissionManagement.Application.Features.Missions;
 using MissionManagement.Domain.Missions;
 
 namespace MissionManagement.Infrastructure.Persistence;
 
-/// <summary>
-/// Command-side implementation of <see cref="IMissionStore"/>. The scalar row is loaded tracked so
-/// domain mutations persist on <see cref="UpdateAsync"/>; the path-item tree is rebuilt from the
-/// flat rows via <see cref="MissionLoader"/> and attached in memory (the Mission has no EF navigation
-/// to its items, so a hydrated tree never dirties the change tracker on its own).
-/// </summary>
-internal sealed class MissionStore(IMissionManagementDbContext dbContext) : IMissionStore
+
+internal sealed class MissionRepository(MissionManagementDbContext dbContext) : IMissionRepository
 {
     public async Task<Mission?> GetAsync(Guid missionId, CancellationToken cancellationToken)
     {
@@ -33,6 +27,43 @@ internal sealed class MissionStore(IMissionManagementDbContext dbContext) : IMis
         var hydrated = await MissionLoader.LoadAsync(dbContext, missionId, cancellationToken);
         mission.ReplaceItems(hydrated!.RootItems);
         return mission;
+    }
+
+    public async Task<Mission> GetRequiredWithItemsAsync(Guid missionId, CancellationToken cancellationToken)
+    {
+        return await MissionLoader.RequireAsync(dbContext, missionId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Mission>> ListMissionsAsync(CancellationToken cancellationToken)
+    {
+        return await dbContext.Missions
+            .AsNoTracking()
+            .OrderBy(mission => mission.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Mission>> ListEligibleMissionsAsync(CancellationToken cancellationToken)
+    {
+        var activeMissionIds = await dbContext.Missions
+            .AsNoTracking()
+            .Where(mission => mission.IsActive)
+            .OrderBy(mission => mission.Name)
+            .Select(mission => mission.Id)
+            .ToListAsync(cancellationToken);
+
+        var eligibleMissions = new List<Mission>();
+        foreach (var missionId in activeMissionIds)
+        {
+            var mission = await MissionLoader.LoadAsync(dbContext, missionId, cancellationToken);
+            if (mission is null || !mission.IsEligibleForLiveSession())
+            {
+                continue;
+            }
+
+            eligibleMissions.Add(mission);
+        }
+
+        return eligibleMissions;
     }
 
     public async Task AddAsync(Mission mission, CancellationToken cancellationToken)
