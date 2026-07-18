@@ -209,6 +209,9 @@ public sealed class SessionEventLogApplicationTests
 
         Assert.True(firstResponse.PenaltyApplied);
         Assert.False(replayResponse.PenaltyApplied);
+        Assert.Null(replayResponse.PenaltyId);
+        Assert.Null(replayResponse.ScoreEntryId);
+        Assert.Equal(firstResponse.VisibleScore, replayResponse.VisibleScore);
         Assert.Equal(1, await dbContext.ScoreEntries.CountAsync());
         Assert.Equal(1, await dbContext.SessionEventLogs.CountAsync());
         var eventLog = await dbContext.SessionEventLogs.SingleAsync();

@@ -278,7 +278,7 @@ public sealed class ScoreboardPenaltyTests
         var sessionTeamId = Guid.NewGuid();
         var penalty = CreatePenalty(Guid.NewGuid(), sessionTeamId, severity);
 
-        var entry = scoreboard.ApplyPenalty(penalty);
+        var entry = Assert.IsType<ScoreEntry>(scoreboard.ApplyPenalty(penalty));
         var teamScore = scoreboard.GetTeamScore(sessionTeamId);
 
         Assert.Equal(expectedDelta, entry.Delta);
@@ -306,7 +306,7 @@ public sealed class ScoreboardPenaltyTests
             DateTimeOffset.UtcNow);
 
         var penalty = CreatePenalty(Guid.NewGuid(), sessionTeamId, PenaltySeverity.Critical);
-        var entry = scoreboard.ApplyPenalty(penalty);
+        var entry = Assert.IsType<ScoreEntry>(scoreboard.ApplyPenalty(penalty));
         var teamScore = scoreboard.GetTeamScore(sessionTeamId);
 
         Assert.Equal(-200, entry.Delta);
@@ -319,7 +319,7 @@ public sealed class ScoreboardPenaltyTests
     }
 
     [Fact]
-    public void ApplyPenalty_BlocksDuplicatePenaltyCommand()
+    public void ApplyPenalty_ReturnsNullForDuplicatePenaltyCommand()
     {
         var scoreboard = new Scoreboard(Guid.NewGuid());
         var sessionTeamId = Guid.NewGuid();
@@ -329,8 +329,10 @@ public sealed class ScoreboardPenaltyTests
 
         scoreboard.ApplyPenalty(firstPenalty);
 
-        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.ApplyPenalty(replayedPenalty));
-        Assert.Equal("scoreboard.duplicate_penalty_command", exception.Code);
+        var duplicateEntry = scoreboard.ApplyPenalty(replayedPenalty);
+
+        Assert.Null(duplicateEntry);
+        Assert.Single(scoreboard.ScoreEntries);
     }
 
     [Fact]
@@ -347,8 +349,10 @@ public sealed class ScoreboardPenaltyTests
 
         scoreboard.RebuildState();
 
-        var exception = Assert.Throws<UmbralDomainException>(() => scoreboard.ApplyPenalty(replayedPenalty));
-        Assert.Equal("scoreboard.duplicate_penalty_command", exception.Code);
+        var duplicateEntry = scoreboard.ApplyPenalty(replayedPenalty);
+
+        Assert.Null(duplicateEntry);
+        Assert.Single(scoreboard.ScoreEntries);
     }
 
     private static Penalty CreatePenalty(Guid commandId, Guid sessionTeamId, PenaltySeverity severity) =>
