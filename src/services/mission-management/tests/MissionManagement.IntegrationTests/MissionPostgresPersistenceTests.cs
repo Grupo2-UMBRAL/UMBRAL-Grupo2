@@ -25,7 +25,7 @@ namespace MissionManagement.IntegrationTests;
 /// Persistence tests against a REAL Postgres container (Testcontainers), exercising the
 /// production EF Core model and the real migration — FK constraints, restrict/cascade rules,
 /// SQL translation — none of which the InMemory-backed <see cref="MissionEndpointTests"/> can
-/// catch. The DbContext is repointed at the container in <c>ConfigureServices</c> (the only
+/// catch. The missionRepository is repointed at the container in <c>ConfigureServices</c> (the only
 /// hook that runs after the app's own registration), then the real migration is applied; the
 /// cases then drive the production persistence path through the HTTP API.
 ///
@@ -281,15 +281,17 @@ public sealed class MissionPostgresPersistenceTests : IAsyncLifetime
                 // to the throwaway container. This is the only hook that runs late enough.
                 services.RemoveAll<DbContextOptions<MissionManagementDbContext>>();
                 services.RemoveAll<MissionManagementDbContext>();
-                services.AddScoped<MissionManagementDbContext>(_ => new MissionManagementDbContext(BuildOptions()));
-                services.AddScoped<DbContextOptions<MissionManagementDbContext>>(_ => BuildOptions());
+                services.AddScoped<MissionManagementDbContext>(_ => new MissionManagementDbContext(CreateDbOptions()));
+                services.AddScoped<DbContextOptions<MissionManagementDbContext>>(_ => CreateDbOptions());
             });
         }
 
-        private DbContextOptions<MissionManagementDbContext> BuildOptions() =>
-            new DbContextOptionsBuilder<MissionManagementDbContext>()
+        private DbContextOptions<MissionManagementDbContext> CreateDbOptions()
+        {
+            return new DbContextOptionsBuilder<MissionManagementDbContext>()
                 .UseNpgsql(connectionString)
                 .Options;
+        }
 
         public HttpClient CreateAdminClient()
         {

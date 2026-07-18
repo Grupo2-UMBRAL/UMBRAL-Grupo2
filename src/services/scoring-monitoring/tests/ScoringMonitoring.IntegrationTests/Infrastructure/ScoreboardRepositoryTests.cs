@@ -1,15 +1,14 @@
 using Microsoft.EntityFrameworkCore;
-using ScoringMonitoring.Domain.Audit;
 using ScoringMonitoring.Domain.Scoreboards;
 using ScoringMonitoring.Infrastructure.Persistence;
 using Xunit;
 
 namespace ScoringMonitoring.IntegrationTests.Infrastructure;
 
-public sealed class ApplyPenaltyScoreboardStoreTests
+public sealed class ScoreboardRepositoryTests
 {
     [Fact]
-    public async Task LoadAsync_ReturnsExistingScoreboardWithScoreEntriesAndRebuiltState()
+    public async Task GetByLiveSessionIdAsync_ReturnsExistingScoreboardWithScoreEntriesAndRebuiltState()
     {
         var databaseName = $"infra-{Guid.NewGuid():N}";
         var liveSessionId = Guid.NewGuid();
@@ -35,10 +34,11 @@ public sealed class ApplyPenaltyScoreboardStoreTests
         }
 
         await using var dbContext = CreateDbContext(databaseName);
-        var store = new ApplyPenaltyScoreboardStore(dbContext);
+        var repository = new ScoreboardRepository(dbContext);
 
-        var loaded = await store.LoadAsync(liveSessionId, CancellationToken.None);
+        var loaded = await repository.GetByLiveSessionIdAsync(liveSessionId, CancellationToken.None);
 
+        Assert.NotNull(loaded);
         Assert.Equal(liveSessionId, loaded.LiveSessionId);
         Assert.Equal(2, loaded.ScoreEntries.Count);
         var teamScore = loaded.GetTeamScore(sessionTeamId);
@@ -47,45 +47,19 @@ public sealed class ApplyPenaltyScoreboardStoreTests
     }
 
     [Fact]
-    public async Task LoadAsync_CreatesNewScoreboardWhenNoneExistsForLiveSession()
+    public async Task GetRequiredByLiveSessionIdAsync_CreatesNewScoreboardWhenNoneExistsForLiveSession()
     {
         var databaseName = $"infra-{Guid.NewGuid():N}";
         var liveSessionId = Guid.NewGuid();
         await using var dbContext = CreateDbContext(databaseName);
-        var store = new ApplyPenaltyScoreboardStore(dbContext);
+        var repository = new ScoreboardRepository(dbContext);
 
-        var loaded = await store.LoadAsync(liveSessionId, CancellationToken.None);
+        var loaded = await repository.GetRequiredByLiveSessionIdAsync(liveSessionId, CancellationToken.None);
 
         Assert.NotNull(loaded);
         Assert.Equal(liveSessionId, loaded.LiveSessionId);
         Assert.Empty(loaded.ScoreEntries);
         Assert.Equal(EntityState.Added, dbContext.Entry(loaded).State);
-    }
-
-    [Fact]
-    public async Task PersistPenaltyApplicationAsync_AppendsSessionEventLogAndPersistsToDatabase()
-    {
-        var databaseName = $"infra-{Guid.NewGuid():N}";
-        var liveSessionId = Guid.NewGuid();
-        var eventLog = new SessionEventLog(
-            Guid.NewGuid(),
-            liveSessionId,
-            "PenaltyApplied",
-            "Penalty applied to team.",
-            DateTimeOffset.Parse("2026-06-04T02:15:00Z"));
-
-        await using (var dbContext = CreateDbContext(databaseName))
-        {
-            var store = new ApplyPenaltyScoreboardStore(dbContext);
-            await store.PersistPenaltyApplicationAsync(eventLog, CancellationToken.None);
-        }
-
-        await using var verifyDbContext = CreateDbContext(databaseName);
-        var persisted = await verifyDbContext.SessionEventLogs.SingleAsync();
-        Assert.Equal(eventLog.Id, persisted.Id);
-        Assert.Equal(liveSessionId, persisted.LiveSessionId);
-        Assert.Equal("PenaltyApplied", persisted.EventType);
-        Assert.Equal("Penalty applied to team.", persisted.Description);
     }
 
     private static ScoringMonitoringDbContext CreateDbContext(string databaseName)

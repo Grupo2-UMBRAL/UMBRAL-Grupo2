@@ -10,7 +10,7 @@ public sealed class MissionNameUniquenessValidatorTests
     [Fact]
     public async Task EnsureAvailableAsync_NoClash_DoesNotThrow()
     {
-        var store = new InMemoryMissionStore();
+        var store = new InMemoryMissionRepository();
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
             store, "Unique", excludeMissionId: null, CancellationToken.None);
@@ -19,7 +19,7 @@ public sealed class MissionNameUniquenessValidatorTests
     [Fact]
     public async Task EnsureAvailableAsync_Clash_ThrowsConflict()
     {
-        var store = new InMemoryMissionStore(Mission.Create(Guid.NewGuid(), "Taken", "Description", 30));
+        var store = new InMemoryMissionRepository(Mission.Create(Guid.NewGuid(), "Taken", "Description", 30));
 
         var exception = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             MissionNameUniquenessValidator.EnsureAvailableAsync(
@@ -33,7 +33,7 @@ public sealed class MissionNameUniquenessValidatorTests
     public async Task EnsureAvailableAsync_SameMissionExcluded_DoesNotThrow()
     {
         var mission = Mission.Create(Guid.NewGuid(), "Keep Name", "Description", 30);
-        var store = new InMemoryMissionStore(mission);
+        var store = new InMemoryMissionRepository(mission);
 
         await MissionNameUniquenessValidator.EnsureAvailableAsync(
             store, "Keep Name", excludeMissionId: mission.Id, CancellationToken.None);

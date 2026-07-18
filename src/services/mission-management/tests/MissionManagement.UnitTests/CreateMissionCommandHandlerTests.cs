@@ -10,7 +10,7 @@ public sealed class CreateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_RejectsNullRequest()
     {
-        var handler = new CreateMissionCommandHandler(new InMemoryMissionStore());
+        var handler = new CreateMissionCommandHandler(new InMemoryMissionRepository());
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             handler.Handle(null!, CancellationToken.None));
@@ -19,7 +19,7 @@ public sealed class CreateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_PersistsNewMission_AndReturnsInactiveResponse()
     {
-        var store = new InMemoryMissionStore();
+        var store = new InMemoryMissionRepository();
         var handler = new CreateMissionCommandHandler(store);
         var command = new CreateMissionCommand("City Circuit", "Route through control points.", 75);
 
@@ -35,7 +35,7 @@ public sealed class CreateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_ThrowsConflict_WhenNameAlreadyTaken()
     {
-        var store = new InMemoryMissionStore(Mission.Create(Guid.NewGuid(), "Taken", "Existing.", 30));
+        var store = new InMemoryMissionRepository(Mission.Create(Guid.NewGuid(), "Taken", "Existing.", 30));
         var handler = new CreateMissionCommandHandler(store);
         var command = new CreateMissionCommand("Taken", "Another.", 45);
 

@@ -10,7 +10,7 @@ public sealed class UpdateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_RejectsNullRequest()
     {
-        var handler = new UpdateMissionCommandHandler(new InMemoryMissionStore());
+        var handler = new UpdateMissionCommandHandler(new InMemoryMissionRepository());
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             handler.Handle(null!, CancellationToken.None));
@@ -19,7 +19,7 @@ public sealed class UpdateMissionCommandHandlerTests
     [Fact]
     public async Task Handle_ThrowsNotFound_WhenMissionMissing()
     {
-        var store = new InMemoryMissionStore();
+        var store = new InMemoryMissionRepository();
         var handler = new UpdateMissionCommandHandler(store);
         var command = new UpdateMissionCommand(Guid.NewGuid(), "Name", "Description", 30);
 
@@ -35,7 +35,7 @@ public sealed class UpdateMissionCommandHandlerTests
     public async Task Handle_UpdatesScalarFields_WhenItemsNull()
     {
         var existing = Mission.Create(Guid.NewGuid(), "Old Mission", "Old.", 45);
-        var store = new InMemoryMissionStore(existing);
+        var store = new InMemoryMissionRepository(existing);
         var handler = new UpdateMissionCommandHandler(store);
         var command = new UpdateMissionCommand(existing.Id, "Updated Mission", "Updated.", 95);
 
@@ -52,7 +52,7 @@ public sealed class UpdateMissionCommandHandlerTests
     {
         var target = Mission.Create(Guid.NewGuid(), "Rename Me", "One.", 30);
         var other = Mission.Create(Guid.NewGuid(), "Taken", "Two.", 30);
-        var store = new InMemoryMissionStore(target, other);
+        var store = new InMemoryMissionRepository(target, other);
         var handler = new UpdateMissionCommandHandler(store);
         var command = new UpdateMissionCommand(target.Id, "Taken", "One.", 30);
 

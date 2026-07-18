@@ -8,7 +8,9 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Application.Features.Scoreboards.Commands.RecordStageCredit;
 
 public sealed class RecordStageCreditHandler(
-    IUnitOfWork unitOfWork, IRepository<Scoreboard> scoreboardRepository, IRepository<SessionEventLog> sessionEventLogRepository,
+    IUnitOfWork unitOfWork,
+    IScoreboardRepository scoreboardRepository,
+    ISessionEventLogRepository sessionEventLogRepository,
     TimeProvider timeProvider,
     IScoringMonitoringUpdatesPublisher updatesPublisher)
     : IRequestHandler<RecordStageCreditCommand, RecordStageCreditResponse>
@@ -19,9 +21,7 @@ public sealed class RecordStageCreditHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await scoreboardRepository
-            .Include(entity => entity.ScoreEntries)
-            .SingleOrDefaultAsync(entity => entity.LiveSessionId == request.LiveSessionId, cancellationToken);
+        var scoreboard = await scoreboardRepository.GetByLiveSessionIdAsync(request.LiveSessionId, cancellationToken);
         if (scoreboard is null)
         {
             scoreboard = new Scoreboard(request.LiveSessionId);

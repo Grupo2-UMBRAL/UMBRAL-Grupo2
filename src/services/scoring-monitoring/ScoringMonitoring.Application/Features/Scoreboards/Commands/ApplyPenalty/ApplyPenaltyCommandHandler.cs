@@ -1,3 +1,4 @@
+using ScoringMonitoring.Application.Abstractions;
 using ScoringMonitoring.Application.Features.SessionEventLogs;
 using ScoringMonitoring.Application.Features.Rankings;
 using ScoringMonitoring.Domain.Audit;
@@ -7,7 +8,9 @@ using ScoringMonitoring.Domain.Scoreboards;
 namespace ScoringMonitoring.Application.Features.Scoreboards.Commands.ApplyPenalty;
 
 public sealed class ApplyPenaltyHandler(
-    IApplyPenaltyScoreboardStore scoreboardStore,
+    IUnitOfWork unitOfWork,
+    IScoreboardRepository scoreboardRepository,
+    ISessionEventLogRepository sessionEventLogRepository,
     TimeProvider timeProvider,
     IScoringMonitoringUpdatesPublisher updatesPublisher)
     : IRequestHandler<ApplyPenaltyCommand, ApplyPenaltyResponse>
@@ -18,7 +21,7 @@ public sealed class ApplyPenaltyHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var scoreboard = await scoreboardStore.LoadAsync(request.LiveSessionId, cancellationToken);
+        var scoreboard = await scoreboardRepository.GetRequiredByLiveSessionIdAsync(request.LiveSessionId, cancellationToken);
 
         var penalty = new Penalty(
             Guid.NewGuid(),
@@ -42,7 +45,8 @@ public sealed class ApplyPenaltyHandler(
                 "PenaltyApplied",
                 CreatePenaltyAppliedDescription(penalty, scoreEntry),
                 request.RecordedAt);
-            await scoreboardStore.PersistPenaltyApplicationAsync(eventLog, cancellationToken);
+            sessionEventLogRepository.Add(eventLog);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             scoreboard.RebuildState();
             penaltyApplied = true;
         }

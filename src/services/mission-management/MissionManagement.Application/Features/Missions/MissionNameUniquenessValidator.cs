@@ -13,7 +13,7 @@ namespace MissionManagement.Application.Features.Missions;
 public static class MissionNameUniquenessValidator
 {
     public static async Task EnsureAvailableAsync(
-        IMissionStore missions,
+        IMissionRepository missions,
         string name,
         Guid? excludeMissionId,
         CancellationToken cancellationToken)

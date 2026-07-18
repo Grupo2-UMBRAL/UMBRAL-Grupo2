@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ScoringMonitoring.Application.Features.SessionEventLogs.Queries.GetSessionEventLog;
 
-public sealed class GetSessionEventLogHandler(IRepository<SessionEventLog> sessionEventLogRepository)
+public sealed class GetSessionEventLogHandler(ISessionEventLogRepository sessionEventLogRepository)
     : IRequestHandler<GetSessionEventLogQuery, IReadOnlyList<SessionEventLogPayload>>
 {
     public async Task<IReadOnlyList<SessionEventLogPayload>> Handle(
@@ -21,8 +21,9 @@ public sealed class GetSessionEventLogHandler(IRepository<SessionEventLog> sessi
                 UmbralFailureCategory.Validation);
         }
 
-        return await sessionEventLogRepository
-            .Where(eventLog => eventLog.LiveSessionId == request.LiveSessionId)
+        var eventLogs = await sessionEventLogRepository.GetByLiveSessionIdAsync(request.LiveSessionId, cancellationToken);
+        
+        return eventLogs
             .OrderByDescending(eventLog => eventLog.Timestamp)
             .ThenByDescending(eventLog => eventLog.Id)
             .Select(eventLog => new SessionEventLogPayload(
@@ -31,7 +32,7 @@ public sealed class GetSessionEventLogHandler(IRepository<SessionEventLog> sessi
                 eventLog.EventType,
                 eventLog.Description,
                 eventLog.Timestamp))
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 }
 

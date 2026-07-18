@@ -4,7 +4,7 @@ using Umbral.ServiceDefaults;
 
 namespace MissionManagement.Application.Features.Missions.Queries.GetEligibleMissionForLiveSession;
 
-public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionManagementDbContext dbContext)
+public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionRepository missionRepository)
     : IRequestHandler<GetEligibleMissionForLiveSessionQuery, EligibleMissionForLiveSessionResponse>
 {
     public async Task<EligibleMissionForLiveSessionResponse> Handle(
@@ -13,7 +13,7 @@ public sealed class GetEligibleMissionForLiveSessionQueryHandler(IMissionManagem
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var mission = await MissionLoader.RequireAsync(dbContext, request.MissionId, cancellationToken);
+        var mission = await missionRepository.GetRequiredWithItemsAsync(request.MissionId, cancellationToken);
 
         if (!mission.IsActive)
         {
