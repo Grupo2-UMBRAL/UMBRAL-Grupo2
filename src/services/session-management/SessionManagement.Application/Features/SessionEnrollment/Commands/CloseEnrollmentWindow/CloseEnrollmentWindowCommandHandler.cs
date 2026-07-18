@@ -1,13 +1,12 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class CloseEnrollmentWindowHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<CloseEnrollmentWindowCommand, EnrollmentWindowResponse>
 {
@@ -15,16 +14,7 @@ public sealed class CloseEnrollmentWindowHandler(
         CloseEnrollmentWindowCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.LiveSessionId == Guid.Empty)
-        {
-            throw new UmbralDomainException(
-                "live_session_id_required",
-                "LiveSession id is required.",
-                UmbralFailureCategory.Validation);
-        }
-
-        var liveSession = await liveSessionRepository
-            .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
+        var liveSession = await liveSessionRepository.GetAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -35,7 +25,7 @@ public sealed class CloseEnrollmentWindowHandler(
 
         var nowUtc = timeProvider.GetUtcNow();
         liveSession.CloseEnrollmentWindow(nowUtc);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         return new EnrollmentWindowResponse(
             liveSession.Id,

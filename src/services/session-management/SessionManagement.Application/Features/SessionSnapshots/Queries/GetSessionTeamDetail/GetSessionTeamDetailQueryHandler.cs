@@ -1,13 +1,12 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
 public sealed class GetSessionTeamDetailQueryHandler(
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionReadRepository liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<GetSessionTeamDetailQuery, SessionTeamDetailResponse>
 {
@@ -17,17 +16,7 @@ public sealed class GetSessionTeamDetailQueryHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .AsSplitQuery()
-            .Include(session => session.SessionTeams.Where(team => team.Id == request.SessionTeamId))
-            .Include(session => session.TeamParticipations.Where(participation => participation.SessionTeamId == request.SessionTeamId))
-            .Include(session => session.TeamProgressions.Where(progress => progress.SessionTeamId == request.SessionTeamId))
-            .Include(session => session.EvidenceSubmissions.Where(submission => submission.SessionTeamId == request.SessionTeamId))
-            .Include(session => session.ReleasedHints.Where(releasedHint => releasedHint.SessionTeamId == request.SessionTeamId))
-            .SingleOrDefaultAsync(
-                session => session.Id == request.LiveSessionId
-                    && session.SessionTeams.Any(team => team.Id == request.SessionTeamId),
-                cancellationToken);
+        var liveSession = await liveSessionRepository.GetSessionTeamDetailAsync(request.LiveSessionId, request.SessionTeamId, cancellationToken);
         if (liveSession is null)
         {
             throw CreateSessionTeamNotFoundException(request.LiveSessionId, request.SessionTeamId);

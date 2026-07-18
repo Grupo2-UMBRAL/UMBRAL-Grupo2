@@ -1,6 +1,5 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.LiveSessions;
 using SessionManagement.Application.Abstractions;
@@ -8,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Hints;
 
 public sealed class CreateOperationalHintHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<CreateOperationalHintCommand, LiveSessionStageHintResponse>
 {
@@ -18,8 +17,7 @@ public sealed class CreateOperationalHintHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
+        var liveSession = await liveSessionRepository.GetAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -36,7 +34,7 @@ public sealed class CreateOperationalHintHandler(
             request.Longitude,
             createdAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         return new LiveSessionStageHintResponse(
             operationalHint.Id,

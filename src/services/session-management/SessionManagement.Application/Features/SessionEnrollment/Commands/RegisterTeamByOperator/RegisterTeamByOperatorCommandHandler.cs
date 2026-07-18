@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Application.Features.SessionLifecycle;
 using SessionManagement.Application.Abstractions.Realtime;
@@ -9,8 +8,7 @@ using Umbral.ServiceDefaults;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class RegisterTeamByOperatorHandler(
-    IUnitOfWork unitOfWork,
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<RegisterTeamByOperatorCommand, RegisterTeamByOperatorResponse>
@@ -21,9 +19,7 @@ public sealed class RegisterTeamByOperatorHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
+        var liveSession = await liveSessionRepository.GetWithSessionTeamsAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -35,7 +31,7 @@ public sealed class RegisterTeamByOperatorHandler(
         var createdAtUtc = timeProvider.GetUtcNow();
         var sessionTeam = liveSession.RegisterTeamByOperator(Guid.NewGuid(), request.TeamName, createdAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         // Let connected clients (operator panel + player lobbies) refresh their rosters.
         await realtimeNotifier.NotifySessionStateChangedAsync(

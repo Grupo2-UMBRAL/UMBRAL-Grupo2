@@ -6,7 +6,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class ValidateJoinCodeHandler(
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionReadRepository liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<ValidateJoinCodeQuery, ParticipantEnrollmentStatusResponse>
 {
@@ -15,8 +15,7 @@ public sealed class ValidateJoinCodeHandler(
         CancellationToken cancellationToken)
     {
         var joinCode = JoinCode.Parse(request.JoinCode);
-        var liveSession = await liveSessionRepository
-            .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
+        var liveSession = await liveSessionRepository.GetByJoinCodeAsync(joinCode.Value, cancellationToken);
         if (liveSession is null)
         {
             throw CreateInvalidJoinCodeException();

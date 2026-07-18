@@ -10,7 +10,6 @@ using Umbral.ServiceDefaults;
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
-    IUnitOfWork unitOfWork,
     ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier,
@@ -43,7 +42,7 @@ public abstract class EvidenceSubmissionFlowHandler<TCommand, TResponse>(
         var currentStage = liveSession.GetCurrentStageForTeam(sessionTeamId);
         var progressState = liveSession.GetProgressStateForTeam(sessionTeamId);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         // Preserve the per-command ordering of the original handlers: the participant submit
         // paths broadcast the outcome before recording the Stage Credit, whereas a Validation

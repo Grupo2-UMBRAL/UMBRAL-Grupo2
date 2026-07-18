@@ -1,6 +1,5 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.SessionEnrollment;
 using SessionManagement.Application.Abstractions;
@@ -8,7 +7,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionSnapshots;
 
 public sealed class GetSessionTeamSnapshotQueryHandler(
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionReadRepository liveSessionRepository,
     ICurrentParticipantIdentity currentParticipantIdentity,
     TimeProvider timeProvider)
     : IRequestHandler<GetSessionTeamSnapshotQuery, SessionTeamSnapshot>
@@ -20,15 +19,7 @@ public sealed class GetSessionTeamSnapshotQueryHandler(
         ArgumentNullException.ThrowIfNull(request);
 
         var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .Include(session => session.TeamParticipations)
-            .Include(session => session.TeamProgressions)
-            .Include(session => session.EvidenceSubmissions)
-            .Include(session => session.ReleasedHints)
-            .SingleOrDefaultAsync(
-                session => session.SessionTeams.Any(team => team.Id == request.SessionTeamId),
-                cancellationToken);
+        var liveSession = await liveSessionRepository.GetSessionTeamSnapshotAsync(request.SessionTeamId, cancellationToken);
         if (liveSession is null)
         {
             throw CreateSessionTeamNotFoundException(request.SessionTeamId);

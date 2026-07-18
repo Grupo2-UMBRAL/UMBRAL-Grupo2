@@ -22,13 +22,6 @@ file static class HandlerScaffold
 
     public static readonly Guid Team = SampleLiveSessions.TeamId(1);
 
-    public static Mock<IUnitOfWork> UnitOfWork()
-    {
-        var unitOfWork = new Mock<IUnitOfWork>();
-        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
-        return unitOfWork;
-    }
-
     public static Mock<ICurrentParticipantIdentity> Participants(string participantUserId)
     {
         var identity = new Mock<ICurrentParticipantIdentity>();
@@ -64,14 +57,14 @@ public sealed class OverrideValidationOutcomeHandlerTests
     {
         var session = SampleLiveSessions.EnrolledActive(SampleLiveSessions.TriviaStages(2));
         var submission = session.SubmitTriviaAnswer(HandlerScaffold.Team, SampleLiveSessions.WrongChoiceId, SampleLiveSessions.Now);
-        var handler = Build(session, out var unitOfWork, out var notifier, out var scoring);
+        var handler = Build(session, out var repository, out var notifier, out var scoring);
 
         var response = await handler.Handle(
             new OverrideValidationOutcomeCommand(submission.Id, true, "Equivalent answer accepted."), default);
 
         Assert.Equal(ValidationOutcome.Accepted.ToString(), response.NewOutcome);
         Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
-        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(1, repository.SaveChangesCount);
         scoring.Verify(s => s.RecordStageCreditAsync(It.IsAny<RecordStageCreditRequest>(), It.IsAny<CancellationToken>()), Times.Once);
         notifier.Verify(n => n.NotifyEvidenceSubmissionOutcomeChangedAsync(It.IsAny<EvidenceSubmissionOutcomeChangedPayload>(), It.IsAny<CancellationToken>()), Times.Once);
         notifier.Verify(n => n.NotifyTeamProgressChangedAsync(It.IsAny<TeamProgressChangedPayload>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -108,16 +101,15 @@ public sealed class OverrideValidationOutcomeHandlerTests
 
     private static OverrideValidationOutcomeHandler Build(
         LiveSession session,
-        out Mock<IUnitOfWork> unitOfWork,
+        out FakeLiveSessionRepository repository,
         out Mock<ISessionRealtimeNotifier> notifier,
         out Mock<IScoringMonitoringClient> scoring)
     {
-        unitOfWork = HandlerScaffold.UnitOfWork();
+        repository = new FakeLiveSessionRepository([session]);
         notifier = new Mock<ISessionRealtimeNotifier>();
         scoring = new Mock<IScoringMonitoringClient>();
         return new OverrideValidationOutcomeHandler(
-            unitOfWork.Object,
-            new FakeLiveSessionRepository([session]),
+            repository,
             HandlerScaffold.Clock(),
             HandlerScaffold.Operator("operator-1").Object,
             notifier.Object,
@@ -196,16 +188,15 @@ public sealed class SubmitTriviaAnswerHandlerTests
     private static SubmitTriviaAnswerHandler Build(
         LiveSession session,
         string participantUserId,
-        out Mock<IUnitOfWork> unitOfWork,
+        out FakeLiveSessionRepository repository,
         out Mock<ISessionRealtimeNotifier> notifier,
         out Mock<IScoringMonitoringClient> scoring)
     {
-        unitOfWork = HandlerScaffold.UnitOfWork();
+        repository = new FakeLiveSessionRepository([session]);
         notifier = new Mock<ISessionRealtimeNotifier>();
         scoring = new Mock<IScoringMonitoringClient>();
         return new SubmitTriviaAnswerHandler(
-            unitOfWork.Object,
-            new FakeLiveSessionRepository([session]),
+            repository,
             HandlerScaffold.Clock(),
             HandlerScaffold.Participants(participantUserId).Object,
             notifier.Object,
@@ -255,12 +246,12 @@ public sealed class SubmitEvidenceCommandHandlerTests
     public async Task Handle_RejectsMismatchedHash_DoesNotRecordCredit()
     {
         var session = SampleLiveSessions.EnrolledActive(SampleLiveSessions.TreasureStages(2));
-        var handler = Build(session, HandlerScaffold.Participant, out var unitOfWork, out var notifier, out var scoring);
+        var handler = Build(session, HandlerScaffold.Participant, out var repository, out var notifier, out var scoring);
 
         var response = await handler.Handle(new SubmitEvidenceCommand(HandlerScaffold.Team, "wrong-hash"), default);
 
         Assert.Equal(ValidationOutcome.Rejected.ToString(), response.ValidationOutcome);
-        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(1, repository.SaveChangesCount);
         scoring.Verify(s => s.RecordStageCreditAsync(It.IsAny<RecordStageCreditRequest>(), It.IsAny<CancellationToken>()), Times.Never);
         notifier.Verify(n => n.NotifyTeamProgressChangedAsync(It.IsAny<TeamProgressChangedPayload>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -280,16 +271,15 @@ public sealed class SubmitEvidenceCommandHandlerTests
     private static SubmitEvidenceCommandHandler Build(
         LiveSession session,
         string participantUserId,
-        out Mock<IUnitOfWork> unitOfWork,
+        out FakeLiveSessionRepository repository,
         out Mock<ISessionRealtimeNotifier> notifier,
         out Mock<IScoringMonitoringClient> scoring)
     {
-        unitOfWork = HandlerScaffold.UnitOfWork();
+        repository = new FakeLiveSessionRepository([session]);
         notifier = new Mock<ISessionRealtimeNotifier>();
         scoring = new Mock<IScoringMonitoringClient>();
         return new SubmitEvidenceCommandHandler(
-            unitOfWork.Object,
-            new FakeLiveSessionRepository([session]),
+            repository,
             HandlerScaffold.Clock(),
             HandlerScaffold.Participants(participantUserId).Object,
             notifier.Object,
@@ -320,14 +310,14 @@ public sealed class ReleaseHintHandlerTests
     public async Task Handle_ReleasesHintForSingleTeam()
     {
         var session = SampleLiveSessions.EnrolledActive(HintStages());
-        var handler = Build(session, out var unitOfWork, out var notifier);
+        var handler = Build(session, out var repository, out var notifier);
 
         var visibleHints = await handler.Handle(
             new ReleaseHintCommand(session.Id, HandlerScaffold.Team, SampleLiveSessions.HintId(1)), default);
 
         Assert.Single(visibleHints);
         Assert.Equal(SampleLiveSessions.HintId(1), visibleHints[0].HintId);
-        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(1, repository.SaveChangesCount);
         var hintReleased = Assert.IsType<HintReleasedDomainEvent>(
             Assert.Single(session.DomainEvents, domainEvent => domainEvent is HintReleasedDomainEvent));
         Assert.Equal(session.Id, hintReleased.LiveSessionId);
@@ -374,14 +364,13 @@ public sealed class ReleaseHintHandlerTests
 
     private static ReleaseHintHandler Build(
         LiveSession session,
-        out Mock<IUnitOfWork> unitOfWork,
+        out FakeLiveSessionRepository repository,
         out Mock<ISessionRealtimeNotifier> notifier)
     {
-        unitOfWork = HandlerScaffold.UnitOfWork();
+        repository = new FakeLiveSessionRepository([session]);
         notifier = new Mock<ISessionRealtimeNotifier>();
         return new ReleaseHintHandler(
-            unitOfWork.Object,
-            new FakeLiveSessionRepository([session]),
+            repository,
             HandlerScaffold.Clock(),
             notifier.Object);
     }

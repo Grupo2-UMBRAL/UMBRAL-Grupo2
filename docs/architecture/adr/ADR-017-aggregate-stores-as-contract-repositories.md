@@ -1,83 +1,71 @@
-# ADR-017: Stores por agregado como forma de los "repositorios definidos por contratos"
+# ADR-017: Repositorios por agregado y contratos explícitos de lectura
 
-## Status
+## Estado
 
-Accepted (complementa a [ADR-006](ADR-006-cqrs-single-database.md); reemplaza el uso de repositorios genéricos)
+Aceptado, revisado el 2026-07-17. Complementa a [ADR-006](ADR-006-cqrs-single-database.md) y reemplaza los repositorios genéricos.
 
-## Context
+## Contexto
 
-Los lineamientos técnicos del enunciado piden *"persistencia sobre PostgreSQL usando Entity Framework Core
-y **repositorios definidos por contratos**"*. La implementación inicial cumplió esto con un repositorio
-**genérico** por servicio: `IRepository<T> : IQueryable<T>` + `IUnitOfWork` + `I<Service>DbContext`,
-implementados por un `Repository<T>` y el `DbContext`.
+El diseño inicial de persistencia usaba un repositorio genérico por servicio:
+`IRepository<T> : IQueryable<T>`, `IUnitOfWork` e `I<Service>DbContext`.
+Ese diseño filtraba EF Core y LINQ hacia Application, exponía una superficie de consulta sin
+límites y ocultaba la intención del agregado detrás de CRUD genérico.
 
-Ese trío tiene dos problemas de diseño:
+El proyecto exige persistencia sobre EF Core mediante repositorios definidos por contratos.
+Un contrato solo sirve si expresa una necesidad acotada de Application y no expone la
+tecnología de persistencia.
 
-1. `IRepository<T>` expone `IQueryable<T>`, así que **filtra EF Core y LINQ hacia la capa `Application`**:
-   los handlers de comando arman `.Include(...)` y consultas sobre el repositorio. El "contrato" es en
-   realidad toda la superficie de `IQueryable`, no un contrato de negocio acotado.
-2. Un repositorio genérico no dice nada sobre las intenciones del agregado; es infraestructura disfrazada
-   de dominio. La consistencia debería entrar por la raíz del agregado, no por un `IQueryable` abierto.
+## Decisión
 
-El refactor **C1** (`docs/refactoring/plan-c1-c2-kernel-y-persistencia.md`) reemplaza ese trío por
-**stores de propósito, uno por agregado**. Este ADR registra la decisión y la reconcilia con el enunciado.
+### Lado comando: un repositorio por agregado
 
-## Decision
+Cada agregado expone un contrato de repositorio en `*.Application/Abstractions`, nombrado
+por el agregado, por ejemplo `ILiveSessionRepository`. Infrastructure lo implementa como un
+adaptador interno con el nombre correspondiente, por ejemplo `LiveSessionRepository`.
 
-### Lado comando — un store por agregado
+El contrato tiene métodos que revelan intención, como `GetForEnrollmentAsync`,
+`GetForEvidenceSubmissionAsync`, `AddAsync` y `SaveChangesAsync`. Nunca expone
+`IQueryable`, `DbSet`, expresiones para componer consultas ni tipos de EF Core.
 
-Cada agregado expone un **store de escritura** con métodos de intención de negocio, no un `IQueryable`:
+Estos repositorios son los repositorios definidos por contratos exigidos por el proyecto:
+Application es dueña de la interfaz e Infrastructure de la implementación con EF Core. Las
+pruebas pueden sustituir el contrato por un fake en memoria.
 
-- Interfaz en `*.Application/Abstractions` (p. ej. `IMissionStore`).
-- Adapter en `*.Infrastructure/Persistence` (p. ej. `MissionStore`, `internal sealed`), apoyado en el
-  `DbContext`.
-- Métodos con nombre de dominio: `GetAsync`, `GetWithItemsAsync`, `Add`, `ReplaceItemsAsync`,
-  `NameExistsAsync`, `SaveChangesAsync`. Ninguno devuelve `IQueryable`.
+### Lado consulta: contratos de lectura explícitos
 
-**Estos stores SON los "repositorios definidos por contratos" que pide el enunciado**: son contratos
-(interfaces en `Application`) con implementación intercambiable en `Infrastructure`, y los tests los
-sustituyen por fakes en memoria (p. ej. `InMemoryMissionStore`, que cuenta `SaveChanges`). Cambia el
-nombre ("Store" en vez de "Repository") y el hecho de que son específicos por agregado en lugar de
-`IRepository<T>` genérico; la propiedad exigida — persistencia detrás de un contrato — se mantiene.
+Las consultas no usan el repositorio del agregado. Cada contexto expone un contrato de
+lectura, como `ILiveSessionReadRepository` o `ILiveSessionQueries`, que devuelve proyecciones
+materializadas o modelos de lectura necesarios para cada query.
 
-### Lado consulta — directo al `DbContext`
+Infrastructure implementa ese contrato con EF Core, `AsNoTracking()` y la estrategia de carga
+requerida. Application no conoce `DbContext`, `DbSet`, `IQueryable` ni extensiones de EF.
+Esto preserva el CQRS lógico de ADR-006 sin filtrar la persistencia a los handlers.
 
-Coherente con [ADR-006](ADR-006-cqrs-single-database.md) (CQRS lógico): las **consultas no pasan por el
-store**. Van directo al `DbContext` vía `I<Service>DbContext` con `AsNoTracking()` y proyección a DTOs de
-lectura. Escritura y lectura son caminos distintos; el store es solo del lado escritura.
-
-## Consequences
+## Consecuencias
 
 Positivas:
 
-- Los handlers de comando quedan **100% mockeables sin EF Core**: un fake por agregado basta.
-- Desaparece el `IRepository<T> : IQueryable<T>` que filtraba EF/LINQ a `Application` en el lado escritura.
-- La superficie del contrato refleja las operaciones reales del agregado, no un CRUD genérico.
+- Los handlers de comandos y consultas se prueban mediante seams explícitos, sin un proveedor de EF.
+- Desaparecen `IRepository<T> : IQueryable<T>` y las fugas de EF Core en Application.
+- Los contratos revelan operaciones del agregado o proyecciones de query, no CRUD genérico.
 
-Coste / notas:
+Costes:
 
-- El nombre literal "Repository" ya no aparece en el código de escritura. Se documenta el mapeo
-  ("Store por agregado" = "repositorio por contrato" del enunciado) en `patterns-map.md` y aquí, para que
-  la rúbrica y la defensa lo encuentren.
-- La lectura usa EF Core directamente en `Application`; es una desviación consciente de clean architecture
-  purista a favor de simplicidad de CQRS (ver ADR-006).
+- Los contratos de lectura agregan tipos y adaptadores.
+- Los perfiles de carga de EF deben validarse en pruebas de integración de los adaptadores de Infrastructure.
 
-## Estado de ejecución (a 2026-07-10)
+## Estado de migración
 
-- **mission-management: migrado.** `IMissionStore` + `MissionStore`; `IUnitOfWork`/`IRepository` eliminados
-  (PR-2, mergeado a `develop`).
-- **session-management y scoring-monitoring: pendientes / mixtos.** `session` aún usa
-  `IRepository<T>` + `IUnitOfWork`; `scoring` mezcla `IRepository<T>` con un store específico
-  (`IApplyPenaltyScoreboardStore`). Homogeneizar a `ILiveSessionStore` / `IScoreboardStore` es el
-  follow-up de C1 (PRs restantes).
+- `mission-management`, `session-management` y `scoring-monitoring` deben migrar los repositorios genéricos a contratos específicos por agregado.
+- Ningún contrato de Application puede exponer `DbContext` o `DbSet`.
+- Los handlers de query migran de manera incremental a contratos de lectura explícitos.
 
 ## Guardrails
 
-- Un store de escritura nunca expone `IQueryable<T>` en su contrato.
-- El lado consulta nunca escribe; el store nunca se usa para leer proyecciones de query.
+- Un repositorio de comandos nunca expone `IQueryable<T>`.
+- Un contrato de lectura nunca escribe ni rehidrata un agregado para mutarlo.
+- Ningún contrato de Application expone tipos de EF Core.
 
-## Related
+## Relacionados
 
-- Complementa [ADR-006](ADR-006-cqrs-single-database.md) (CQRS lógico, una BD).
-- Detalle de ejecución: `docs/refactoring/plan-c1-c2-kernel-y-persistencia.md`,
-  `docs/refactoring/handoff-c1-persistence.md`.
+- [ADR-006](ADR-006-cqrs-single-database.md)

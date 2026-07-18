@@ -15,12 +15,12 @@ namespace SessionManagement.UnitTests.Features.SessionEnrollment;
 
 public class ListSessionTeamsHandlerTests
 {
-    private readonly Mock<IRepository<LiveSession>> _liveSessionRepositoryMock;
+    private readonly Mock<ILiveSessionReadRepository> _liveSessionRepositoryMock;
     private readonly ListSessionTeamsHandler _handler;
 
     public ListSessionTeamsHandlerTests()
     {
-        _liveSessionRepositoryMock = new Mock<IRepository<LiveSession>>();
+        _liveSessionRepositoryMock = new Mock<ILiveSessionReadRepository>();
         _handler = new ListSessionTeamsHandler(_liveSessionRepositoryMock.Object, TimeProvider.System);
     }
 
@@ -28,13 +28,6 @@ public class ListSessionTeamsHandlerTests
     public async Task Handle_WhenJoinCodeIsInvalid_ThrowsNotFoundDomainException()
     {
         var request = new ListSessionTeamsQuery("INVALID");
-        var emptyList = new List<LiveSession>().AsTestAsyncQueryable();
-
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(emptyList.Provider);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(emptyList.Expression);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(emptyList.ElementType);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(emptyList.GetEnumerator());
-
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             _handler.Handle(request, CancellationToken.None));
 

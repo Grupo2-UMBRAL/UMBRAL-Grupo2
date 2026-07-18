@@ -17,8 +17,7 @@ public sealed class SessionEnrollmentQaTests
         dbContext.LiveSessions.Add(liveSession);
         await dbContext.SaveChangesAsync();
         var handler = new GenerateJoinCodeHandler(
-            dbContext,
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionRepository(dbContext),
             new SequenceJoinCodeGenerator("ABC234", "DEF567"));
 
         var first = await handler.Handle(new GenerateJoinCodeCommand(liveSession.Id), CancellationToken.None);

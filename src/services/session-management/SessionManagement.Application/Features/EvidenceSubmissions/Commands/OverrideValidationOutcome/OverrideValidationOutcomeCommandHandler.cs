@@ -10,14 +10,13 @@ using Umbral.ServiceDefaults;
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public sealed class OverrideValidationOutcomeHandler(
-    IUnitOfWork unitOfWork, 
     ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
     IScoringMonitoringClient scoringAuditClient)
     : EvidenceSubmissionFlowHandler<OverrideValidationOutcomeCommand, OverrideValidationOutcomeResponse>(
-        unitOfWork, liveSessionRepository, timeProvider, realtimeNotifier, scoringAuditClient)
+        liveSessionRepository, timeProvider, realtimeNotifier, scoringAuditClient)
 {
     protected override async Task<LiveSession?> GetLiveSessionAsync(OverrideValidationOutcomeCommand request, ILiveSessionRepository repository, CancellationToken cancellationToken)
     {

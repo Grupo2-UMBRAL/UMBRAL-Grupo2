@@ -1,13 +1,12 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class ListSessionTeamsHandler(
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionReadRepository liveSessionRepository,
     TimeProvider timeProvider)
     : IRequestHandler<ListSessionTeamsQuery, SessionTeamsResponse>
 {
@@ -16,9 +15,7 @@ public sealed class ListSessionTeamsHandler(
         CancellationToken cancellationToken)
     {
         var joinCode = JoinCode.Parse(request.JoinCode);
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
+        var liveSession = await liveSessionRepository.GetByJoinCodeWithSessionTeamsAsync(joinCode.Value, cancellationToken);
         if (liveSession is null)
         {
             throw CreateInvalidJoinCodeException();

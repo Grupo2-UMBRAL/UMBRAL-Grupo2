@@ -11,14 +11,13 @@ using Umbral.ServiceDefaults;
 namespace SessionManagement.Application.Features.EvidenceSubmissions;
 
 public sealed class SubmitTriviaAnswerHandler(
-    IUnitOfWork unitOfWork, 
     ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity,
     ISessionRealtimeNotifier realtimeNotifier,
     IScoringMonitoringClient scoringAuditClient)
     : EvidenceSubmissionFlowHandler<SubmitTriviaAnswerCommand, SubmitEvidenceResponse>(
-        unitOfWork, liveSessionRepository, timeProvider, realtimeNotifier, scoringAuditClient)
+        liveSessionRepository, timeProvider, realtimeNotifier, scoringAuditClient)
 {
     protected override async Task<LiveSession?> GetLiveSessionAsync(SubmitTriviaAnswerCommand request, ILiveSessionRepository repository, CancellationToken cancellationToken)
     {

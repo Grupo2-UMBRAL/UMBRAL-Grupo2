@@ -1,11 +1,10 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
 
-public sealed class ListLiveSessionsQueryHandler(IRepository<LiveSession> liveSessionRepository)
+public sealed class ListLiveSessionsQueryHandler(ILiveSessionReadRepository liveSessionRepository)
     : IRequestHandler<ListLiveSessionsQuery, IReadOnlyList<LiveSessionResponse>>
 {
     public async Task<IReadOnlyList<LiveSessionResponse>> Handle(
@@ -14,10 +13,7 @@ public sealed class ListLiveSessionsQueryHandler(IRepository<LiveSession> liveSe
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSessions = await liveSessionRepository
-            .Include(liveSession => liveSession.SessionTeams)
-            .OrderByDescending(liveSession => liveSession.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        var liveSessions = await liveSessionRepository.ListWithSessionTeamsAsync(cancellationToken);
 
         return liveSessions
             .Select(liveSession => liveSession.ToResponse())

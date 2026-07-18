@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions.Scoring;
 using SessionManagement.Application.Abstractions.Realtime;
@@ -10,7 +9,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Hints;
 
 public sealed class ReleaseHintHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<ReleaseHintCommand, IReadOnlyList<VisibleHintSnapshot>>
@@ -21,11 +20,7 @@ public sealed class ReleaseHintHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .Include(session => session.TeamProgressions)
-            .Include(session => session.ReleasedHints)
-            .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
+        var liveSession = await liveSessionRepository.GetForHintReleaseAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -39,7 +34,7 @@ public sealed class ReleaseHintHandler(
             ? ReleaseForSingleTeam(liveSession, sessionTeamId, request.HintId, releasedAtUtc)
             : ReleaseForEligibleTeams(liveSession, request.HintId, releasedAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         var visibleHints = releasedHints
             .Select(releasedHint => MapVisibleHint(liveSession, releasedHint))

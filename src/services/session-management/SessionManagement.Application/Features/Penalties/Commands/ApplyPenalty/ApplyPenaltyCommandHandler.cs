@@ -1,6 +1,5 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Features.EvidenceSubmissions;
 using SessionManagement.Application.Abstractions.Scoring;
@@ -9,7 +8,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.Penalties;
 
 public sealed class ApplyPenaltyHandler(
-    IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentOperatorIdentity currentOperatorIdentity,
     IScoringMonitoringClient scoringAuditClient)
@@ -21,25 +20,7 @@ public sealed class ApplyPenaltyHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.CommandId == Guid.Empty)
-        {
-            throw new UmbralDomainException(
-                "penalty_command_id_required",
-                "Penalty command id is required.",
-                UmbralFailureCategory.Validation);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Reason))
-        {
-            throw new UmbralDomainException(
-                "penalty_reason_required",
-                "Penalty reason is required.",
-                UmbralFailureCategory.Validation);
-        }
-
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .SingleOrDefaultAsync(session => session.Id == request.LiveSessionId, cancellationToken);
+        var liveSession = await liveSessionRepository.GetWithSessionTeamsAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(

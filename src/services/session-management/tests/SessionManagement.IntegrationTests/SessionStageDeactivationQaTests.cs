@@ -165,7 +165,7 @@ public sealed class SessionStageDeactivationQaTests
         await using var dbContext = CreateDbContext();
         await SeedLiveSessionAsync(dbContext, CreateLiveSessionWithTeams(stageCount: 2));
         var realtimeNotifier = new RecordingSessionRealtimeNotifier();
-        var handler = new DeactivateStageHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc), realtimeNotifier);
+        var handler = new DeactivateStageHandler(new LiveSessionRepository(dbContext), new FixedTimeProvider(NowUtc), realtimeNotifier);
 
         var response = await handler.Handle(
             new DeactivateStageCommand(LiveSessionId, StageOneId),

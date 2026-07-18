@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Domain.LiveSessions;
 using SessionManagement.Application.Abstractions;
@@ -7,7 +6,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class JoinSessionTeamHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity)
     : IRequestHandler<JoinSessionTeamCommand, JoinSessionTeamResponse>
@@ -18,10 +17,7 @@ public sealed class JoinSessionTeamHandler(
     {
         var joinCode = JoinCode.Parse(request.JoinCode);
         var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .Include(session => session.TeamParticipations)
-            .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
+        var liveSession = await liveSessionRepository.GetByJoinCodeWithEnrollmentAsync(joinCode.Value, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -37,7 +33,7 @@ public sealed class JoinSessionTeamHandler(
             joinCode,
             enrolledAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         var sessionTeam = liveSession.SessionTeams.Single(team => team.Id == request.SessionTeamId);
         return new JoinSessionTeamResponse(

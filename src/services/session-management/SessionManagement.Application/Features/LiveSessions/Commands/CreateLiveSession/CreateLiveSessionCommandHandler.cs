@@ -6,7 +6,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.LiveSessions;
 
 public sealed class CreateLiveSessionCommandHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     IMissionManagementLiveSessionCatalog missionManagementLiveSessionCatalog,
     TimeProvider timeProvider)
     : IRequestHandler<CreateLiveSessionCommand, LiveSessionResponse>
@@ -32,8 +32,8 @@ public sealed class CreateLiveSessionCommandHandler(
             timeProvider.GetUtcNow(),
             sessionStageFlow);
 
-        liveSessionRepository.Add(liveSession);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.AddAsync(liveSession, cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         return liveSession.ToResponse();
     }

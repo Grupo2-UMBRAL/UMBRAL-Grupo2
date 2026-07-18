@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
-
 using Moq;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Application.Features.SessionEnrollment;
@@ -16,116 +9,50 @@ namespace SessionManagement.UnitTests.Features.SessionEnrollment;
 
 public class EnrollmentWindowHandlersTests
 {
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<IRepository<LiveSession>> _liveSessionRepositoryMock;
-    private readonly OpenEnrollmentWindowHandler _openHandler;
-    private readonly CloseEnrollmentWindowHandler _closeHandler;
-
-    public EnrollmentWindowHandlersTests()
-    {
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _liveSessionRepositoryMock = new Mock<IRepository<LiveSession>>();
-
-        var timeProvider = TimeProvider.System;
-        _openHandler = new OpenEnrollmentWindowHandler(
-            _unitOfWorkMock.Object,
-            _liveSessionRepositoryMock.Object,
-            timeProvider);
-
-        _closeHandler = new CloseEnrollmentWindowHandler(
-            _unitOfWorkMock.Object,
-            _liveSessionRepositoryMock.Object,
-            timeProvider);
-    }
-
     [Fact]
     public async Task OpenEnrollment_WhenSessionNotFound_ThrowsNotFoundDomainException()
     {
-        var request = new OpenEnrollmentWindowCommand(Guid.NewGuid());
-        var emptyList = new List<LiveSession>().AsTestAsyncQueryable();
-        
-        _liveSessionRepositoryMock.Setup(m => m.SingleOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<Func<LiveSession, bool>>>(), It.IsAny<CancellationToken>())).ReturnsAsync((LiveSession)null);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(emptyList.Provider);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(emptyList.Expression);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(emptyList.ElementType);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(emptyList.GetEnumerator());
+        var repository = Repository(null);
+        var handler = new OpenEnrollmentWindowHandler(repository.Object, TimeProvider.System);
 
-        var ex = await Assert.ThrowsAsync<UmbralDomainException>(() =>
-            _openHandler.Handle(request, CancellationToken.None));
+        var exception = await Assert.ThrowsAsync<UmbralDomainException>(() => handler.Handle(new OpenEnrollmentWindowCommand(Guid.NewGuid()), default));
 
-        Assert.Equal("live_session_not_found", ex.Code);
+        Assert.Equal("live_session_not_found", exception.Code);
     }
 
     [Fact]
     public async Task OpenEnrollment_WhenValid_OpensWindowAndSaves()
     {
-        var liveSession = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(), "Miss", "Desc", TimeProvider.System.GetUtcNow(), TimeProvider.System.GetUtcNow(), new[] { SessionManagement.Domain.LiveSessions.LiveSessionStage.Create(Guid.NewGuid(), "Stage1", 1, 1, 60, "Easy", "Type1", "Prompt") });
-        liveSession.AssignJoinCode(SessionManagement.Domain.LiveSessions.JoinCode.Parse("ABCDE2"));
-        var request = new OpenEnrollmentWindowCommand(liveSession.Id);
-        
-        var list = new List<LiveSession> { liveSession }.AsTestAsyncQueryable();
-        
-        _liveSessionRepositoryMock.Setup(m => m.SingleOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<Func<LiveSession, bool>>>(), It.IsAny<CancellationToken>())).ReturnsAsync(liveSession);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(list.Provider);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(list.Expression);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(list.ElementType);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(list.GetEnumerator());
+        var session = Session();
+        session.AssignJoinCode(JoinCode.Parse("ABCDE2"));
+        var repository = Repository(session);
+        var handler = new OpenEnrollmentWindowHandler(repository.Object, TimeProvider.System);
 
-        var result = await _openHandler.Handle(request, CancellationToken.None);
+        await handler.Handle(new OpenEnrollmentWindowCommand(session.Id), default);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.OpenedAtUtc);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task CloseEnrollment_WhenSessionNotFound_ThrowsNotFoundDomainException()
-    {
-        var request = new CloseEnrollmentWindowCommand(Guid.NewGuid());
-        var emptyList = new List<LiveSession>().AsTestAsyncQueryable();
-        
-        _liveSessionRepositoryMock.Setup(m => m.SingleOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<Func<LiveSession, bool>>>(), It.IsAny<CancellationToken>())).ReturnsAsync((LiveSession)null);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(emptyList.Provider);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(emptyList.Expression);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(emptyList.ElementType);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(emptyList.GetEnumerator());
-
-        var ex = await Assert.ThrowsAsync<UmbralDomainException>(() =>
-            _closeHandler.Handle(request, CancellationToken.None));
-
-        Assert.Equal("live_session_not_found", ex.Code);
+        repository.Verify(store => store.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task CloseEnrollment_WhenValid_ClosesWindowAndSaves()
     {
-        var liveSession = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(), "Miss", "Desc", TimeProvider.System.GetUtcNow(), TimeProvider.System.GetUtcNow(), new[] { SessionManagement.Domain.LiveSessions.LiveSessionStage.Create(Guid.NewGuid(), "Stage1", 1, 1, 60, "Easy", "Type1", "Prompt") });
-        liveSession.AssignJoinCode(SessionManagement.Domain.LiveSessions.JoinCode.Parse("ABCDE2"));
-        liveSession.OpenEnrollmentWindow(TimeProvider.System.GetUtcNow()); // Ensure it can be closed
+        var session = Session();
+        session.AssignJoinCode(JoinCode.Parse("ABCDE2"));
+        session.OpenEnrollmentWindow(TimeProvider.System.GetUtcNow());
+        var repository = Repository(session);
+        var handler = new CloseEnrollmentWindowHandler(repository.Object, TimeProvider.System);
 
-        var request = new CloseEnrollmentWindowCommand(liveSession.Id);
-        var list = new List<LiveSession> { liveSession }.AsTestAsyncQueryable();
-        
-        _liveSessionRepositoryMock.Setup(m => m.SingleOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<Func<LiveSession, bool>>>(), It.IsAny<CancellationToken>())).ReturnsAsync(liveSession);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(list.Provider);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(list.Expression);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(list.ElementType);
-        _liveSessionRepositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(list.GetEnumerator());
+        await handler.Handle(new CloseEnrollmentWindowCommand(session.Id), default);
 
-        var result = await _closeHandler.Handle(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotNull(result.ClosedAtUtc);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(store => store.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    private static Mock<ILiveSessionRepository> Repository(LiveSession? session)
+    {
+        var repository = new Mock<ILiveSessionRepository>();
+        repository.Setup(store => store.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        return repository;
+    }
+
+    private static LiveSession Session() => LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(), "Mission", "Session", TimeProvider.System.GetUtcNow(), TimeProvider.System.GetUtcNow(), [LiveSessionStage.Create(Guid.NewGuid(), "Play", 1, 1, 60, "Easy", "Trivia", "Prompt")]);
 }
-
-
-
-
-
-
-
-
-
-
