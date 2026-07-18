@@ -37,8 +37,8 @@ public sealed class RegisterTeamByOperatorHandler(
         await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
-                liveSession.State.Value,
-                liveSession.State.Value,
+                liveSession.State.Name,
+                liveSession.State.Name,
                 liveSession.SessionTeams.Count,
                 liveSession.SequenceNumber,
                 "Session Team roster changed; refresh LiveSession snapshot.",

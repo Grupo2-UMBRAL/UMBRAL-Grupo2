@@ -20,6 +20,14 @@ public sealed class ApplyPenaltyHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            throw new UmbralDomainException(
+                "penalty_reason_required",
+                "Penalty reason is required.",
+                UmbralFailureCategory.Validation);
+        }
+
         var liveSession = await liveSessionRepository.GetWithSessionTeamsAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {

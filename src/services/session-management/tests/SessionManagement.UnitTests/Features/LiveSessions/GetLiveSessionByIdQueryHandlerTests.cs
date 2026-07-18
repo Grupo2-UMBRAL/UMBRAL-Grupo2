@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,7 +51,7 @@ public class GetLiveSessionByIdQueryHandlerTests
         Assert.NotNull(result);
         Assert.Equal(liveSession.Id, result.Id);
         Assert.Equal(liveSession.MissionId, result.MissionId);
-        Assert.Equal(liveSession.State.Value, result.State);
+        Assert.Equal(liveSession.State.Name, result.State);
     }
 }
 

@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using Xunit;
 using System.Reflection;
 using Umbral.ServiceDefaults;
@@ -67,7 +68,7 @@ public sealed class EvidenceSubmissionQaTests
         var submission = liveSession.SubmitEvidence(TeamId, "qr-stage-1", NowUtc);
 
         Assert.Equal(ValidationOutcome.Accepted, submission.Outcome);
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
         Assert.Equal(SessionTeamProgressStates.Completed, liveSession.GetProgressStateForTeam(TeamId));
         Assert.Null(liveSession.GetCurrentStageForTeam(TeamId));
         Assert.Equal(1, liveSession.SequenceNumber);

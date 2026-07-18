@@ -36,8 +36,8 @@ public sealed class DeactivateStageHandler(
         await realtimeNotifier.NotifySessionStateChangedAsync(
             new LiveSessionStateChangedEvent(
                 liveSession.Id,
-                previousState.Value,
-                liveSession.State.Value,
+                previousState.Name,
+                liveSession.State.Name,
                 liveSession.SessionTeams.Count,
                 liveSession.SequenceNumber,
                 "Session Stage Flow changed; refresh LiveSession snapshot.",

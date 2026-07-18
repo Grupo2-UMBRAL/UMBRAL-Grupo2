@@ -148,7 +148,7 @@ public static class LiveSessionMappings
             liveSession.MissionId,
             liveSession.MissionName,
             liveSession.Name,
-            liveSession.State.Value,
+            liveSession.State.Name,
             liveSession.ScheduledStartAtUtc,
             liveSession.CreatedAtUtc,
             liveSession.JoinCodeValue,
@@ -164,7 +164,7 @@ public static class LiveSessionMappings
 
         return new LiveSessionStateResponse(
             liveSession.Id,
-            liveSession.State.Value,
+            liveSession.State.Name,
             liveSession.SessionTeams.Count,
             liveSession.EnrollmentWindowOpenedAtUtc,
             liveSession.EnrollmentWindowClosedAtUtc);

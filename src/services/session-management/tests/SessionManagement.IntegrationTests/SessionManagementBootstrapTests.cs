@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -203,7 +204,7 @@ public sealed class LiveSessionDomainTests
                     [])
             ]);
 
-        Assert.Equal("Scheduled", liveSession.State.Value);
+        Assert.Equal("Scheduled", liveSession.State.Name);
         Assert.Single(liveSession.SessionStageFlow);
         Assert.Equal("Stage 1", liveSession.SessionStageFlow[0].Name);
         Assert.Equal("Which code opens the archive?", liveSession.SessionStageFlow[0].Prompt);
@@ -235,7 +236,7 @@ public sealed class LiveSessionDomainTests
 
         liveSession.Start(startedAtUtc);
 
-        Assert.Equal("Active", liveSession.State.Value);
+        Assert.Equal("Active", liveSession.State.Name);
         Assert.Equal(startedAtUtc, liveSession.EnrollmentWindowClosedAtUtc);
     }
 
@@ -245,13 +246,13 @@ public sealed class LiveSessionDomainTests
         var liveSession = CreateStartedLiveSession();
 
         liveSession.Pause();
-        Assert.Equal("Paused", liveSession.State.Value);
+        Assert.Equal("Paused", liveSession.State.Name);
 
         liveSession.Resume();
-        Assert.Equal("Active", liveSession.State.Value);
+        Assert.Equal("Active", liveSession.State.Name);
 
         liveSession.FinalizeSession();
-        Assert.Equal("Finalized", liveSession.State.Value);
+        Assert.Equal("Finalized", liveSession.State.Name);
     }
 
     [Fact]
@@ -501,7 +502,7 @@ public sealed class LiveSessionEndpointTests
         await using var scope = factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<SessionManagementDbContext>();
         var storedSession = await dbContext.LiveSessions.SingleAsync(session => session.Id == liveSession.Id);
-        Assert.Equal("Finalized", storedSession.State.Value);
+        Assert.Equal("Finalized", storedSession.State.Name);
         Assert.NotNull(storedSession.EnrollmentWindowClosedAtUtc);
 
         Assert.Collection(

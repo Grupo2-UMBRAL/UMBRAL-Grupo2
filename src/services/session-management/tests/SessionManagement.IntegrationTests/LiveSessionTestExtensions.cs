@@ -1,3 +1,4 @@
+using SessionManagement.Domain.LiveSessions.States;
 using System;
 using SessionManagement.Domain.LiveSessions;
 
@@ -7,38 +8,38 @@ internal static class LiveSessionTestExtensions
 {
     public static void ForceState(this LiveSession liveSession, string state)
     {
-        var targetState = LiveSessionState.FromName(state);
+        var targetState = LiveSessionStateFactory.FromName(state);
         var now = DateTimeOffset.UtcNow;
-        if (liveSession.State == targetState) return;
+        if (liveSession.State.Name == targetState.Name) return;
 
-        if (liveSession.State == LiveSessionState.Scheduled)
+        if (liveSession.State is ScheduledState)
         {
             liveSession.Start(now);
         }
 
-        if (targetState == LiveSessionState.Active)
+        if (targetState is ActiveState)
         {
             liveSession.ClearDomainEvents();
             return;
         }
 
-        if (targetState == LiveSessionState.Paused)
+        if (targetState is PausedState)
         {
             liveSession.Pause();
             liveSession.ClearDomainEvents();
             return;
         }
         
-        if (targetState == LiveSessionState.Canceled)
+        if (targetState is CanceledState)
         {
             liveSession.Cancel();
             liveSession.ClearDomainEvents();
             return;
         }
 
-        if (targetState == LiveSessionState.Finalized)
+        if (targetState is FinalizedState)
         {
-            if (liveSession.State != LiveSessionState.Canceled)
+            if (liveSession.State is not CanceledState)
             {
                 liveSession.FinalizeSession();
             }
