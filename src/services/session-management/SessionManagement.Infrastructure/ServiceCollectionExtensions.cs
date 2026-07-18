@@ -26,7 +26,6 @@ public static class ServiceCollectionExtensions
             SessionManagementPersistence.SchemaName,
             (serviceProvider, options) =>
                 options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventsDispatchInterceptor>()));
-        services.AddScoped<ISessionManagementDbContext>(provider => provider.GetRequiredService<SessionManagementDbContext>());
         
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
@@ -51,9 +50,8 @@ public static class ServiceCollectionExtensions
             .AddHttpMessageHandler<AuthHeaderForwardingHandler>();
 
         
-        services.AddScoped(typeof(SessionManagement.Application.Abstractions.IRepository<>), typeof(Persistence.Repository<>));
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
-        services.AddScoped<SessionManagement.Application.Abstractions.IUnitOfWork>(sp => sp.GetRequiredService<Persistence.SessionManagementDbContext>());
+        services.AddScoped<ILiveSessionReadRepository, LiveSessionReadRepository>();
 
         // Scoped so it shares the DbContext's scope with the outbox's scoped IPublishEndpoint.
         services.AddScoped<DomainEventsDispatchInterceptor>();

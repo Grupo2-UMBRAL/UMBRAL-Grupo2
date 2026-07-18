@@ -65,7 +65,7 @@ public sealed class HintReleaseQaTests
         var templateStage = liveSession.SessionStageFlow.Single(stage => stage.MissionStageId == StageOneId);
         var templateHintCount = templateStage.Hints.Count;
         await SeedLiveSessionAsync(dbContext, liveSession);
-        var handler = new CreateOperationalHintHandler(dbContext, new Repository<LiveSession>(dbContext), new FixedTimeProvider(NowUtc));
+        var handler = new CreateOperationalHintHandler(new LiveSessionRepository(dbContext), new FixedTimeProvider(NowUtc));
 
         var response = await handler.Handle(
             new CreateOperationalHintCommand(
@@ -92,7 +92,7 @@ public sealed class HintReleaseQaTests
         liveSession.ReleaseHint(AlphaTeamId, HintOneId, NowUtc);
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionReadRepository(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(1)));
 
@@ -117,8 +117,7 @@ public sealed class HintReleaseQaTests
         await SeedLiveSessionAsync(dbContext, liveSession);
         var realtimeNotifier = new RecordingSessionRealtimeNotifier();
         var handler = new ReleaseHintHandler(
-            dbContext,
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionRepository(dbContext),
             new FixedTimeProvider(NowUtc),
             realtimeNotifier);
 
@@ -221,7 +220,7 @@ public sealed class HintReleaseQaTests
         liveSession.ReleaseHint(AlphaTeamId, SolutionOneId, NowUtc.AddMinutes(2));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionReadRepository(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(3)));
 
@@ -242,7 +241,7 @@ public sealed class HintReleaseQaTests
         liveSession.FinalizeAndRevealAllHints(NowUtc.AddMinutes(5));
         await SeedLiveSessionAsync(dbContext, liveSession);
         var handler = new GetSessionTeamSnapshotQueryHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionReadRepository(dbContext),
             new StaticParticipantIdentity("creator-alpha"),
             new FixedTimeProvider(NowUtc.AddMinutes(6)));
 

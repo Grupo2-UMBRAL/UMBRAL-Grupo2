@@ -15,12 +15,12 @@ namespace SessionManagement.UnitTests.Features.LiveSessions;
 
 public class GetLiveSessionByIdQueryHandlerTests
 {
-    private readonly Mock<IRepository<LiveSession>> _repositoryMock;
+    private readonly Mock<ILiveSessionReadRepository> _repositoryMock;
     private readonly GetLiveSessionByIdQueryHandler _handler;
 
     public GetLiveSessionByIdQueryHandlerTests()
     {
-        _repositoryMock = new Mock<IRepository<LiveSession>>();
+        _repositoryMock = new Mock<ILiveSessionReadRepository>();
         _handler = new GetLiveSessionByIdQueryHandler(_repositoryMock.Object);
     }
 
@@ -28,12 +28,8 @@ public class GetLiveSessionByIdQueryHandlerTests
     public async Task Handle_WhenSessionDoesNotExist_ThrowsNotFoundDomainException()
     {
         var request = new GetLiveSessionByIdQuery(Guid.NewGuid());
-        var emptyList = new List<LiveSession>().AsTestAsyncQueryable();
         
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(emptyList.Provider);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(emptyList.Expression);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(emptyList.ElementType);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(emptyList.GetEnumerator());
+        _repositoryMock.Setup(m => m.GetByIdWithSessionTeamsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((LiveSession?)null);
 
         var ex = await Assert.ThrowsAsync<UmbralDomainException>(() =>
             _handler.Handle(request, CancellationToken.None));
@@ -46,12 +42,8 @@ public class GetLiveSessionByIdQueryHandlerTests
     {
         var liveSession = LiveSession.Create(Guid.NewGuid(), Guid.NewGuid(), "Mission 1", "Desc", TimeProvider.System.GetUtcNow(), TimeProvider.System.GetUtcNow(), new[] { SessionManagement.Domain.LiveSessions.LiveSessionStage.Create(Guid.NewGuid(), "Stage1", 1, 1, 60, "Easy", "Type1", "Prompt") });
         var request = new GetLiveSessionByIdQuery(liveSession.Id);
-        var list = new List<LiveSession> { liveSession }.AsTestAsyncQueryable();
         
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Provider).Returns(list.Provider);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.Expression).Returns(list.Expression);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.ElementType).Returns(list.ElementType);
-        _repositoryMock.As<IQueryable<LiveSession>>().Setup(m => m.GetEnumerator()).Returns(list.GetEnumerator());
+        _repositoryMock.Setup(m => m.GetByIdWithSessionTeamsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(liveSession);
 
         var result = await _handler.Handle(request, CancellationToken.None);
 

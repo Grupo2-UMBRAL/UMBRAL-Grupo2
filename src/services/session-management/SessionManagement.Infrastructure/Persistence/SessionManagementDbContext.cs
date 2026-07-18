@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace SessionManagement.Infrastructure.Persistence;
 
-public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options) : DbContext(options), IUnitOfWork, ISessionManagementDbContext
+public sealed class SessionManagementDbContext(DbContextOptions<SessionManagementDbContext> options) : DbContext(options)
 {
     public DbSet<LiveSession> LiveSessions => Set<LiveSession>();
 

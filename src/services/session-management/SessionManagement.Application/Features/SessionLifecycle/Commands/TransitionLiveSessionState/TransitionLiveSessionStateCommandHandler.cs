@@ -1,6 +1,5 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions.Realtime;
 using SessionManagement.Application.Features.LiveSessions;
@@ -11,7 +10,7 @@ using SessionManagement.Application.Abstractions;
 namespace SessionManagement.Application.Features.SessionLifecycle;
 
 public sealed class TransitionLiveSessionStateCommandHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ISessionRealtimeNotifier realtimeNotifier)
     : IRequestHandler<TransitionLiveSessionStateCommand, LiveSessionStateResponse>
@@ -22,12 +21,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .Include(existingLiveSession => existingLiveSession.SessionTeams)
-            .Include(existingLiveSession => existingLiveSession.ReleasedHints)
-            .SingleOrDefaultAsync(
-                existingLiveSession => existingLiveSession.Id == request.LiveSessionId,
-                cancellationToken);
+        var liveSession = await liveSessionRepository.GetForLifecycleTransitionAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -41,7 +35,7 @@ public sealed class TransitionLiveSessionStateCommandHandler(
 
         var newlyReleasedHints = ApplyTransition(liveSession, request.Action, occurredAtUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         var response = liveSession.ToStateResponse();
 

@@ -17,7 +17,7 @@ file static class QueryScaffold
 
     public static readonly Guid Team = SampleLiveSessions.TeamId(1);
 
-    public static IRepository<LiveSession> Repository(LiveSession session) => new FakeRepository<LiveSession>([session]);
+    public static ILiveSessionReadRepository Repository(LiveSession session) => new FakeLiveSessionReadRepository([session]);
 
     public static TimeProvider Clock() => new FixedTimeProvider(SampleLiveSessions.Now);
 

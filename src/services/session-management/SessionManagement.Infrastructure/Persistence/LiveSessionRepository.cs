@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using SessionManagement.Application.Abstractions;
 using SessionManagement.Domain.LiveSessions;
@@ -15,31 +13,37 @@ internal sealed class LiveSessionRepository : ILiveSessionRepository
         _dbContext = dbContext;
     }
 
-    public Type ElementType => ((IQueryable<LiveSession>)_dbContext.Set<LiveSession>()).ElementType;
-    public Expression Expression => ((IQueryable<LiveSession>)_dbContext.Set<LiveSession>()).Expression;
-    public IQueryProvider Provider => ((IQueryable<LiveSession>)_dbContext.Set<LiveSession>()).Provider;
-    
-    public IEnumerator<LiveSession> GetEnumerator() => ((IQueryable<LiveSession>)_dbContext.Set<LiveSession>()).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_dbContext.Set<LiveSession>()).GetEnumerator();
+    public async Task<LiveSession?> GetAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.SingleOrDefaultAsync(session => session.Id == liveSessionId, cancellationToken);
 
-    public async Task<LiveSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => 
-        await _dbContext.Set<LiveSession>().FindAsync(new object[] { id }, cancellationToken);
+    public async Task<LiveSession?> GetWithSessionTeamsAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.Include(session => session.SessionTeams)
+            .SingleOrDefaultAsync(session => session.Id == liveSessionId, cancellationToken);
 
-    public async Task<IReadOnlyList<LiveSession>> GetAllAsync(CancellationToken cancellationToken = default) => 
-        await _dbContext.Set<LiveSession>().ToListAsync(cancellationToken);
+    public async Task<LiveSession?> GetByJoinCodeWithEnrollmentAsync(string joinCodeValue, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.Include(session => session.SessionTeams).Include(session => session.TeamParticipations)
+            .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCodeValue, cancellationToken);
 
-    public async Task<LiveSession?> SingleOrDefaultAsync(Expression<Func<LiveSession, bool>> predicate, CancellationToken cancellationToken = default) => 
-        await _dbContext.Set<LiveSession>().SingleOrDefaultAsync(predicate, cancellationToken);
+    public async Task<LiveSession?> GetForHintReleaseAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.Include(session => session.SessionTeams).Include(session => session.TeamProgressions)
+            .Include(session => session.ReleasedHints).SingleOrDefaultAsync(session => session.Id == liveSessionId, cancellationToken);
 
-    public async Task<LiveSession?> FirstOrDefaultAsync(Expression<Func<LiveSession, bool>> predicate, CancellationToken cancellationToken = default) => 
-        await _dbContext.Set<LiveSession>().FirstOrDefaultAsync(predicate, cancellationToken);
+    public async Task<LiveSession?> GetForLifecycleTransitionAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.Include(session => session.SessionTeams).Include(session => session.ReleasedHints)
+            .SingleOrDefaultAsync(session => session.Id == liveSessionId, cancellationToken);
 
-    public async Task<IReadOnlyList<LiveSession>> GetAsync(Expression<Func<LiveSession, bool>> predicate, CancellationToken cancellationToken = default) => 
-        await _dbContext.Set<LiveSession>().Where(predicate).ToListAsync(cancellationToken);
+    public async Task<LiveSession?> GetForSessionFlowDeactivationAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+        => await _dbContext.LiveSessions.Include(session => session.SessionTeams).Include(session => session.TeamProgressions)
+            .SingleOrDefaultAsync(session => session.Id == liveSessionId, cancellationToken);
 
-    public void Add(LiveSession entity) => _dbContext.Set<LiveSession>().Add(entity);
-    public void Update(LiveSession entity) => _dbContext.Set<LiveSession>().Update(entity);
-    public void Remove(LiveSession entity) => _dbContext.Set<LiveSession>().Remove(entity);
+    public Task AddAsync(LiveSession liveSession, CancellationToken cancellationToken = default)
+    {
+        _dbContext.LiveSessions.Add(liveSession);
+        return Task.CompletedTask;
+    }
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await _dbContext.SaveChangesAsync(cancellationToken);
 
     public async Task<LiveSession?> GetBySessionTeamIdWithEvidenceSubmissionsAsync(Guid sessionTeamId, CancellationToken cancellationToken = default)
     {

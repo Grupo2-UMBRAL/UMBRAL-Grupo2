@@ -1,12 +1,11 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.LiveSessions;
 
-public sealed class GetLiveSessionByIdQueryHandler(IRepository<LiveSession> liveSessionRepository)
+public sealed class GetLiveSessionByIdQueryHandler(ILiveSessionReadRepository liveSessionRepository)
     : IRequestHandler<GetLiveSessionByIdQuery, LiveSessionResponse>
 {
     public async Task<LiveSessionResponse> Handle(
@@ -15,11 +14,7 @@ public sealed class GetLiveSessionByIdQueryHandler(IRepository<LiveSession> live
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var liveSession = await liveSessionRepository
-            .Include(existingLiveSession => existingLiveSession.SessionTeams)
-            .SingleOrDefaultAsync(
-                existingLiveSession => existingLiveSession.Id == request.LiveSessionId,
-                cancellationToken);
+        var liveSession = await liveSessionRepository.GetByIdWithSessionTeamsAsync(request.LiveSessionId, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(

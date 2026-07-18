@@ -1,13 +1,12 @@
 using SessionManagement.Domain.LiveSessions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Umbral.ServiceDefaults;
 using SessionManagement.Application.Abstractions;
 
 namespace SessionManagement.Application.Features.SessionEnrollment;
 
 public sealed class RegisterTeamHandler(
-    IUnitOfWork unitOfWork, IRepository<LiveSession> liveSessionRepository,
+    ILiveSessionRepository liveSessionRepository,
     TimeProvider timeProvider,
     ICurrentParticipantIdentity currentParticipantIdentity)
     : IRequestHandler<RegisterTeamCommand, RegisterTeamResponse>
@@ -19,10 +18,7 @@ public sealed class RegisterTeamHandler(
         var joinCode = JoinCode.Parse(request.JoinCode);
         var participantUserId = currentParticipantIdentity.GetRequiredParticipantUserId();
 
-        var liveSession = await liveSessionRepository
-            .Include(session => session.SessionTeams)
-            .Include(session => session.TeamParticipations)
-            .SingleOrDefaultAsync(session => session.JoinCodeValue == joinCode.Value, cancellationToken);
+        var liveSession = await liveSessionRepository.GetByJoinCodeWithEnrollmentAsync(joinCode.Value, cancellationToken);
         if (liveSession is null)
         {
             throw new UmbralDomainException(
@@ -46,7 +42,7 @@ public sealed class RegisterTeamHandler(
             joinCode,
             nowUtc);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await liveSessionRepository.SaveChangesAsync(cancellationToken);
 
         return new RegisterTeamResponse(
             liveSession.Id,

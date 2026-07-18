@@ -24,7 +24,7 @@ public sealed class PenaltyApplicationQaTests
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionRepository(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);
@@ -58,7 +58,7 @@ public sealed class PenaltyApplicationQaTests
         await SeedLiveSessionAsync(dbContext, CreateActiveLiveSession());
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionRepository(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);
@@ -84,7 +84,7 @@ public sealed class PenaltyApplicationQaTests
         await SeedLiveSessionAsync(dbContext, CreateScheduledLiveSession());
         var scoringAuditClient = new RecordingScoringMonitoringClient();
         var handler = new ApplyPenaltyHandler(
-            new Repository<LiveSession>(dbContext),
+            new LiveSessionRepository(dbContext),
             new FixedTimeProvider(NowUtc),
             new StaticOperatorIdentity("operator-7"),
             scoringAuditClient);
